@@ -8,11 +8,17 @@
 // WebGPU graphics backend: wgpu-native on desktop, emdawnwebgpu on the web. Built only with the
 // CF_WEBGPU CMake option.
 //
-// Ordering model. Every upload is staged into a mapped-at-creation buffer and recorded into the
-// frame's command encoder as a copy, so uploads interleave with passes exactly like SDL_GPU copy
-// passes. Uniform data is the exception: it goes into a per-submission ring at unique offsets and
-// is written with one wgpuQueueWriteBuffer right before the submit, which is legal because no two
-// draws in a submission share a ring region.
+// Ordering model. Uploads must look as if recorded in place, like SDL_GPU copy passes, without
+// ending the render pass the way a copy would:
+// - A buffer nothing in the current submission references yet takes wgpuQueueWriteBuffer, which
+//   lands before the submission's commands.
+// - A buffer already referenced gets the new contents at a fresh region of a per-submission
+//   arena, and later commands bind that region; the pass end copies it back into the buffer.
+// - Uniform data goes into a per-submission ring at unique offsets.
+// Ring and arena are each written with one wgpuQueueWriteBuffer right before the submit, which is
+// legal because no two commands in a submission share a region. Textures are staged in mapped
+// buffers and copied in the encoder, which ends the pass.
+// An upload still resets the pass state and needs cf_apply_shader again, as SDL_GPU's pass end does.
 //
 // Binding model, which the WGSL emitter in cute_spirv.h must produce:
 // - CF set N is @group(N). Graphics: 0 = vertex resources, 1 = vertex uniforms, 2 = fragment
@@ -64,7 +70,10 @@ static const char* s_wgsl_src(const CF_ShaderBytecode& bc) { return bc.wgsl_src;
 #define CF_WGPU_MAX_BINDINGS (64)
 #define CF_WGPU_UNIFORM_ALIGN (256)
 #define CF_WGPU_STAGING_CHUNK (4 * 1024 * 1024)
-#define CF_WGPU_STAGING_MAX_PENDING 4 // Submitted chunks still remapping before an upload waits on one.
+// Live staging memory past which an upload waits for a chunk to remap instead of making one. The
+// browser's GPU process dies when mapped buffers pile up while maps return late (startup
+// pipeline compiles), so the pool may not grow without bound.
+#define CF_WGPU_STAGING_CEILING (64 * 1024 * 1024)
 
 // Anonymous: the other backends define structs of the same names, and their inline members
 // would otherwise collide across translation units.
@@ -205,6 +214,7 @@ struct CF_WPipelineKey
 	uint32_t unfilterable_mask;
 };
 
+
 struct CF_WPipeline
 {
 	CF_WPipelineKey key;
@@ -284,6 +294,7 @@ struct CF_ShaderInternal
 	Cute::Array<CF_WPipeline> pip_cache;
 	CF_WUniformGroup uniform_groups[2]; // Groups 1 and 3.
 	CF_WBindCache bind_caches[2];       // Groups 0 and 2.
+	bool dynamic_storage; // Storage bindings take dynamic offsets, so arena regions reuse bind groups.
 
 	CF_INLINE int get_input_index(const char* name)
 	{
@@ -294,12 +305,28 @@ struct CF_ShaderInternal
 	}
 };
 
+// A buffer CF updates from the CPU. Once a command in the current submission references it, an
+// update writes a fresh arena region instead and later reads in the submission bind that region,
+// until the end of the pass copies it back into the buffer.
 struct CF_WBuffer
 {
 	int element_count;
 	int size;
 	int stride;
 	WGPUBuffer buffer;
+	uint64_t used_serial; // Last submission that recorded a command referencing the buffer.
+	bool in_arena;
+	int arena_offset;
+	int arena_bytes;      // Reserved; a storage binding of the region spans all of it.
+	int arena_data_bytes; // Valid data, 4-byte padded: the copy back moves this much.
+};
+
+// Where a draw or dispatch reads a buffer's current contents.
+struct CF_WSlice
+{
+	WGPUBuffer buffer;
+	uint64_t offset;
+	uint64_t size;
 };
 
 struct CF_MeshInternal
@@ -319,8 +346,7 @@ struct CF_InstanceBufferInternal
 
 struct CF_StorageBufferInternal
 {
-	WGPUBuffer buffer;
-	int size;
+	CF_WBuffer buf;
 	WGPUBufferUsage usage;
 };
 
@@ -377,9 +403,9 @@ struct CF_WPassState
 	int scissor[4];
 	WGPUColor blend_constant;
 	uint32_t stencil_reference;
-	WGPUBuffer vs_storage[8];
+	CF_StorageBufferInternal* vs_storage[8];
 	int vs_storage_count;
-	WGPUBuffer fs_storage[8];
+	CF_StorageBufferInternal* fs_storage[8];
 	int fs_storage_count;
 };
 
@@ -453,7 +479,7 @@ static struct
 
 	CF_Filter filter_override;
 	bool has_filter_override;
-	WGPUBuffer instance_override;
+	CF_InstanceBufferInternal* instance_override;
 	int instance_override_count;
 	int instance_override_offset;
 
@@ -465,9 +491,21 @@ static struct
 	uint64_t ring_generation;
 	int ring_wanted_size;
 
+	// Buffer arena for the current submission: updates to buffers the submission already
+	// references, written with one wgpuQueueWriteBuffer before the submit, like the ring.
+	uint8_t* arena_cpu;
+	int arena_size;
+	int arena_used;
+	WGPUBuffer arena;
+	int arena_wanted_size;
+	Cute::Array<CF_WBuffer*> arena_buffers; // Buffers whose contents live in the arena.
+	uint64_t serial; // Current submission, from 1: a zeroed used_serial means never used.
+	int render_pass_count;
+
 	Cute::Array<CF_WStagingChunk*> staging;         // Mapped, recording uploads this submission.
 	Cute::Array<CF_WStagingChunk*> staging_pending; // Submitted, remapping.
 	Cute::Array<CF_WStagingChunk*> staging_free;    // Mapped and ready for reuse.
+	uint64_t staging_bytes; // Standard chunks alive, in any of the three lists.
 	Cute::Array<CF_ReadbackInternal*> readbacks;    // Alive until cf_destroy_readback or cleanup.
 	Cute::Array<CF_WSampler*> samplers; // Every sampler made, deduplicated by descriptor.
 	Cute::Array<CF_WBlitPipeline> blit_pipelines;
@@ -1195,6 +1233,19 @@ static WGPUCommandEncoder s_encoder()
 	return g.encoder;
 }
 
+// Copies arena-held contents back into their buffers. Must run outside a render pass, before any
+// command that could reference those buffers by handle.
+static void s_flush_arena_buffers()
+{
+	for (int i = 0; i < g.arena_buffers.count(); ++i) {
+		CF_WBuffer* b = g.arena_buffers[i];
+		if (!g.device_lost) wgpuCommandEncoderCopyBufferToBuffer(s_encoder(), g.arena, (uint64_t)b->arena_offset, b->buffer, 0, (uint64_t)b->arena_data_bytes);
+		b->in_arena = false;
+		b->used_serial = g.serial;
+	}
+	g.arena_buffers.clear();
+}
+
 static void s_end_active_pass()
 {
 	if (g.pass) {
@@ -1203,9 +1254,47 @@ static void s_end_active_pass()
 		g.pass = NULL;
 		g.ps = { };
 	}
+	s_flush_arena_buffers();
 	g.shader = NULL;
 	g.material = NULL;
 	g.variant = NULL;
+}
+
+// What ending the pass would do to CF-visible state, with the pass kept open: pass state returns
+// to its defaults and the next draw needs cf_apply_shader again. Uploads do this, as they end
+// the pass on SDL_GPU.
+static void s_soft_pass_break()
+{
+	g.shader = NULL;
+	g.material = NULL;
+	g.variant = NULL;
+	if (!g.pass) return;
+	CF_WPassState& ps = g.ps;
+	float w = (float)g.canvas->w, h = (float)g.canvas->h;
+	if (ps.has_viewport) wgpuRenderPassEncoderSetViewport(g.pass, 0, 0, w, h, 0, 1);
+	if (ps.has_scissor) wgpuRenderPassEncoderSetScissorRect(g.pass, 0, 0, (uint32_t)g.canvas->w, (uint32_t)g.canvas->h);
+	if (ps.has_blend_constant) {
+		WGPUColor zero = { 0, 0, 0, 0 };
+		wgpuRenderPassEncoderSetBlendConstant(g.pass, &zero);
+	}
+	if (ps.has_stencil_reference) wgpuRenderPassEncoderSetStencilReference(g.pass, 0);
+	ps = { };
+}
+
+static void s_make_arena(int size)
+{
+	if (g.arena) {
+		wgpuBufferRelease(g.arena);
+		g.bind_epoch++;
+	}
+	CF_FREE(g.arena_cpu);
+	g.arena_size = size;
+	g.arena_cpu = (uint8_t*)CF_ALLOC(size);
+	WGPUBufferDescriptor desc = WGPU_BUFFER_DESCRIPTOR_INIT;
+	desc.usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_Index | WGPUBufferUsage_Storage | WGPUBufferUsage_Indirect | WGPUBufferUsage_CopySrc | WGPUBufferUsage_CopyDst;
+	desc.size = (uint64_t)size;
+	g.arena = wgpuDeviceCreateBuffer(g.device, &desc);
+	g.arena_used = 0;
 }
 
 static void s_make_ring(int size)
@@ -1224,6 +1313,7 @@ static void s_make_ring(int size)
 
 static void s_free_staging_chunk(CF_WStagingChunk* c)
 {
+	if (c->size == CF_WGPU_STAGING_CHUNK) g.staging_bytes -= c->size;
 	if (c->buffer) wgpuBufferRelease(c->buffer);
 	CF_FREE(c->cpu);
 	CF_FREE(c);
@@ -1266,10 +1356,15 @@ static void s_submit()
 		for (int i = 0; i < g.staging.count(); ++i) s_free_staging_chunk(g.staging[i]);
 		g.staging.clear();
 		g.ring_used = 0;
+		g.arena_used = 0;
+		g.serial++;
 		return;
 	}
 	if (g.ring_used) {
 		wgpuQueueWriteBuffer(g.queue, g.ring, 0, g.ring_cpu, (size_t)g.ring_used);
+	}
+	if (g.arena_used) {
+		wgpuQueueWriteBuffer(g.queue, g.arena, 0, g.arena_cpu, (size_t)g.arena_used);
 	}
 	if (g.encoder) {
 		WGPUCommandBufferDescriptor cdesc = WGPU_COMMAND_BUFFER_DESCRIPTOR_INIT;
@@ -1300,6 +1395,11 @@ static void s_submit()
 	if (g.ring_wanted_size > g.ring_size) {
 		s_make_ring(g.ring_wanted_size);
 	}
+	g.arena_used = 0;
+	if (g.arena_wanted_size > g.arena_size) {
+		s_make_arena(g.arena_wanted_size);
+	}
+	g.serial++;
 }
 
 // Staging memory for one upload; the copy reading it must be recorded into the current encoder.
@@ -1314,9 +1414,7 @@ static uint8_t* s_stage(int size, WGPUBuffer* buffer, uint64_t* offset)
 				s_process_events();
 				s_collect_staging();
 			}
-			// While the GPU is busy (browsers compiling startup pipelines), maps return late; making
-			// a fresh 4 MiB mapped chunk per upload instead exhausted the browser's GPU process.
-			if (!g.staging_free.count() && g.staging_pending.count() >= CF_WGPU_STAGING_MAX_PENDING && !g.device_lost) {
+			if (!g.staging_free.count() && g.staging_pending.count() && g.staging_bytes + CF_WGPU_STAGING_CHUNK > CF_WGPU_STAGING_CEILING && !g.device_lost) {
 				s_wait(&g.staging_pending[0]->map_done);
 				s_collect_staging();
 			}
@@ -1331,6 +1429,7 @@ static uint8_t* s_stage(int size, WGPUBuffer* buffer, uint64_t* offset)
 			chunk = (CF_WStagingChunk*)CF_CALLOC(sizeof(CF_WStagingChunk));
 			chunk->buffer = wgpuDeviceCreateBuffer(g.device, &desc);
 			chunk->size = chunk_size;
+			if (chunk_size == CF_WGPU_STAGING_CHUNK) g.staging_bytes += chunk_size;
 			// The browser throws instead of mapping once its GPU process is gone, before the lost
 			// callback has run.
 			if (!chunk->buffer) s_mark_device_lost(s_sv("a mapped staging buffer could not be created"));
@@ -1396,18 +1495,103 @@ static WGPUBuffer s_make_buffer(int size, WGPUBufferUsage usage)
 	return wgpuDeviceCreateBuffer(g.device, &desc);
 }
 
-static void s_upload_buffer(WGPUBuffer dst, uint64_t dst_offset, const void* data, int size)
+// Arena bytes for one update, or -1 after a full arena submitted everything recorded so far: the
+// buffer is then unreferenced and takes a queue write. The next arena grows so steady-state
+// submissions fit.
+static int s_arena_alloc(int bytes)
+{
+	int need = s_align(bytes, 256);
+	if (g.arena_used + need > g.arena_size) {
+		g.arena_wanted_size = cf_max(g.arena_size * 2, need * 2);
+		s_submit();
+		return -1;
+	}
+	int at = g.arena_used;
+	g.arena_used += need;
+	return at;
+}
+
+static int s_pow2(int x)
+{
+	int p = 1;
+	while (p < x) p <<= 1;
+	return p;
+}
+
+// Replaces b's contents. Commands recorded before the update keep reading the old contents and
+// commands after it read the new, as if the upload were recorded in place.
+static void s_write_buffer(CF_WBuffer* b, const void* data, int size, bool storage)
 {
 	if (size <= 0 || !data || g.device_lost) return;
-	s_end_active_pass();
-	WGPUBuffer src;
-	uint64_t src_offset;
-	uint8_t* p = s_stage(size, &src, &src_offset);
-	CF_MEMCPY(p, data, size);
+	s_soft_pass_break();
+	if (!g.pass) {
+		// No pass to keep open: a copy recorded in order. Queue writes here measured slower on
+		// compute-heavy frames (Dawn/D3D12), and only mid-pass uploads need them.
+		WGPUBuffer src;
+		uint64_t off;
+		int pd = s_align(size, 4);
+		uint8_t* p = s_stage(pd, &src, &off);
+		CF_MEMCPY(p, data, size);
+		if (pd != size) CF_MEMSET(p + size, 0, pd - size);
+		wgpuCommandEncoderCopyBufferToBuffer(s_encoder(), src, off, b->buffer, 0, (uint64_t)pd);
+		return;
+	}
 	int padded = s_align(size, 4);
-	if (padded != size) CF_MEMSET(p + size, 0, padded - size);
-	if (!src) return;
-	wgpuCommandEncoderCopyBufferToBuffer(s_encoder(), src, src_offset, dst, dst_offset, (uint64_t)padded);
+	if (b->used_serial == g.serial) {
+		// Storage regions reserve a power of two so their bindings stay few and cacheable.
+		int reserve = storage ? s_pow2(cf_max(padded, 256)) : padded;
+		int at = s_arena_alloc(reserve);
+		if (at >= 0) {
+			CF_MEMCPY(g.arena_cpu + at, data, size);
+			if (padded != size) CF_MEMSET(g.arena_cpu + at + size, 0, padded - size);
+			if (!b->in_arena) g.arena_buffers.add(b);
+			b->in_arena = true;
+			b->arena_offset = at;
+			b->arena_bytes = reserve;
+			b->arena_data_bytes = padded;
+			return;
+		}
+	}
+	// Nothing recorded in this submission references b, so a queue write, which lands before the
+	// submission's commands, is indistinguishable from an in-place copy.
+	int whole = size & ~3;
+	if (whole) wgpuQueueWriteBuffer(g.queue, b->buffer, 0, data, (size_t)whole);
+	if (whole != size) {
+		uint8_t tail[4] = { };
+		CF_MEMCPY(tail, (const uint8_t*)data + whole, size - whole);
+		wgpuQueueWriteBuffer(g.queue, b->buffer, (uint64_t)whole, tail, 4);
+	}
+}
+
+// Before b's handle is released or replaced: its arena contents must not be copied anywhere.
+static void s_release_buffer(CF_WBuffer* b)
+{
+	if (b->in_arena) {
+		for (int i = 0; i < g.arena_buffers.count(); ++i) {
+			if (g.arena_buffers[i] == b) { g.arena_buffers.unordered_remove(i); break; }
+		}
+		b->in_arena = false;
+	}
+	if (b->buffer) wgpuBufferRelease(b->buffer);
+	b->buffer = NULL;
+	b->used_serial = 0;
+}
+
+// The current contents of b for a command being recorded now, which marks b referenced.
+static CF_WSlice s_slice(CF_WBuffer* b)
+{
+	b->used_serial = g.serial;
+	CF_WSlice s;
+	if (b->in_arena) {
+		s.buffer = g.arena;
+		s.offset = (uint64_t)b->arena_offset;
+		s.size = (uint64_t)b->arena_bytes;
+	} else {
+		s.buffer = b->buffer;
+		s.offset = 0;
+		s.size = WGPU_WHOLE_SIZE;
+	}
+	return s;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1609,6 +1793,8 @@ CF_Result cf_webgpu_init(bool debug)
 	wgpuDeviceGetLimits(g.device, &g.limits);
 
 	s_make_ring(4 * 1024 * 1024);
+	s_make_arena(1024 * 1024);
+	g.serial = 1;
 #ifdef CF_EMSCRIPTEN
 	printf("CF: WebGPU backend on %s\n", g.adapter_name[0] ? g.adapter_name : "an unnamed adapter");
 #endif
@@ -1909,6 +2095,11 @@ static WGPUShaderModule s_make_module(const char* wgsl, const char* label)
 	return wgpuDeviceCreateShaderModule(g.device, &desc);
 }
 
+static WGPURenderPipeline s_create_pipeline(const WGPURenderPipelineDescriptor* pd)
+{
+	return wgpuDeviceCreateRenderPipeline(g.device, pd);
+}
+
 static CF_WBlitPipeline* s_blit_pipeline(WGPUTextureFormat format)
 {
 	for (int i = 0; i < g.blit_pipelines.count(); ++i) {
@@ -1948,7 +2139,7 @@ static CF_WBlitPipeline* s_blit_pipeline(WGPUTextureFormat format)
 	pd.primitive.topology = WGPUPrimitiveTopology_TriangleList;
 	pd.multisample.count = 1;
 	pd.fragment = &fs;
-	bp.pip = wgpuDeviceCreateRenderPipeline(g.device, &pd);
+	bp.pip = s_create_pipeline(&pd);
 	wgpuPipelineLayoutRelease(layout);
 	g.blit_pipelines.add(bp);
 	return &g.blit_pipelines.last();
@@ -2463,6 +2654,7 @@ static void s_begin_pass(CF_CanvasInternal* c, bool clear)
 	rp.colorAttachments = ca;
 	rp.depthStencilAttachment = c->depth_view ? &da : NULL;
 	g.pass = wgpuCommandEncoderBeginRenderPass(s_encoder(), &rp);
+	g.render_pass_count++;
 }
 
 void cf_webgpu_clear_canvas(CF_Canvas canvas_handle)
@@ -2663,6 +2855,7 @@ void cf_webgpu_mesh_set_index_buffer(CF_Mesh mesh_handle, int index_buffer_size_
 {
 	CF_ASSERT(index_bit_count == 16 || index_bit_count == 32);
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
+	s_release_buffer(&mesh->indices);
 	mesh->indices.size = index_buffer_size_in_bytes;
 	mesh->indices.stride = index_bit_count / 8;
 	mesh->indices.buffer = s_make_buffer(index_buffer_size_in_bytes, WGPUBufferUsage_Index);
@@ -2671,6 +2864,7 @@ void cf_webgpu_mesh_set_index_buffer(CF_Mesh mesh_handle, int index_buffer_size_
 void cf_webgpu_mesh_set_instance_buffer(CF_Mesh mesh_handle, int instance_buffer_size_in_bytes, int instance_stride)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
+	s_release_buffer(&mesh->instances);
 	mesh->instances.size = instance_buffer_size_in_bytes;
 	mesh->instances.stride = instance_stride;
 	mesh->instances.buffer = s_make_buffer(instance_buffer_size_in_bytes, WGPUBufferUsage_Vertex);
@@ -2702,11 +2896,11 @@ void cf_webgpu_mesh_set_draw3d_augmented(CF_Mesh mesh_handle) { ((CF_MeshInterna
 static void s_update_buffer(CF_WBuffer* buffer, int element_count, const void* data, int size, WGPUBufferUsage usage)
 {
 	if (size > buffer->size || !buffer->buffer) {
-		if (buffer->buffer) wgpuBufferRelease(buffer->buffer);
+		s_release_buffer(buffer);
 		buffer->size = cf_max(size * 2, 4);
 		buffer->buffer = s_make_buffer(buffer->size, usage);
 	}
-	s_upload_buffer(buffer->buffer, 0, data, size);
+	s_write_buffer(buffer, data, size, false);
 	buffer->element_count = element_count;
 }
 
@@ -2734,9 +2928,9 @@ void cf_webgpu_destroy_mesh(CF_Mesh mesh_handle)
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	if (!mesh) return;
 	if (g.canvas && g.canvas->mesh == mesh) g.canvas->mesh = NULL;
-	if (mesh->vertices.buffer) wgpuBufferRelease(mesh->vertices.buffer);
-	if (mesh->indices.buffer) wgpuBufferRelease(mesh->indices.buffer);
-	if (mesh->instances.buffer) wgpuBufferRelease(mesh->instances.buffer);
+	s_release_buffer(&mesh->vertices);
+	s_release_buffer(&mesh->indices);
+	s_release_buffer(&mesh->instances);
 	CF_FREE(mesh);
 }
 
@@ -2765,35 +2959,33 @@ void cf_webgpu_destroy_instance_buffer(uint64_t handle)
 {
 	CF_InstanceBufferInternal* b = (CF_InstanceBufferInternal*)(uintptr_t)handle;
 	if (!b) return;
-	if (b->buf.buffer) wgpuBufferRelease(b->buf.buffer);
+	if (g.instance_override == b) g.instance_override = NULL;
+	s_release_buffer(&b->buf);
 	CF_FREE(b);
 }
 
 void cf_webgpu_apply_instance_buffer_override(uint64_t handle, int count, int offset_bytes)
 {
 	CF_InstanceBufferInternal* b = (CF_InstanceBufferInternal*)(uintptr_t)handle;
-	g.instance_override = b ? b->buf.buffer : NULL;
+	g.instance_override = b && b->buf.buffer ? b : NULL;
 	g.instance_override_count = b ? count : 0;
 	g.instance_override_offset = b ? offset_bytes : 0;
 }
 
-// Unbinds a storage buffer about to be released, so no draw binds a dead handle.
-static void s_release_storage_buffer(WGPUBuffer buffer)
+// Releases a storage buffer's handle; bind caches keyed on it drop before a reused address matches.
+static void s_release_storage_buffer(CF_StorageBufferInternal* sb)
 {
-	CF_WPassState& ps = g.ps;
-	for (int i = 0; i < ps.vs_storage_count; ++i) if (ps.vs_storage[i] == buffer) ps.vs_storage[i] = NULL;
-	for (int i = 0; i < ps.fs_storage_count; ++i) if (ps.fs_storage[i] == buffer) ps.fs_storage[i] = NULL;
-	wgpuBufferRelease(buffer);
+	s_release_buffer(&sb->buf);
 	g.bind_epoch++;
 }
 
 CF_StorageBuffer cf_webgpu_make_storage_buffer(CF_StorageBufferParams params)
 {
 	CF_StorageBufferInternal* sb = (CF_StorageBufferInternal*)CF_CALLOC(sizeof(CF_StorageBufferInternal));
-	sb->size = params.size;
+	sb->buf.size = params.size;
 	sb->usage = WGPUBufferUsage_Storage | WGPUBufferUsage_CopySrc;
 	if (params.indirect_drawable) sb->usage |= WGPUBufferUsage_Indirect;
-	sb->buffer = s_make_buffer(params.size, sb->usage);
+	sb->buf.buffer = s_make_buffer(params.size, sb->usage);
 	CF_StorageBuffer result;
 	result.id = (uint64_t)(uintptr_t)sb;
 	return result;
@@ -2802,19 +2994,22 @@ CF_StorageBuffer cf_webgpu_make_storage_buffer(CF_StorageBufferParams params)
 void cf_webgpu_update_storage_buffer(CF_StorageBuffer buffer, const void* data, int size)
 {
 	CF_StorageBufferInternal* sb = (CF_StorageBufferInternal*)buffer.id;
-	if (size > sb->size) {
-		s_release_storage_buffer(sb->buffer);
-		sb->size = size * 2;
-		sb->buffer = s_make_buffer(sb->size, sb->usage);
+	if (size > sb->buf.size) {
+		s_release_storage_buffer(sb);
+		sb->buf.size = size * 2;
+		sb->buf.buffer = s_make_buffer(sb->buf.size, sb->usage);
 	}
-	s_upload_buffer(sb->buffer, 0, data, size);
+	s_write_buffer(&sb->buf, data, size, true);
 }
 
 void cf_webgpu_destroy_storage_buffer(CF_StorageBuffer buffer)
 {
 	CF_StorageBufferInternal* sb = (CF_StorageBufferInternal*)buffer.id;
 	if (!sb) return;
-	s_release_storage_buffer(sb->buffer);
+	CF_WPassState& ps = g.ps;
+	for (int i = 0; i < ps.vs_storage_count; ++i) if (ps.vs_storage[i] == sb) ps.vs_storage[i] = NULL;
+	for (int i = 0; i < ps.fs_storage_count; ++i) if (ps.fs_storage[i] == sb) ps.fs_storage[i] = NULL;
+	s_release_storage_buffer(sb);
 	CF_FREE(sb);
 }
 
@@ -2822,14 +3017,14 @@ void cf_webgpu_apply_fs_storage_buffers(CF_StorageBuffer* buffers, int count)
 {
 	CF_ASSERT(count <= 8);
 	g.ps.fs_storage_count = count;
-	for (int i = 0; i < count; ++i) g.ps.fs_storage[i] = ((CF_StorageBufferInternal*)buffers[i].id)->buffer;
+	for (int i = 0; i < count; ++i) g.ps.fs_storage[i] = (CF_StorageBufferInternal*)buffers[i].id;
 }
 
 void cf_webgpu_apply_vs_storage_buffers(CF_StorageBuffer* buffers, int count)
 {
 	CF_ASSERT(count <= 8);
 	g.ps.vs_storage_count = count;
-	for (int i = 0; i < count; ++i) g.ps.vs_storage[i] = ((CF_StorageBufferInternal*)buffers[i].id)->buffer;
+	for (int i = 0; i < count; ++i) g.ps.vs_storage[i] = (CF_StorageBufferInternal*)buffers[i].id;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -2901,7 +3096,7 @@ static void s_load_stage_info(CF_WStageInfo* st, const CF_ShaderInfo* info)
 
 // Bind group layout for one group of a layout info. unfilterable_mask bit (b/2) marks sampled
 // pairs whose texture cannot be filtered.
-static WGPUBindGroupLayout s_make_bgl(const CF_WLayoutInfo* info, int group, uint32_t unfilterable_mask, bool uniform_group)
+static WGPUBindGroupLayout s_make_bgl(const CF_WLayoutInfo* info, int group, uint32_t unfilterable_mask, bool uniform_group, bool dynamic_storage)
 {
 	WGPUBindGroupLayoutEntry entries[CF_WGPU_MAX_BINDINGS];
 	int n = 0;
@@ -2919,9 +3114,11 @@ static WGPUBindGroupLayout s_make_bgl(const CF_WLayoutInfo* info, int group, uin
 			break;
 		case CF_WBIND_STORAGE_RO:
 			e.buffer.type = WGPUBufferBindingType_ReadOnlyStorage;
+			e.buffer.hasDynamicOffset = dynamic_storage;
 			break;
 		case CF_WBIND_STORAGE_RW:
 			e.buffer.type = WGPUBufferBindingType_Storage;
+			e.buffer.hasDynamicOffset = dynamic_storage;
 			break;
 		case CF_WBIND_SAMPLER:
 			e.sampler.type = unfilterable ? WGPUSamplerBindingType_NonFiltering : WGPUSamplerBindingType_Filtering;
@@ -2953,14 +3150,14 @@ static WGPUBindGroupLayout s_make_bgl(const CF_WLayoutInfo* info, int group, uin
 	return wgpuDeviceCreateBindGroupLayout(g.device, &d);
 }
 
-static CF_WLayoutVariant s_make_variant(const CF_WLayoutInfo* info, int group_count, const bool* uniform_groups, uint32_t mask)
+static CF_WLayoutVariant s_make_variant(const CF_WLayoutInfo* info, int group_count, const bool* uniform_groups, uint32_t mask, bool dynamic_storage)
 {
 	CF_WLayoutVariant v = { };
 	v.unfilterable_mask = mask;
 	for (int grp = 0; grp < group_count; ++grp) {
 		// Graphics masks: bits 0-15 cover group 0, bits 16-31 group 2. Compute uses group 0 only.
 		uint32_t gm = grp == 0 ? (mask & 0xFFFF) : grp == 2 ? (mask >> 16) : 0;
-		v.bgl[grp] = s_make_bgl(info, grp, gm, uniform_groups[grp]);
+		v.bgl[grp] = s_make_bgl(info, grp, gm, uniform_groups[grp], dynamic_storage && !uniform_groups[grp]);
 	}
 	WGPUPipelineLayoutDescriptor pld = WGPU_PIPELINE_LAYOUT_DESCRIPTOR_INIT;
 	pld.bindGroupLayoutCount = (size_t)group_count;
@@ -2991,6 +3188,12 @@ CF_Shader cf_webgpu_make_shader_from_bytecode(CF_ShaderBytecode vertex_bytecode,
 	shd->fs = fs;
 	s_parse_wgsl_bindings(&shd->layout, vs_src, WGPUShaderStage_Vertex);
 	s_parse_wgsl_bindings(&shd->layout, fs_src, WGPUShaderStage_Fragment);
+	int storage_count = 0;
+	for (int i = 0; i < shd->layout.count; ++i) {
+		CF_WBindKind kind = shd->layout.b[i].kind;
+		if (kind == CF_WBIND_STORAGE_RO || kind == CF_WBIND_STORAGE_RW) ++storage_count;
+	}
+	shd->dynamic_storage = storage_count && storage_count <= (int)g.limits.maxDynamicStorageBuffersPerPipelineLayout;
 	s_load_stage_info(&shd->stage[0], &vertex_bytecode.shader_info);
 	s_load_stage_info(&shd->stage[1], &fragment_bytecode.shader_info);
 	const CF_ShaderInfo* vi = &vertex_bytecode.shader_info;
@@ -3020,7 +3223,10 @@ void cf_webgpu_destroy_shader_internal(CF_Shader shader_handle)
 	CF_ShaderInternal* shd = (CF_ShaderInternal*)shader_handle.id;
 	if (!shd) return;
 	if (g.shader == shd) { s_end_active_pass(); }
-	for (int i = 0; i < shd->pip_cache.count(); ++i) wgpuRenderPipelineRelease(shd->pip_cache[i].pip);
+	for (int i = 0; i < shd->pip_cache.count(); ++i) {
+		CF_WPipeline* e = &shd->pip_cache[i];
+		if (e->pip) wgpuRenderPipelineRelease(e->pip);
+	}
 	for (int i = 0; i < shd->variants.count(); ++i) s_release_variant(&shd->variants[i]);
 	s_release_uniform_group(&shd->uniform_groups[0]);
 	s_release_uniform_group(&shd->uniform_groups[1]);
@@ -3112,15 +3318,14 @@ static CF_WLayoutVariant* s_graphics_variant(CF_ShaderInternal* shd, uint32_t ma
 		if (shd->variants[i].unfilterable_mask == mask) return &shd->variants[i];
 	}
 	bool uniform_groups[4] = { false, true, false, true };
-	shd->variants.add(s_make_variant(&shd->layout, 4, uniform_groups, mask));
+	shd->variants.add(s_make_variant(&shd->layout, 4, uniform_groups, mask, shd->dynamic_storage));
 	return &shd->variants.last();
 }
 
-static CF_WPipelineKey s_make_pipeline_key(CF_RenderState* state, CF_MeshInternal* mesh, CF_ShaderInternal* shader, uint32_t mask)
+static CF_WPipelineKey s_make_pipeline_key(const CF_RenderState* state, CF_MeshInternal* mesh, CF_ShaderInternal* shader, uint32_t mask, CF_CanvasInternal* c)
 {
 	CF_WPipelineKey key;
 	CF_MEMSET(&key, 0, sizeof(key));
-	CF_CanvasInternal* c = g.canvas;
 	key.color_target_count = s_color_target_count(c);
 	for (int i = 0; i < key.color_target_count; ++i) {
 		CF_TextureInternal* t = (CF_TextureInternal*)(i == 0 ? c->cf_texture.id : c->cf_textures_mrt[i].id);
@@ -3149,7 +3354,7 @@ static CF_WPipelineKey s_make_pipeline_key(CF_RenderState* state, CF_MeshInterna
 	return key;
 }
 
-static WGPURenderPipeline s_build_pipeline(CF_ShaderInternal* shader, CF_RenderState* state, CF_MeshInternal* mesh, const CF_WPipelineKey& key, CF_WLayoutVariant* variant)
+static WGPURenderPipeline s_build_pipeline(CF_ShaderInternal* shader, const CF_RenderState* state, CF_MeshInternal* mesh, const CF_WPipelineKey& key, CF_WLayoutVariant* variant)
 {
 	WGPUColorTargetState targets[CF_MAX_CANVAS_TARGETS];
 	WGPUBlendState blends[CF_MAX_CANVAS_TARGETS];
@@ -3269,7 +3474,7 @@ static WGPURenderPipeline s_build_pipeline(CF_ShaderInternal* shader, CF_RenderS
 	fs.targetCount = (size_t)key.color_target_count;
 	fs.targets = targets;
 	pd.fragment = &fs;
-	WGPURenderPipeline pip = wgpuDeviceCreateRenderPipeline(g.device, &pd);
+	WGPURenderPipeline pip = s_create_pipeline(&pd);
 	CF_ASSERT(pip);
 	return pip;
 }
@@ -3333,14 +3538,17 @@ struct CF_WResourceSource
 	int storage_texture_count;
 	CF_Texture* storage_textures;     // Compute only.
 	int storage_texture_given;
-	WGPUBuffer* buffers;
+	const CF_WSlice* buffers;
 	int buffer_count;
 	uint32_t unfilterable_mask;
+	uint32_t* dynamic_offsets; // Non-NULL when the layout's storage bindings are dynamic.
+	int dynamic_count;
 };
 
 // Entries for a resource group: sampled pairs, then storage textures, then storage buffers.
-static int s_resource_entries(const CF_WLayoutInfo* info, int group, const CF_WResourceSource& src, WGPUBindGroupEntry* entries)
+static int s_resource_entries(const CF_WLayoutInfo* info, int group, CF_WResourceSource& src, WGPUBindGroupEntry* entries)
 {
+	src.dynamic_count = 0;
 	int n = 0;
 	for (int i = 0; i < info->count; ++i) {
 		const CF_WBinding& b = info->b[i];
@@ -3370,9 +3578,15 @@ static int s_resource_entries(const CF_WLayoutInfo* info, int group, const CF_WR
 			e.textureView = t ? s_storage_view(t) : s_dummy_view(b.dim, WGPUTextureSampleType_Undefined, b.storage_format);
 		} else if (b.kind == CF_WBIND_STORAGE_RO || b.kind == CF_WBIND_STORAGE_RW || b.kind == CF_WBIND_UNIFORM) {
 			int k = b.binding - storage_tex_end;
-			e.buffer = (k >= 0 && k < src.buffer_count && src.buffers[k]) ? src.buffers[k] : g.dummy_buffer;
-			e.offset = 0;
-			e.size = WGPU_WHOLE_SIZE;
+			CF_WSlice s = { g.dummy_buffer, 0, WGPU_WHOLE_SIZE };
+			if (k >= 0 && k < src.buffer_count && src.buffers[k].buffer) s = src.buffers[k];
+			e.buffer = s.buffer;
+			e.offset = s.offset;
+			e.size = s.size;
+			if (src.dynamic_offsets && b.kind != CF_WBIND_UNIFORM) {
+				e.offset = 0;
+				src.dynamic_offsets[src.dynamic_count++] = (uint32_t)s.offset;
+			}
 		} else if (b.kind == CF_WBIND_TEXTURE) {
 			e.textureView = s_dummy_view(b.dim, b.sample_type, WGPUTextureFormat_Undefined);
 		} else {
@@ -3396,7 +3610,7 @@ static WGPUBindGroup s_create_bind_group(WGPUBindGroupLayout bgl, const WGPUBind
 	return wgpuDeviceCreateBindGroup(g.device, &d);
 }
 
-static WGPUBindGroup s_make_resource_group(const CF_WLayoutInfo* info, int group, WGPUBindGroupLayout bgl, const CF_WResourceSource& src)
+static WGPUBindGroup s_make_resource_group(const CF_WLayoutInfo* info, int group, WGPUBindGroupLayout bgl, CF_WResourceSource& src)
 {
 	WGPUBindGroupEntry entries[CF_WGPU_MAX_BINDINGS];
 	int n = s_resource_entries(info, group, src, entries);
@@ -3528,6 +3742,27 @@ static void s_apply_pass_state()
 	if (ps.has_stencil_reference) wgpuRenderPassEncoderSetStencilReference(g.pass, ps.stencil_reference);
 }
 
+// The instance stream: the override slice when one is applied, else the mesh's own.
+static void s_bind_instances(CF_MeshInternal* mesh)
+{
+	CF_WSlice s;
+	if (g.instance_override) {
+		s = s_slice(&g.instance_override->buf);
+		s.offset += (uint64_t)g.instance_override_offset;
+	} else {
+		s = s_slice(&mesh->instances);
+	}
+	wgpuRenderPassEncoderSetVertexBuffer(g.pass, mesh->vertices.buffer ? 1 : 0, s.buffer, s.offset, WGPU_WHOLE_SIZE);
+}
+
+static CF_WPipeline* s_find_pipeline(CF_ShaderInternal* shader, const CF_WPipelineKey& key)
+{
+	for (int i = 0; i < shader->pip_cache.count(); ++i) {
+		if (CF_MEMCMP(&key, &shader->pip_cache[i].key, sizeof(key)) == 0) return &shader->pip_cache[i];
+	}
+	return NULL;
+}
+
 void cf_webgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 {
 	CF_ASSERT(g.canvas);
@@ -3544,21 +3779,16 @@ void cf_webgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	uint32_t mask = s_unfilterable_mask(&shader->layout, 0, &material->vs, &shader->stage[0])
 		| (s_unfilterable_mask(&shader->layout, 2, &material->fs, &shader->stage[1]) << 16);
 	CF_WLayoutVariant* variant = s_graphics_variant(shader, mask);
-	CF_WPipelineKey key = s_make_pipeline_key(state, mesh, shader, mask);
-	WGPURenderPipeline pip = NULL;
-	for (int i = 0; i < shader->pip_cache.count(); ++i) {
-		if (CF_MEMCMP(&key, &shader->pip_cache[i].key, sizeof(key)) == 0) {
-			pip = shader->pip_cache[i].pip;
-			break;
-		}
+	CF_WPipelineKey key = s_make_pipeline_key(state, mesh, shader, mask, g.canvas);
+	CF_WPipeline* entry = s_find_pipeline(shader, key);
+	if (!entry) {
+		CF_WPipeline e;
+		e.key = key;
+		e.pip = s_build_pipeline(shader, state, mesh, key, variant);
+		shader->pip_cache.add(e);
+		entry = &shader->pip_cache.last();
 	}
-	if (!pip) {
-		pip = s_build_pipeline(shader, state, mesh, key, variant);
-		CF_WPipeline entry;
-		entry.key = key;
-		entry.pip = pip;
-		shader->pip_cache.add(entry);
-	}
+	WGPURenderPipeline pip = entry->pip;
 
 	// Uniforms go into the ring first: a full ring submits, which must not cut the pass below.
 	s_ring_reserve(s_ring_bytes(&shader->layout, 1, shader->stage[0].block_sizes) + s_ring_bytes(&shader->layout, 3, shader->stage[1].block_sizes));
@@ -3575,12 +3805,14 @@ void cf_webgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 	wgpuRenderPassEncoderSetPipeline(g.pass, pip);
 	bool has_vertex_data = mesh->vertices.buffer != NULL;
 	bool has_instance_data = mesh->instances.buffer != NULL;
-	WGPUBuffer instance_buffer = g.instance_override ? g.instance_override : mesh->instances.buffer;
-	uint64_t instance_offset = g.instance_override ? (uint64_t)g.instance_override_offset : 0;
-	if (has_vertex_data) wgpuRenderPassEncoderSetVertexBuffer(g.pass, 0, mesh->vertices.buffer, 0, WGPU_WHOLE_SIZE);
-	if (has_instance_data) wgpuRenderPassEncoderSetVertexBuffer(g.pass, has_vertex_data ? 1 : 0, instance_buffer, instance_offset, WGPU_WHOLE_SIZE);
+	if (has_vertex_data) {
+		CF_WSlice s = s_slice(&mesh->vertices);
+		wgpuRenderPassEncoderSetVertexBuffer(g.pass, 0, s.buffer, s.offset, WGPU_WHOLE_SIZE);
+	}
+	if (has_instance_data) s_bind_instances(mesh);
 	if (mesh->indices.buffer) {
-		wgpuRenderPassEncoderSetIndexBuffer(g.pass, mesh->indices.buffer, mesh->indices.stride == 2 ? WGPUIndexFormat_Uint16 : WGPUIndexFormat_Uint32, 0, WGPU_WHOLE_SIZE);
+		CF_WSlice s = s_slice(&mesh->indices);
+		wgpuRenderPassEncoderSetIndexBuffer(g.pass, s.buffer, mesh->indices.stride == 2 ? WGPUIndexFormat_Uint16 : WGPUIndexFormat_Uint32, s.offset, WGPU_WHOLE_SIZE);
 	}
 	g.ps.has_stencil_reference = true;
 	g.ps.stencil_reference = state->stencil.reference;
@@ -3606,13 +3838,19 @@ static void s_bind_for_draw()
 		src.stage = &shd->stage[stage];
 		src.sampled_count = shd->stage[stage].sampled_count;
 		src.storage_texture_count = shd->stage[stage].storage_texture_count;
-		src.buffers = stage == 0 ? g.ps.vs_storage : g.ps.fs_storage;
-		src.buffer_count = stage == 0 ? g.ps.vs_storage_count : g.ps.fs_storage_count;
+		CF_StorageBufferInternal** sbs = stage == 0 ? g.ps.vs_storage : g.ps.fs_storage;
+		CF_WSlice slices[8] = { };
+		int buffer_count = stage == 0 ? g.ps.vs_storage_count : g.ps.fs_storage_count;
+		for (int i = 0; i < buffer_count; ++i) if (sbs[i]) slices[i] = s_slice(&sbs[i]->buf);
+		src.buffers = slices;
+		src.buffer_count = buffer_count;
 		src.unfilterable_mask = stage == 0 ? (v->unfilterable_mask & 0xFFFF) : (v->unfilterable_mask >> 16);
+		uint32_t rdyn[CF_WGPU_MAX_BINDINGS];
+		src.dynamic_offsets = shd->dynamic_storage ? rdyn : NULL;
 		WGPUBindGroupEntry entries[CF_WGPU_MAX_BINDINGS];
 		int n = s_resource_entries(&shd->layout, rgroup, src, entries);
 		WGPUBindGroup bg = s_cached_bind_group(&shd->bind_caches[stage], v->bgl[rgroup], entries, n);
-		wgpuRenderPassEncoderSetBindGroup(g.pass, (uint32_t)rgroup, bg, 0, NULL);
+		wgpuRenderPassEncoderSetBindGroup(g.pass, (uint32_t)rgroup, bg, (size_t)src.dynamic_count, src.dynamic_count ? rdyn : NULL);
 
 		int ugroup = rgroup + 1;
 		WGPUBindGroup ubg = s_uniform_group(&shd->uniform_groups[stage], &shd->layout, ugroup, v->bgl[ugroup], &shd->stage[stage]);
@@ -3675,7 +3913,7 @@ static bool s_draw_ready(const char* fn)
 void cf_webgpu_draw_elements()
 {
 	CF_MeshInternal* mesh = g.canvas->mesh;
-	WGPUBuffer instance_override = g.instance_override;
+	CF_InstanceBufferInternal* instance_override = g.instance_override;
 	g.instance_override = NULL;
 	if (!s_draw_ready("cf_draw_elements")) return;
 	s_bind_for_draw();
@@ -3692,12 +3930,13 @@ void cf_webgpu_draw_elements()
 void cf_webgpu_draw_elements_range(int first_element, int element_count, int instance_count)
 {
 	CF_MeshInternal* mesh = g.canvas->mesh;
-	WGPUBuffer instance_override = g.instance_override;
-	g.instance_override = NULL;
-	if (!s_draw_ready("cf_draw_elements_range")) return;
-	if (instance_override) {
-		wgpuRenderPassEncoderSetVertexBuffer(g.pass, mesh->vertices.buffer ? 1 : 0, instance_override, (uint64_t)g.instance_override_offset, WGPU_WHOLE_SIZE);
+	CF_InstanceBufferInternal* instance_override = g.instance_override;
+	if (!s_draw_ready("cf_draw_elements_range")) {
+		g.instance_override = NULL;
+		return;
 	}
+	if (instance_override) s_bind_instances(mesh);
+	g.instance_override = NULL;
 	s_bind_for_draw();
 	int ninst = instance_count;
 	if (ninst <= 0) {
@@ -3731,11 +3970,12 @@ void cf_webgpu_draw_elements_indirect(CF_StorageBuffer args, int offset, int dra
 	CF_ASSERT(sb && (sb->usage & WGPUBufferUsage_Indirect));
 	if (!s_draw_ready("cf_draw_elements_indirect")) return;
 	s_bind_for_draw();
+	CF_WSlice s = s_slice(&sb->buf);
 	for (int i = 0; i < draw_count; ++i) {
 		if (mesh->indices.buffer) {
-			wgpuRenderPassEncoderDrawIndexedIndirect(g.pass, sb->buffer, (uint64_t)(offset + i * 20));
+			wgpuRenderPassEncoderDrawIndexedIndirect(g.pass, s.buffer, s.offset + (uint64_t)(offset + i * 20));
 		} else {
-			wgpuRenderPassEncoderDrawIndirect(g.pass, sb->buffer, (uint64_t)(offset + i * 16));
+			wgpuRenderPassEncoderDrawIndirect(g.pass, s.buffer, s.offset + (uint64_t)(offset + i * 16));
 		}
 	}
 	app->draw_call_count++;
@@ -3797,7 +4037,7 @@ static WGPUComputePipeline s_compute_pipeline(CF_ComputeShaderInternal* cs, uint
 		}
 	}
 	bool uniform_groups[4] = { false, false, true, false };
-	cs->variants.add(s_make_variant(&cs->layout, 3, uniform_groups, mask));
+	cs->variants.add(s_make_variant(&cs->layout, 3, uniform_groups, mask, false));
 	WGPUComputePipelineDescriptor pd = WGPU_COMPUTE_PIPELINE_DESCRIPTOR_INIT;
 	pd.layout = cs->variants.last().layout;
 	pd.compute.module = cs->module;
@@ -3878,9 +4118,10 @@ void cf_webgpu_dispatch_compute(CF_ComputeShader shader, CF_Material material_ha
 		split_views[i] = t ? s_split_scratch(t) : NULL;
 	}
 
-	WGPUBuffer ro_buffers[16], rw_buffers[16];
-	for (int i = 0; i < dispatch.ro_buffer_count && i < 16; ++i) ro_buffers[i] = ((CF_StorageBufferInternal*)dispatch.ro_buffers[i].id)->buffer;
-	for (int i = 0; i < dispatch.rw_buffer_count && i < 16; ++i) rw_buffers[i] = ((CF_StorageBufferInternal*)dispatch.rw_buffers[i].id)->buffer;
+	// No pass is open, so no buffer's contents live in the arena: these slices are whole buffers.
+	CF_WSlice ro_buffers[16], rw_buffers[16];
+	for (int i = 0; i < dispatch.ro_buffer_count && i < 16; ++i) ro_buffers[i] = s_slice(&((CF_StorageBufferInternal*)dispatch.ro_buffers[i].id)->buf);
+	for (int i = 0; i < dispatch.rw_buffer_count && i < 16; ++i) rw_buffers[i] = s_slice(&((CF_StorageBufferInternal*)dispatch.rw_buffers[i].id)->buf);
 
 	CF_WResourceSource ro = { };
 	ro.material = &material->cs;
@@ -3919,7 +4160,7 @@ void cf_webgpu_dispatch_compute(CF_ComputeShader shader, CF_Material material_ha
 				e.textureView = v ? v : s_dummy_view(b.dim, b.sample_type, WGPUTextureFormat_Undefined);
 			} else {
 				int k = b.binding - cs->rw_storage_texture_count;
-				e.buffer = (k >= 0 && k < rw.buffer_count) ? rw_buffers[k] : g.dummy_buffer;
+				e.buffer = (k >= 0 && k < rw.buffer_count) ? rw_buffers[k].buffer : g.dummy_buffer;
 				e.size = WGPU_WHOLE_SIZE;
 			}
 			entries[n++] = e;
@@ -3976,6 +4217,11 @@ bool cf_webgpu_device_is_lost()
 int cf_webgpu_error_count()
 {
 	return g.error_count;
+}
+
+int cf_webgpu_render_pass_count()
+{
+	return g.render_pass_count;
 }
 
 // Loses the device the way a driver reset does: wgpu-native reports it to the lost callback
@@ -4052,8 +4298,9 @@ void cf_webgpu_cleanup()
 	g.staging_pending.clear();
 	g.staging_free.clear();
 	for (int i = 0; i < g.blit_pipelines.count(); ++i) {
-		wgpuRenderPipelineRelease(g.blit_pipelines[i].pip);
-		wgpuBindGroupLayoutRelease(g.blit_pipelines[i].bgl);
+		CF_WBlitPipeline* bp = &g.blit_pipelines[i];
+		if (bp->pip) wgpuRenderPipelineRelease(bp->pip);
+		wgpuBindGroupLayoutRelease(bp->bgl);
 	}
 	g.blit_pipelines.clear();
 	if (g.blit_module) wgpuShaderModuleRelease(g.blit_module);
@@ -4072,6 +4319,8 @@ void cf_webgpu_cleanup()
 	if (g.empty_bgl) wgpuBindGroupLayoutRelease(g.empty_bgl);
 	if (g.ring) wgpuBufferRelease(g.ring);
 	CF_FREE(g.ring_cpu);
+	if (g.arena) wgpuBufferRelease(g.arena);
+	CF_FREE(g.arena_cpu);
 	if (g.surface) {
 		if (g.surface_configured) wgpuSurfaceUnconfigure(g.surface);
 		wgpuSurfaceRelease(g.surface);
@@ -4086,6 +4335,7 @@ void cf_webgpu_cleanup()
 	g.staging.~Array();
 	g.staging_pending.~Array();
 	g.staging_free.~Array();
+	g.arena_buffers.~Array();
 	g.readbacks.~Array();
 	g.samplers.~Array();
 	g.blit_pipelines.~Array();
