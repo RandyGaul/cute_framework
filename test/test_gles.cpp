@@ -179,6 +179,72 @@ TEST_CASE(test_mesh_streaming_within_one_frame)
 	return true;
 }
 
+static const char* s_textured_fs =
+"layout (location = 0) in vec4 v_col;\n"
+"layout (location = 0) out vec4 result;\n"
+"layout (set = 2, binding = 0) uniform sampler2D u_tex;\n"
+"void main() { result = v_col * texture(u_tex, vec2(0.5)); }\n";
+
+// On the web a full texture ring reuses its busy slot instead of waiting on a fence, which
+// would yield to the browser mid-frame. This forces that path on desktop: each upload must
+// still reach only the draws issued after it.
+TEST_CASE(test_texture_streaming_reuses_busy_slots)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	if (cf_query_backend() != CF_BACKEND_TYPE_GLES3) return true;
+
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(STRIPS, H));
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_textured_fs);
+	REQUIRE(shader.id);
+	CF_TextureParams tp = cf_texture_defaults(1, 1);
+	tp.stream = true;
+	CF_Texture texture = cf_make_texture(tp);
+	CF_Material material = cf_make_material();
+	cf_material_set_texture_fs(material, "u_tex", texture);
+	CF_Mesh mesh = s_make_color_mesh(6 * STRIPS);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(STRIPS * H * (int)sizeof(CF_Pixel));
+	cf_canvas_set_clear_color(canvas, cf_color_black());
+
+	cf_gles_reuse_busy_ring_slots(true);
+	int waits = cf_gles_fence_wait_count();
+	cf_app_update(NULL);
+	cf_apply_canvas(canvas, true);
+	for (int i = 0; i < STRIPS; ++i) {
+		CF_Color c = s_strip_color(i);
+		CF_Pixel p = cf_make_pixel_rgb((uint8_t)(c.r * 255 + 0.5f), (uint8_t)(c.g * 255 + 0.5f), (uint8_t)(c.b * 255 + 0.5f));
+		cf_texture_update(texture, &p, sizeof(p));
+		Vertex v[6];
+		float x0 = -1.0f + 2.0f * i / STRIPS;
+		s_fill_strip(v, x0, x0 + 2.0f / STRIPS, cf_color_white());
+		cf_mesh_update_vertex_data(mesh, v, 6);
+		cf_apply_mesh(mesh);
+		cf_apply_shader(shader, material);
+		cf_draw_elements();
+	}
+	cf_app_draw_onto_screen(false);
+	int new_waits = cf_gles_fence_wait_count() - waits;
+	cf_gles_reuse_busy_ring_slots(false);
+	REQUIRE(new_waits == 0);
+
+	CF_Readback rb = cf_canvas_readback(canvas);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, STRIPS * H * (int)sizeof(CF_Pixel));
+	cf_destroy_readback(rb);
+	for (int i = 0; i < STRIPS; ++i) {
+		CF_Color e = s_strip_color(i);
+		REQUIRE(s_is(px[(H / 2) * STRIPS + i], (int)(e.r * 255 + 0.5f), (int)(e.g * 255 + 0.5f), (int)(e.b * 255 + 0.5f), 2));
+	}
+
+	cf_free(px);
+	cf_destroy_mesh(mesh);
+	cf_destroy_material(material);
+	cf_destroy_texture(texture);
+	cf_destroy_shader(shader);
+	cf_destroy_canvas(canvas);
+	test_destroy_app();
+	return true;
+}
+
 enum ReadbackKind { READBACK_UNORM8, READBACK_HALF, READBACK_FLOAT };
 
 struct ReadbackCase
@@ -287,6 +353,7 @@ TEST_SUITE(test_gles)
 {
 	RUN_TEST_CASE(test_scissor_box_survives_unscissored_pass);
 	RUN_TEST_CASE(test_mesh_streaming_within_one_frame);
+	RUN_TEST_CASE(test_texture_streaming_reuses_busy_slots);
 	RUN_TEST_CASE(test_readback_formats);
 	RUN_TEST_CASE(test_readback_formats_guaranteed_pairs_only);
 }

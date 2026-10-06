@@ -557,34 +557,53 @@ int cf_gles_fence_wait_count()
 	return s_fence_wait_count;
 }
 
+// WebGL fences signal only once control returns to the browser, so waiting on one would
+// yield mid-frame and let the browser composite a half-drawn canvas.
+#ifdef CF_EMSCRIPTEN
+static const bool s_reuse_busy_slot = true;
+#else
+static bool s_reuse_busy_slot = false;
+#endif
+
+void cf_gles_reuse_busy_ring_slots(bool reuse)
+{
+#ifndef CF_EMSCRIPTEN
+	s_reuse_busy_slot = reuse;
+#else
+	CF_UNUSED(reuse);
+#endif
+}
+
 static inline CF_GL_Slot* s_force_slot(CF_GL_Ring* ring, uint32_t frame, int* out_index)
 {
 	if (!ring->count) return NULL;
 	int index = ring->head;
 	CF_GL_Slot& slot = ring->slots[index];
 	if (!s_slot_ready(slot)) {
-		++s_fence_wait_count;
-		// Block the CPU until the GPU is done with this slot.
-		// If you're seeing this on the hot-path of a profile or flame-graph it means you're GPU bound.
-		if (slot.in_flight_frame == g_ctx.frame_index && !slot.fence) {
-			// Reused within one frame: no covering frame fence exists yet, so raise one now.
-			slot.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-			glFlush();
-		}
-#ifdef CF_EMSCRIPTEN
-		while (!s_slot_ready(slot)) {
-			// We can't block in glClientWaitSync on WebGL, so poll and yield to simulate it.
-			cf_sleep(0);
-		}
-#else
-		if (slot.fence) {
-			glClientWaitSync(slot.fence, GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
-			glDeleteSync(slot.fence);
-			slot.fence = 0;
+		if (s_reuse_busy_slot) {
+			// Ring uploads are glBufferSubData/glTexSubImage, which GL orders after the draws already issued.
+			if (slot.fence) {
+				glDeleteSync(slot.fence);
+				slot.fence = 0;
+			}
 			slot.in_flight_frame = 0;
+		} else {
+			++s_fence_wait_count;
+			// Block the CPU until the GPU is done with this slot.
+			// If you're seeing this on the hot-path of a profile or flame-graph it means you're GPU bound.
+			if (slot.in_flight_frame == g_ctx.frame_index && !slot.fence) {
+				// Reused within one frame: no covering frame fence exists yet, so raise one now.
+				slot.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+				glFlush();
+			}
+			if (slot.fence) {
+				glClientWaitSync(slot.fence, GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
+				glDeleteSync(slot.fence);
+				slot.fence = 0;
+				slot.in_flight_frame = 0;
+			}
+			while (!s_slot_ready(slot)) cf_sleep(0);
 		}
-		while (!s_slot_ready(slot)) cf_sleep(0);
-#endif
 	}
 	slot.last_use_frame = frame;
 	ring->head = (index + 1) % ring->count;
