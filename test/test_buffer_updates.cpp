@@ -231,8 +231,53 @@ TEST_CASE(test_storage_updated_between_draws)
 	return true;
 }
 
+// Large updates made between passes: the first reaches a buffer nothing has read yet, the second
+// one an earlier pass in the same submission already read, which must keep seeing the first.
+TEST_CASE(test_large_mesh_updated_between_passes)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+
+	const int count = 4096; // 96 KiB of vertices, past the backend's large-upload threshold.
+	CF_Mesh mesh = s_make_color_mesh(count);
+	CF_Shader shader = cf_make_shader_from_source(s_color_vs, s_color_fs);
+	REQUIRE(shader.id);
+	CF_Material material = cf_make_material();
+	CF_Canvas canvases[2] = { cf_make_canvas(cf_canvas_defaults(W, H)), cf_make_canvas(cf_canvas_defaults(W, H)) };
+	Vertex* verts = (Vertex*)cf_calloc(count * (int)sizeof(Vertex), 1); // Zeroed tail: degenerate triangles.
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	cf_app_update(NULL);
+	for (int i = 0; i < 2; ++i) {
+		cf_apply_canvas(canvases[i], true);
+		s_column_quad(verts, 0, 1, s_colors[i]);
+		verts[4] = verts[0];
+		verts[5] = verts[2];
+		Vertex t = verts[3]; verts[3] = verts[4]; verts[4] = verts[5]; verts[5] = t;
+		cf_mesh_update_vertex_data(mesh, verts, count);
+		cf_apply_mesh(mesh);
+		cf_apply_shader(shader, material);
+		cf_draw_elements();
+	}
+	cf_app_draw_onto_screen(false);
+	for (int i = 0; i < 2; ++i) {
+		s_read(canvases[i], px);
+		REQUIRE(s_column_is(px, 0, 1, s_colors[i]));
+	}
+
+	cf_free(px);
+	cf_free(verts);
+	cf_destroy_canvas(canvases[0]);
+	cf_destroy_canvas(canvases[1]);
+	cf_destroy_material(material);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	test_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_buffer_updates)
 {
 	RUN_TEST_CASE(test_mesh_updated_between_draws);
 	RUN_TEST_CASE(test_storage_updated_between_draws);
+	RUN_TEST_CASE(test_large_mesh_updated_between_passes);
 }

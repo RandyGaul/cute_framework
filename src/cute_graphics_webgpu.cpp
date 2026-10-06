@@ -70,6 +70,7 @@ static const char* s_wgsl_src(const CF_ShaderBytecode& bc) { return bc.wgsl_src;
 #define CF_WGPU_MAX_BINDINGS (64)
 #define CF_WGPU_UNIFORM_ALIGN (256)
 #define CF_WGPU_STAGING_CHUNK (4 * 1024 * 1024)
+#define CF_WGPU_QUEUE_WRITE_MIN (64 * 1024) // Uploads this big skip the mapped staging copy.
 // Live staging memory past which an upload waits for a chunk to remap instead of making one. The
 // browser's GPU process dies when mapped buffers pile up while maps return late (startup
 // pipeline compiles), so the pool may not grow without bound.
@@ -1524,9 +1525,10 @@ static void s_write_buffer(CF_WBuffer* b, const void* data, int size, bool stora
 {
 	if (size <= 0 || !data || g.device_lost) return;
 	s_soft_pass_break();
-	if (!g.pass) {
-		// No pass to keep open: a copy recorded in order. Queue writes here measured slower on
-		// compute-heavy frames (Dawn/D3D12), and only mid-pass uploads need them.
+	if (!g.pass && size < CF_WGPU_QUEUE_WRITE_MIN) {
+		// No pass to keep open: a copy recorded in order. Small queue writes here measured slower
+		// on compute-heavy frames (Dawn/D3D12); large ones skip the mapped staging copy, which on
+		// the web is a second copy out of wasm memory.
 		WGPUBuffer src;
 		uint64_t off;
 		int pd = s_align(size, 4);
