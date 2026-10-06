@@ -24,12 +24,12 @@ int main(int argc, char* argv[])
 	while (app_is_running()) {
 		app_update();
 
-		static float chubbiness = 0;
+		static float rounding = 0;
 		static CF_Color color = color_white();
 		static float aa_scale = 1.0f;
 		static bool aa = true;
 		ImGui::Begin("Polygon");
-		ImGui::SliderFloat("chubbiness", &chubbiness, 0, 50);
+		ImGui::SliderFloat("rounding", &rounding, 0, 50);
 		ImGui::ColorPicker4("color", &color.r);
 		ImGui::Checkbox("antialias on/off", &aa);
 		ImGui::SliderFloat("antialias scale", &aa_scale, 0, 200);
@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
 
 		draw_push_color(color);
 		draw_push_shape_aa(aa ? aa_scale : 0);
-		draw_polygon_fill(polygon, CF_ARRAY_SIZE(polygon), chubbiness);
+		draw_polygon_fill(polygon, CF_ARRAY_SIZE(polygon), rounding);
 
 		if (!ImGui::GetIO().WantCaptureMouse) {
 			if (mouse_just_pressed(CF_MOUSE_BUTTON_LEFT)) {

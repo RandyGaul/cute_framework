@@ -553,7 +553,7 @@ static void handle_clay_core_commands(const Clay_RenderCommand* command)
 					command->renderData.rectangle.backgroundColor
 				)
 			);
-			cf_draw_box_rounded_fill(
+			cf_draw_box_fill(
 				cf_aabb_from_clay(command->boundingBox),
 				command->renderData.rectangle.cornerRadius.topLeft
 			);
@@ -580,7 +580,7 @@ static void handle_clay_core_commands(const Clay_RenderCommand* command)
 				&&
 				border.cornerRadius.topLeft == border.cornerRadius.bottomLeft
 			) {
-				cf_draw_box_rounded(
+				cf_draw_box(
 					aabb,
 					(float)border.width.top * 0.5f,
 					border.cornerRadius.topLeft

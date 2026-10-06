@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
 
 		// Filled rounded box.
 		CF_Aabb box = cf_make_aabb_pos_w_h(cf_v2(40, shapes_y), 100.0f, 70.0f);
-		cf_draw_box_rounded_fill(box, 14.0f);
+		cf_draw_box_fill(box, 14.0f);
 
 		// Outlined triangle.
 		cf_draw_tri(cf_v2(220, shapes_y + 40), cf_v2(180, shapes_y - 40), cf_v2(260, shapes_y - 40), 2.0f, 0.0f);

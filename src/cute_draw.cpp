@@ -481,10 +481,11 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 			axmax = cf_max(axmax, poly[j].x);
 			aymax = cf_max(aymax, poly[j].y);
 		}
-		// An outline or glow paints past the shape's own coverage box, so grow the pixel AABB
-		// the tile walk masks against by that reach (world units scaled into pixels by the mvp).
+		// A glow paints past the shape's own coverage box, so grow the pixel AABB the tile walk
+		// masks against by its reach (world units scaled into pixels by the mvp). Outlines sit
+		// inside the shape and need nothing.
 		if (!instanced) {
-			float fx_extent = cf_max(geom.fx.outline_width, geom.fx.glow_radius);
+			float fx_extent = geom.fx.glow_radius;
 			if (fx_extent > 0) {
 				float sx = cf_len(cf_v2(geom.mvp.m.x.x, geom.mvp.m.x.y)) * w2;
 				float sy = cf_len(cf_v2(geom.mvp.m.y.x, geom.mvp.m.y.y)) * h2;
@@ -706,12 +707,13 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		}
 
 		// Shape effects: a trailing payload block (outline rgba, glow rgba, widths) pointed at
-		// by tc.fx.x. tc.fx.y is how far past the shape the effects reach, so the coverage quad
-		// and the tile cull can pad for a glow rather than clipping it.
+		// by tc.fx.x. tc.fx.y is how far past the shape the effects reach -- only a glow does,
+		// the outline lies inside the edge -- so the coverage quad and the tile cull can pad
+		// for a glow rather than clipping it.
 		if (is_sdf && (geom.fx.outline_width > 0 || geom.fx.glow_radius > 0)) {
 			uint32_t fx_offset = (uint32_t)pay.count();
 			CF_MEMCPY(&tc.fx[0], &fx_offset, sizeof(fx_offset));
-			tc.fx[1] = cf_max(geom.fx.outline_width, geom.fx.glow_radius);
+			tc.fx[1] = geom.fx.glow_radius;
 			pay.add({ geom.fx.outline.r, geom.fx.outline.g, geom.fx.outline.b, geom.fx.outline.a });
 			pay.add({ geom.fx.glow.r, geom.fx.glow.g, geom.fx.glow.b, geom.fx.glow.a });
 			pay.add({ geom.fx.outline_width, geom.fx.glow_radius, 0, 0 });
@@ -722,8 +724,9 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		// Clipped segments are excluded: their planes can cut mid-tile, so "interior
 		// covers the tile" cannot be decided from the SDF alone.
 		// Dashed strokes never claim opaque cover: their gaps don't hide what's beneath.
-		// Neither do effects: an outline or glow extends past the shape's own interior.
-		if (is_sdf && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.a >= 1.0f && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED && blend == CF_DRAW_BLEND_NORMAL && !(tc.type & 16u) && tc.fx[1] == 0) {
+		// Effects don't matter here: the cull only fires on tiles wholly inside the fill, where
+		// an outline (src-over an opaque fill) and a glow (under it) both leave alpha at 1.
+		if (is_sdf && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.a >= 1.0f && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED && blend == CF_DRAW_BLEND_NORMAL && !(tc.type & 16u)) {
 			tc.opaque = 1.0f;
 		}
 
@@ -1913,7 +1916,16 @@ void cf_draw_prefetch(const CF_Sprite* sprite)
 	}
 }
 
-static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, float radius, bool fill)
+// Strokes sit inside the extent: a band of `stroke` running inward from the edge. The shaders
+// draw strokes centered on `d - radius = 0`, so pulling the radius in by half the stroke lands
+// the band exactly on [-stroke, 0]. A negative result is fine -- the distance functions are
+// exact inside the shape, so the band's inner edge keeps sharp corners sharp.
+static float s_inner_stroke_radius(float rounding, float stroke, bool fill)
+{
+	return fill ? rounding : rounding - stroke * 0.5f;
+}
+
+static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, float rounding, bool fill)
 {
 	float aaf = s_draw->aaf;
 	BatchGeometry& g = s_push_shape_geom();
@@ -1923,7 +1935,10 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	v2 v = skew(u);
 	v2 he = V2(distance(p1, p0), distance(p3, p0)) * 0.5f;
 	v2 c = ((p0 + p1) * 0.5f + (p2 + p3) * 0.5f) * 0.5f;
-	v2 inflate = V2(stroke+radius+aaf,stroke+radius+aaf);
+	// The core box shrinks by the rounding so core + rounding is the requested extent.
+	float radius = cf_clamp(rounding, 0.0f, cf_min(he.x, he.y));
+	he = he - V2(radius, radius);
+	v2 inflate = V2(aaf, aaf);
 	p0 = p0 - u * inflate - v * inflate;
 	p1 = p1 + u * inflate - v * inflate;
 	p2 = p2 + u * inflate + v * inflate;
@@ -1938,57 +1953,35 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	g.shape[2] = u;
 	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
-	g.radius = radius;
+	g.radius = s_inner_stroke_radius(radius, stroke, fill);
 	g.stroke = stroke;
 	g.fill = fill;
 	g.aa = aaf;
 	g.user_params = s_draw->user_params.last();
 }
 
-void cf_draw_quad(CF_Aabb bb, float thickness, float chubbiness)
+void cf_draw_quad(CF_Aabb bb, float thickness, float rounding)
 {
 	CF_V2 verts[4];
 	cf_aabb_verts(verts, bb);
-	s_draw_quad(verts[0], verts[1], verts[2], verts[3], thickness, chubbiness, false);
+	s_draw_quad(verts[0], verts[1], verts[2], verts[3], thickness, rounding, false);
 }
 
-void cf_draw_box_rounded(CF_Aabb bb, float thickness, float radius)
+void cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float rounding)
 {
-	v2 p = center(bb);
-	float x = p.x;
-	float y = p.y;
-	float hw = (width(bb) - 2*radius) * 0.5f;
-	float hh = (height(bb) - 2*radius) * 0.5f;
-	bb = make_aabb(V2(x - hw, y - hh), V2(x + hw, y + hh));
-	draw_box(bb, thickness, radius);
+	s_draw_quad(p0, p1, p2, p3, thickness, rounding, false);
 }
 
-void cf_draw_box_rounded_fill(CF_Aabb bb, float radius)
-{
-	v2 p = center(bb);
-	float x = p.x;
-	float y = p.y;
-	float hw = (width(bb) - 2*radius) * 0.5f;
-	float hh = (height(bb) - 2*radius) * 0.5f;
-	bb = make_aabb(V2(x - hw, y - hh), V2(x + hw, y + hh));
-	draw_box_fill(bb, radius);
-}
-
-void cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float chubbiness)
-{
-	s_draw_quad(p0, p1, p2, p3, thickness, chubbiness, false);
-}
-
-void cf_draw_quad_fill(CF_Aabb bb, float chubbiness)
+void cf_draw_quad_fill(CF_Aabb bb, float rounding)
 {
 	CF_V2 verts[4];
 	cf_aabb_verts(verts, bb);
-	s_draw_quad(verts[0], verts[1], verts[2], verts[3], 0, chubbiness, true);
+	s_draw_quad(verts[0], verts[1], verts[2], verts[3], 0, rounding, true);
 }
 
-void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float chubbiness)
+void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float rounding)
 {
-	s_draw_quad(p0, p1, p2, p3, 0, chubbiness, true);
+	s_draw_quad(p0, p1, p2, p3, 0, rounding, true);
 }
 
 static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
@@ -1998,7 +1991,7 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	g.type = BATCH_GEOMETRY_TYPE_CIRCLE;
 
 	v2 rr = V2(radius, radius);
-	v2 inflate = V2(stroke+aaf, stroke+aaf);
+	v2 inflate = V2(aaf, aaf);
 	CF_Aabb bb = make_aabb(position - (rr+inflate), position + (rr+inflate));
 	cf_aabb_verts(g.box, bb);
 	g.shape[0] = position;
@@ -2006,7 +1999,7 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	g.shape[2] = position;
 	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
-	g.radius = radius;
+	g.radius = s_inner_stroke_radius(radius, stroke, fill);
 	g.stroke = stroke;
 	g.fill = fill;
 	g.aa = aaf;
@@ -2081,23 +2074,178 @@ void cf_draw_capsule_fill2(CF_V2 a, CF_V2 b, float radius)
 }
 
 
-static void s_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fill)
+// The core a rounded polygon's SDF grows by `radius`: the polygon inset by its rounding, so
+// core + radius is exactly the requested extent. count 2 or 1 means the rounding reached what
+// the shape can hold and the core collapsed to a segment or a point (a capsule or circle).
+struct RoundedCore
+{
+	v2 pts[8];
+	int count;
+	float radius;
+};
+
+static float s_signed_area(const v2* pts, int count)
+{
+	float a = 0;
+	for (int i = 0, j = count - 1; i < count; j = i++) a += det2(pts[j], pts[i]);
+	return a * 0.5f;
+}
+
+static bool s_is_convex_ccw(const v2* pts, int count)
+{
+	for (int i = 0; i < count; ++i) {
+		v2 a = pts[i];
+		v2 b = pts[(i + 1) % count];
+		v2 c = pts[(i + 2) % count];
+		if (det2(b - a, c - b) < -1.0e-6f * len(b - a) * len(c - b)) return false;
+	}
+	return true;
+}
+
+// Sutherland-Hodgman against the half-plane dot(n, p) >= d. Grows the count by at most one.
+static int s_clip_halfplane(const v2* in, int count, v2 n, float d, v2* out)
+{
+	int k = 0;
+	for (int i = 0; i < count; ++i) {
+		v2 a = in[i];
+		v2 b = in[i + 1 == count ? 0 : i + 1];
+		float da = dot(n, a) - d;
+		float db = dot(n, b) - d;
+		if (da >= 0) out[k++] = a;
+		if ((da >= 0) != (db >= 0)) out[k++] = a + (b - a) * (da / (da - db));
+	}
+	return k;
+}
+
+// Convex CCW polygon inset by r: every edge's half-plane pushed in by r, intersected. Edges
+// too short to survive simply drop out. out holds up to 24 points; near-duplicates are merged.
+static int s_inset_convex(const v2* pts, int count, float r, float eps, v2* out)
+{
+	v2 buf[2][24];
+	int k = count;
+	for (int i = 0; i < count; ++i) buf[0][i] = pts[i];
+	int cur = 0;
+	for (int i = 0; i < count && k > 0; ++i) {
+		v2 e = pts[i + 1 == count ? 0 : i + 1] - pts[i];
+		float l = len(e);
+		if (l <= 0) continue;
+		v2 n = skew(e) / l;
+		k = s_clip_halfplane(buf[cur], k, n, dot(n, pts[i]) + r, buf[cur ^ 1]);
+		cur ^= 1;
+	}
+	int m = 0;
+	for (int i = 0; i < k; ++i) {
+		if (m > 0 && len(buf[cur][i] - out[m - 1]) <= eps) continue;
+		out[m++] = buf[cur][i];
+	}
+	while (m > 1 && len(out[m - 1] - out[0]) <= eps) --m;
+	return m;
+}
+
+static RoundedCore s_rounded_core(const v2* points, int count, float rounding)
+{
+	RoundedCore core;
+	core.count = count;
+	core.radius = 0;
+	for (int i = 0; i < count; ++i) core.pts[i] = points[i];
+	float area = s_signed_area(points, count);
+	if (!(rounding > 0) || count < 3 || area == 0) return core;
+
+	v2 p[8];
+	for (int i = 0; i < count; ++i) p[i] = area > 0 ? points[i] : points[count - 1 - i];
+	CF_Aabb bb = make_aabb(p, count);
+	float scale = len(bb.max - bb.min);
+	float eps = scale * 1.0e-5f;
+	float r = rounding;
+
+	if (s_is_convex_ccw(p, count)) {
+		v2 out[24];
+		int k = s_inset_convex(p, count, r, eps, out);
+		if (k == 0) {
+			// Past the inscribed circle: settle on the largest rounding that still leaves a core.
+			float lo = 0, hi = r;
+			for (int i = 0; i < 32; ++i) {
+				float mid = (lo + hi) * 0.5f;
+				if (s_inset_convex(p, count, mid, eps, out) > 0) lo = mid;
+				else hi = mid;
+			}
+			r = lo;
+			k = s_inset_convex(p, count, r, eps, out);
+		}
+		if (k < 3 || CF_FABSF(s_signed_area(out, k)) <= scale * scale * 1.0e-6f) {
+			// Collapsed: the core's farthest pair spans the remaining segment (or point).
+			int ia = 0, ib = 0;
+			float best = -1;
+			for (int i = 0; i < k; ++i) for (int j = i + 1; j < k; ++j) {
+				float d2 = len_sq(out[i] - out[j]);
+				if (d2 > best) { best = d2; ia = i; ib = j; }
+			}
+			out[0] = out[ia];
+			out[1] = out[ib];
+			k = best > eps * eps ? 2 : 1;
+		}
+		if (k > 8) return core;
+		for (int i = 0; i < k; ++i) core.pts[i] = out[i];
+		core.count = k;
+	} else {
+		// Concave: offset each edge inward by r and meet neighbors at the miter. Reflex corners
+		// stay sharp (their outward offsets meet at the original vertex); convex corners round.
+		// Clamp where the first edge would vanish -- best effort, not an exact inscribed limit.
+		v2 m[8];
+		for (int i = 0; i < count; ++i) {
+			v2 n0 = skew(safe_norm(p[i] - p[(i + count - 1) % count]));
+			v2 n1 = skew(safe_norm(p[(i + 1) % count] - p[i]));
+			m[i] = (n0 + n1) / cf_max(1.0f + dot(n0, n1), 1.0e-4f);
+		}
+		for (int i = 0; i < count; ++i) {
+			int j = (i + 1) % count;
+			v2 e = p[j] - p[i];
+			float l = len(e);
+			if (l <= 0) continue;
+			float shrink = dot(m[i], e / l) - dot(m[j], e / l);
+			if (shrink > 0) r = cf_min(r, l / shrink);
+		}
+		for (int i = 0; i < count; ++i) core.pts[i] = p[i] + m[i] * r;
+	}
+	core.radius = r;
+	return core;
+}
+
+// Emits a collapsed rounded core as the capsule (segment) or circle (point) it became.
+static void s_set_collapsed_core(BatchGeometry& g, const RoundedCore& core)
+{
+	g.type = BATCH_GEOMETRY_TYPE_CAPSULE;
+	g.shape[0] = core.pts[0];
+	g.shape[1] = core.pts[core.count - 1];
+	g.shape[2] = core.pts[0];
+	g.dash = { };
+}
+
+static void s_set_box_from_points(BatchGeometry& g, const v2* pts, int count, float pad)
+{
+	CF_Aabb bb = expand(make_aabb(pts, count), pad);
+	aabb_verts(g.box, bb);
+}
+
+static void s_draw_tri(v2 a, v2 b, v2 c, float stroke, float rounding, bool fill)
 {
 	BatchGeometry& g = s_push_shape_geom();
+	float radius = 0;
 
 	// A CSG group needs a distance function, so force the SDF triangle variant there.
-	if (stroke > 0 || radius > 0 || !fill || s_draw->antialias.last() || s_draw->shape_group_active) {
+	if (stroke > 0 || rounding > 0 || !fill || s_draw->antialias.last() || s_draw->shape_group_active) {
 		g.type = BATCH_GEOMETRY_TYPE_TRI_SDF;
-		float tri_pad = radius + stroke + s_draw->aaf;
-	v2 tri_mn = V2(cf_min(a.x, cf_min(b.x, c.x)) - tri_pad, cf_min(a.y, cf_min(b.y, c.y)) - tri_pad);
-	v2 tri_mx = V2(cf_max(a.x, cf_max(b.x, c.x)) + tri_pad, cf_max(a.y, cf_max(b.y, c.y)) + tri_pad);
-	g.box[0] = tri_mn;
-	g.box[1] = V2(tri_mx.x, tri_mn.y);
-	g.box[2] = tri_mx;
-	g.box[3] = V2(tri_mn.x, tri_mx.y);
-		g.shape[0] = a;
-		g.shape[1] = b;
-		g.shape[2] = c;
+		v2 tri[3] = { a, b, c };
+		s_set_box_from_points(g, tri, 3, s_draw->aaf);
+		RoundedCore core = s_rounded_core(tri, 3, rounding);
+		radius = core.radius;
+		if (core.count == 3) {
+			g.shape[0] = core.pts[0];
+			g.shape[1] = core.pts[1];
+			g.shape[2] = core.pts[2];
+		} else {
+			s_set_collapsed_core(g, core);
+		}
 	} else {
 		g.type = BATCH_GEOMETRY_TYPE_TRI;
 		g.shape[0] = a;
@@ -2107,7 +2255,7 @@ static void s_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fill)
 
 	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
-	g.radius = radius;
+	g.radius = s_inner_stroke_radius(radius, stroke, fill);
 	g.stroke = stroke;
 	g.fill = fill;
 	g.aa = s_draw->aaf;
@@ -2131,14 +2279,14 @@ static void s_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fill)
 
 }
 
-void cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, float chubbiness)
+void cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, float rounding)
 {
-	s_draw_tri(p0, p1, p2, thickness, chubbiness, false);
+	s_draw_tri(p0, p1, p2, thickness, rounding, false);
 }
 
-void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, float chubbiness)
+void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, float rounding)
 {
-	s_draw_tri(p0, p1, p2, 0, chubbiness, true);
+	s_draw_tri(p0, p1, p2, 0, rounding, true);
 }
 
 void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness)
@@ -2250,27 +2398,27 @@ void cf_draw_polyline(const CF_V2* pts, int count, float thickness, bool loop)
 	}
 }
 
-void cf_draw_polygon_fill(const CF_V2* points, int count, float chubbiness)
+void cf_draw_polygon_fill(const CF_V2* points, int count, float rounding)
 {
 	CF_ASSERT(count >= 3 && count <= 8);
 	BatchGeometry& g = s_push_shape_geom();
 
 	g.type = BATCH_GEOMETRY_TYPE_POLYGON;
-	CF_Aabb bb = expand(make_aabb(points, count), s_draw->aaf+chubbiness);
-	CF_V2 box[4];
-	aabb_verts(box, bb);
-	g.box[0] = box[0];
-	g.box[1] = box[1];
-	g.box[2] = box[2];
-	g.box[3] = box[3];
-	g.n = count;
-	for (int i = 0; i < count; ++i) {
-		g.shape[i] = points[i];
+	s_set_box_from_points(g, points, count, s_draw->aaf);
+	RoundedCore core = s_rounded_core(points, count, rounding);
+	if (core.count >= 3) {
+		g.n = core.count;
+		for (int i = 0; i < core.count; ++i) {
+			g.shape[i] = core.pts[i];
+		}
+	} else {
+		s_set_collapsed_core(g, core);
 	}
 
 	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
-	g.radius = chubbiness;
+	g.fill = true;
+	g.radius = core.radius;
 	g.aa = s_draw->aaf;
 	g.user_params = s_draw->user_params.last();
 }
@@ -2545,10 +2693,9 @@ static void s_draw_shape_group_end(float stroke, bool fill)
 	int count = s_draw->group_geoms.count();
 	if (count == 0) return;
 
-	// Composite bounds: union of the operands' (already stroke/aa padded) boxes.
-	// Subtract/intersect only shrink the shape. Smooth blending can bulge outward by up
-	// to k/4 near where surfaces meet, and the composite's own stroke extends past the
-	// operand surfaces, so pad for both.
+	// Composite bounds: union of the operands' (already aa padded) boxes. Subtract/intersect
+	// only shrink the shape, and the composite's stroke stays inside it, but smooth blending
+	// can bulge outward by up to k/4 near where surfaces meet.
 	v2 mn = V2(FLT_MAX, FLT_MAX), mx = V2(-FLT_MAX, -FLT_MAX);
 	float max_k = 0;
 	for (int i = 0; i < count; ++i) {
@@ -2559,7 +2706,7 @@ static void s_draw_shape_group_end(float stroke, bool fill)
 		}
 		max_k = cf_max(max_k, og.csg_k);
 	}
-	float pad = stroke + s_draw->aaf + max_k * 0.25f;
+	float pad = s_draw->aaf + max_k * 0.25f;
 	mn = mn - V2(pad, pad);
 	mx = mx + V2(pad, pad);
 
@@ -2572,7 +2719,7 @@ static void s_draw_shape_group_end(float stroke, bool fill)
 	g.n = count;
 	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
-	g.radius = 0;
+	g.radius = s_inner_stroke_radius(0, stroke, fill);
 	g.stroke = stroke;
 	g.fill = fill;
 	g.aa = s_draw->aaf;

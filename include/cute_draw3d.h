@@ -938,9 +938,11 @@ CF_API CF_V3 CF_CALL cf_draw3d_peek_dash(void);
  * @brief    Draws an outline around subsequent 3d strokes.
  * @param    color  The outline color.
  * @param    width  Outline width in world units. Zero (the default) disables it.
- * @remarks  The 3d twin of `cf_draw_push_outline`: a band hugging the stroke's edge, drawn under
- *           the stroke itself, straight out of the same signed distance the stroke already
- *           evaluates -- no second pass and no extra geometry. Ideal for making a selected
+ * @remarks  A band hugging the stroke's edge from outside, drawn under the stroke itself. This differs
+ *           from the 2d `cf_draw_push_outline`, which runs inside a shape's edge: 3d strokes are lines
+ *           whose thickness is not an extent to keep, and an inside band would cross a neighboring
+ *           segment's core at every polyline joint. Evaluated straight out of the same signed
+ *           distance the stroke already evaluates -- no extra geometry. Ideal for making a selected
  *           wireframe or gizmo read against a busy scene. Applies to strokes (lines, polylines,
  *           circles, arcs, wire boxes); solids ignore it. Unlike the 2d effect stack these ride
  *           uniforms rather than instance lanes, so strokes sharing effects still coalesce into
