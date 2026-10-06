@@ -549,6 +549,7 @@ struct CF_DrawListData
 
 void cf_make_draw();
 void cf_destroy_draw();
+void cf_destroy_all_fonts();
 
 // 3d mesh submission layer (cute_draw3d.cpp). Made/destroyed inside cf_make_draw and
 // cf_destroy_draw; cf_draw3d_process renders one mesh command from s_process_command after

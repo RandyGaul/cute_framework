@@ -1239,6 +1239,7 @@ void cf_destroy_draw()
 	cf_destroy_texture(s_draw->white_texture);
 	atlas_cache_term(&s_draw->atlas_cache);
 	cf_destroy_material(s_draw->material);
+	cf_destroy_arena(&s_draw->uniform_arena);
 	s_draw->~CF_Draw();
 	CF_FREE(s_draw);
 	s_draw = NULL;
@@ -2440,6 +2441,8 @@ CF_CustomShape cf_make_custom_shape(const char* sdf_src)
 		fprintf(stderr, "cf_make_custom_shape: requires the command renderer (compute-capable backend).\n");
 		return result;
 	}
+	// Re-registering a known snippet must not recompile every draw pipeline.
+	for (int i = 0; i < s_draw->custom_shape_srcs.count(); ++i) if (s_draw->custom_shape_srcs[i] == sdf_src) return { (uint32_t)(i + 1) };
 	s_draw->custom_shape_srcs.add(String(sdf_src));
 
 	// Stitch every registered snippet into custom_shapes.shd: rename each sdf() to
@@ -2597,13 +2600,13 @@ void cf_draw_shape_group_end_stroked(float thickness)
 	s_draw_shape_group_end(thickness, false);
 }
 
-CF_Result cf_make_font_from_memory(void* data, int size, const char* font_name)
+static CF_Result s_make_font(void* data, const char* font_name, bool owns)
 {
 	font_name = sintern(font_name);
 	CF_Font* font = (CF_Font*)CF_NEW(CF_Font);
 	font->file_data = (uint8_t*)data;
+	font->owns_file_data = owns;
 	if (!stbtt_InitFont(&font->info, font->file_data, stbtt_GetFontOffsetForIndex(font->file_data, 0))) {
-		CF_FREE(data);
 		CF_FREE(font);
 		return result_failure("Failed to parse ttf file with stb_truetype.h.");
 	}
@@ -2657,16 +2660,20 @@ CF_Result cf_make_font(const char* path, const char* font_name)
 	if (!data) {
 		return cf_result_error("Unable to open font file.");;
 	}
-	return cf_make_font_from_memory(data, (int)size, font_name);
+	CF_Result result = s_make_font(data, font_name, true);
+	if (cf_is_error(result)) CF_FREE(data);
+	return result;
 }
 
-void cf_destroy_font(const char* font_name)
+CF_Result cf_make_font_from_memory(void* data, int size, const char* font_name)
 {
-	font_name = sintern(font_name);
-	CF_Font* font = app->fonts.get(font_name);
-	if (!font) return;
-	app->fonts.remove(font_name);
-	CF_FREE(font->file_data);
+	CF_UNUSED(size);
+	return s_make_font(data, font_name, false);
+}
+
+static void s_destroy_font(CF_Font* font)
+{
+	if (font->owns_file_data) CF_FREE(font->file_data);
 	for (int i = 0; i < font->image_ids.count(); ++i) {
 		uint64_t image_id = font->image_ids[i];
 		CF_Pixel* pixels = app->font_pixels.get(image_id);
@@ -2677,6 +2684,22 @@ void cf_destroy_font(const char* font_name)
 	}
 	font->~CF_Font();
 	CF_FREE(font);
+}
+
+void cf_destroy_font(const char* font_name)
+{
+	font_name = sintern(font_name);
+	CF_Font* font = app->fonts.get(font_name);
+	if (!font) return;
+	app->fonts.remove(font_name);
+	s_destroy_font(font);
+}
+
+void cf_destroy_all_fonts()
+{
+	CF_Font** fonts = app->fonts.items();
+	for (int i = 0; i < app->fonts.count(); ++i) s_destroy_font(fonts[i]);
+	app->fonts.clear();
 }
 
 CF_Font* cf_font_get(const char* font_name)

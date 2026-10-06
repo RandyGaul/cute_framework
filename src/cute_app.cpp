@@ -163,6 +163,8 @@ void cf_app_recreate_default_canvas_if_needed()
 {
 	int w = (int)CF_ROUNDF(app->w * app->pixel_scale);
 	int h = (int)CF_ROUNDF(app->h * app->pixel_scale);
+	// A canvas cannot be zero-sized. Keep the current one until the window has area again.
+	if (w <= 0 || h <= 0) return;
 	s_canvas(w, h);
 	cf_draw_on_app_canvas_resized(app->w, app->h); // The draw API stays in window points.
 }
@@ -347,7 +349,8 @@ CF_Result cf_make_app(const char* window_title, CF_DisplayID display_id, int x, 
 		SDL_GetWindowPosition(app->window, &app->x, &app->y);
 		app->display_scale = SDL_GetWindowDisplayScale(app->window);
 		app->pixel_scale = window ? SDL_GetWindowPixelDensity(app->window) : 1.0f;
-		if (app->pixel_scale <= 0.0f) app->pixel_scale = 1.0f;
+		// A window without area has no density: SDL divides 0 by 0, and NaN fails every comparison.
+		if (!(app->pixel_scale > 0.0f)) app->pixel_scale = 1.0f;
 		if (options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT) app->pixel_scale = 1.0f;
 	}
 	::app = app;
@@ -444,6 +447,7 @@ void cf_destroy_app()
 #endif
 		}
 	}
+	cf_destroy_all_fonts();
 	cf_destroy_aseprite_cache();
 	cf_destroy_custom_sprite_cache();
 	cs_shutdown();

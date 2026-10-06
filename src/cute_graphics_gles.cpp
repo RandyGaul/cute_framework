@@ -550,33 +550,66 @@ static inline CF_GL_Slot* s_acquire_slot(CF_GL_Ring* ring, uint32_t frame, int* 
 	return NULL;
 }
 
+static int s_fence_wait_count;
+
+int CF_CALL cf_gles_fence_wait_count()
+{
+	return s_fence_wait_count;
+}
+
+int CF_CALL cf_gles_texture_active_slot(CF_Texture texture)
+{
+	CF_GL_Texture* t = (CF_GL_Texture*)(uintptr_t)texture.id;
+	return t ? t->active_slot : -1;
+}
+
+// WebGL fences signal only once control returns to the browser, so waiting on one would
+// yield mid-frame and let the browser composite a half-drawn canvas.
+#ifdef CF_EMSCRIPTEN
+static const bool s_reuse_busy_slot = true;
+#else
+static bool s_reuse_busy_slot = false;
+#endif
+
+void CF_CALL cf_gles_reuse_busy_ring_slots(bool reuse)
+{
+#ifndef CF_EMSCRIPTEN
+	s_reuse_busy_slot = reuse;
+#else
+	CF_UNUSED(reuse);
+#endif
+}
+
 static inline CF_GL_Slot* s_force_slot(CF_GL_Ring* ring, uint32_t frame, int* out_index)
 {
 	if (!ring->count) return NULL;
 	int index = ring->head;
 	CF_GL_Slot& slot = ring->slots[index];
 	if (!s_slot_ready(slot)) {
-		// Block the CPU until the GPU is done with this slot.
-		// If you're seeing this on the hot-path of a profile or flame-graph it means you're GPU bound.
-		if (slot.in_flight_frame == g_ctx.frame_index && !slot.fence) {
-			// Reused within one frame: no covering frame fence exists yet, so raise one now.
-			slot.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-			glFlush();
-		}
-#ifdef CF_EMSCRIPTEN
-		while (!s_slot_ready(slot)) {
-			// We can't block in glClientWaitSync on WebGL, so poll and yield to simulate it.
-			cf_sleep(0);
-		}
-#else
-		if (slot.fence) {
-			glClientWaitSync(slot.fence, GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
-			glDeleteSync(slot.fence);
-			slot.fence = 0;
+		if (s_reuse_busy_slot) {
+			// Ring uploads are glBufferSubData/glTexSubImage, which GL orders after the draws already issued.
+			if (slot.fence) {
+				glDeleteSync(slot.fence);
+				slot.fence = 0;
+			}
 			slot.in_flight_frame = 0;
+		} else {
+			++s_fence_wait_count;
+			// Block the CPU until the GPU is done with this slot.
+			// If you're seeing this on the hot-path of a profile or flame-graph it means you're GPU bound.
+			if (slot.in_flight_frame == g_ctx.frame_index && !slot.fence) {
+				// Reused within one frame: no covering frame fence exists yet, so raise one now.
+				slot.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+				glFlush();
+			}
+			if (slot.fence) {
+				glClientWaitSync(slot.fence, GL_SYNC_FLUSH_COMMANDS_BIT, GL_TIMEOUT_IGNORED);
+				glDeleteSync(slot.fence);
+				slot.fence = 0;
+				slot.in_flight_frame = 0;
+			}
+			while (!s_slot_ready(slot)) cf_sleep(0);
 		}
-		while (!s_slot_ready(slot)) cf_sleep(0);
-#endif
 	}
 	slot.last_use_frame = frame;
 	ring->head = (index + 1) % ring->count;
@@ -646,6 +679,8 @@ static inline void s_apply_state()
 	) {
 		glScissor(target->scissor.x, target->scissor.y, target->scissor.w, target->scissor.h);
 	}
+	// GL keeps the last applied box while the test is off.
+	CF_GL_Rect scissor = target->scissor_enabled ? target->scissor : current->scissor;
 
 	if (target->stencil_reference != current->stencil_reference) {
 		GLenum front_compare = GL_ALWAYS;
@@ -674,6 +709,7 @@ static inline void s_apply_state()
 	}
 
 	*current = *target;
+	current->scissor = scissor;
 	CF_POLL_OPENGL_ERROR();
 }
 
@@ -1115,8 +1151,24 @@ static inline bool s_texture_allocate_storage(CF_GL_Texture* t, CF_GL_Slot* slot
 
 static inline CF_GL_Slot* s_prepare_buffer_slot(CF_GL_Buffer* buffer, GLsizeiptr required_bytes, int* out_index)
 {
-	CF_GL_Slot* slot = s_acquire_or_wait(&buffer->ring, g_ctx.frame_index, out_index);
-	if (!slot) return NULL;
+	// Appending past every prior upload cannot overwrite a range a queued draw reads.
+	CF_GL_Ring& ring = buffer->ring;
+	CF_GL_Slot* slot = NULL;
+	int index = buffer->active_slot;
+	if (index >= 0 && index < ring.count) {
+		CF_GL_Slot& active = ring.slots[index];
+		if (required_bytes > 0 && required_bytes <= active.size - active.offset) slot = &active;
+	}
+	if (!slot) slot = s_acquire_slot(&ring, g_ctx.frame_index, &index);
+	// No idle slot: orphan one with glBufferData, GL keeps the old storage for queued draws.
+	bool orphan = slot == NULL;
+	if (orphan) {
+		index = ring.head;
+		slot = &ring.slots[index];
+		ring.head = (index + 1) % ring.count;
+	}
+	slot->last_use_frame = g_ctx.frame_index;
+	if (out_index) *out_index = index;
 	if (!slot->handle) {
 		glGenBuffers(1, &slot->handle);
 		slot->size = 0;
@@ -1126,14 +1178,16 @@ static inline CF_GL_Slot* s_prepare_buffer_slot(CF_GL_Buffer* buffer, GLsizeiptr
 	if (buffer->target == GL_ARRAY_BUFFER) s_bind_array_buffer(slot->handle);
 	else if (buffer->target == GL_ELEMENT_ARRAY_BUFFER) s_bind_element_buffer(slot->handle);
 	else glBindBuffer(buffer->target, slot->handle);
-	if (slot->size < capacity) {
+	if (orphan || slot->size < capacity || (required_bytes > 0 && required_bytes > slot->size - slot->offset)) {
 		glBufferData(buffer->target, capacity, NULL, GL_DYNAMIC_DRAW);
 		slot->size = capacity;
 		slot->offset = 0;
 		buffer->capacity = capacity;
-	} else if (required_bytes > 0 && slot->offset + required_bytes > slot->size) {
-		glBufferData(buffer->target, slot->size, NULL, GL_DYNAMIC_DRAW);
-		slot->offset = 0;
+		if (slot->fence) {
+			glDeleteSync(slot->fence);
+			slot->fence = 0;
+		}
+		slot->in_flight_frame = 0;
 	}
 	return slot;
 }
@@ -2409,6 +2463,26 @@ void cf_gles_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	s_apply_vertex_attributes(shader, mesh);
 }
 
+static void s_fence_ring_slot(CF_GL_Ring& ring, int active_slot)
+{
+	if (active_slot >= 0 && active_slot < ring.count) s_set_slot_fence(ring.slots[active_slot]);
+}
+
+// Every draw marks the ring slots it reads busy, so the next upload to them takes another slot.
+static void s_fence_draw_inputs(CF_GL_Mesh* mesh, CF_MaterialInternal* material)
+{
+	s_fence_ring_slot(mesh->vbo.ring, mesh->vbo.active_slot);
+	s_fence_ring_slot(mesh->ibo.ring, mesh->ibo.active_slot);
+	s_fence_ring_slot(mesh->instance.ring, mesh->instance.active_slot);
+	CF_MaterialState* stages[2] = { &material->vs, &material->fs };
+	for (int s = 0; s < 2; ++s) {
+		for (int i = 0; i < stages[s]->textures.count(); ++i) {
+			CF_GL_Texture* texture = (CF_GL_Texture*)(uintptr_t)stages[s]->textures[i].handle.id;
+			if (texture) s_fence_ring_slot(texture->ring, texture->active_slot);
+		}
+	}
+}
+
 void cf_gles_draw_elements()
 {
 	CF_GL_Mesh* mesh = g_ctx.mesh;
@@ -2443,29 +2517,7 @@ void cf_gles_draw_elements()
 		}
 	}
 
-	if (mesh->vbo.active_slot >= 0 && mesh->vbo.active_slot < mesh->vbo.ring.count) {
-		s_set_slot_fence(mesh->vbo.ring.slots[mesh->vbo.active_slot]);
-	}
-	if (mesh->ibo.active_slot >= 0 && mesh->ibo.active_slot < mesh->ibo.ring.count) {
-		s_set_slot_fence(mesh->ibo.ring.slots[mesh->ibo.active_slot]);
-	}
-	if (mesh->instance.active_slot >= 0 && mesh->instance.active_slot < mesh->instance.ring.count) {
-		s_set_slot_fence(mesh->instance.ring.slots[mesh->instance.active_slot]);
-	}
-	for (int texture_index = 0; texture_index < material->fs.textures.count(); ++texture_index) {
-		CF_GL_Texture* texture = (CF_GL_Texture*)(uintptr_t)material->fs.textures[texture_index].handle.id;
-		if (!texture) continue;
-		if (texture->active_slot >= 0 && texture->active_slot < texture->ring.count) {
-			s_set_slot_fence(texture->ring.slots[texture->active_slot]);
-		}
-	}
-	for (int texture_index = 0; texture_index < material->vs.textures.count(); ++texture_index) {
-		CF_GL_Texture* texture = (CF_GL_Texture*)(uintptr_t)material->vs.textures[texture_index].handle.id;
-		if (!texture) continue;
-		if (texture->active_slot >= 0 && texture->active_slot < texture->ring.count) {
-			s_set_slot_fence(texture->ring.slots[texture->active_slot]);
-		}
-	}
+	s_fence_draw_inputs(mesh, material);
 
 	CF_POLL_OPENGL_ERROR();
 	++app->draw_call_count;
@@ -2513,15 +2565,7 @@ void cf_gles_draw_elements_range(int first_element, int element_count, int insta
 		}
 	}
 
-	if (mesh->vbo.active_slot >= 0 && mesh->vbo.active_slot < mesh->vbo.ring.count) {
-		s_set_slot_fence(mesh->vbo.ring.slots[mesh->vbo.active_slot]);
-	}
-	if (mesh->ibo.active_slot >= 0 && mesh->ibo.active_slot < mesh->ibo.ring.count) {
-		s_set_slot_fence(mesh->ibo.ring.slots[mesh->ibo.active_slot]);
-	}
-	if (mesh->instance.active_slot >= 0 && mesh->instance.active_slot < mesh->instance.ring.count) {
-		s_set_slot_fence(mesh->instance.ring.slots[mesh->instance.active_slot]);
-	}
+	s_fence_draw_inputs(mesh, material);
 
 	CF_POLL_OPENGL_ERROR();
 	++app->draw_call_count;
@@ -3302,6 +3346,7 @@ void cf_gles_draw_elements_instanced(int instance_count)
 	} else if (mesh->vbo.count > 0) {
 		glDrawArraysInstanced(prim, 0, mesh->vbo.count, instance_count);
 	}
+	s_fence_draw_inputs(mesh, material);
 
 	CF_POLL_OPENGL_ERROR();
 	++app->draw_call_count;
@@ -3337,24 +3382,95 @@ struct CF_GL_Readback
 	int size;
 };
 
+static int s_readback_channels(GLenum format)
+{
+	switch (format) {
+	case GL_RED: case GL_RED_INTEGER:   return 1;
+	case GL_RG: case GL_RG_INTEGER:     return 2;
+	case GL_RGB: case GL_RGB_INTEGER:   return 3;
+	case GL_RGBA: case GL_RGBA_INTEGER: return 4;
+	default: return 0;
+	}
+}
+
 // Bytes per texel of a target's own (format, type) layout; 0 for pairs the readback
 // does not handle (packed and compressed types).
 static int s_readback_texel_size(GLenum format, GLenum type)
 {
-	int channels = 0;
-	switch (format) {
-	case GL_RED: case GL_RED_INTEGER:   channels = 1; break;
-	case GL_RG: case GL_RG_INTEGER:     channels = 2; break;
-	case GL_RGB: case GL_RGB_INTEGER:   channels = 3; break;
-	case GL_RGBA: case GL_RGBA_INTEGER: channels = 4; break;
-	default: return 0;
-	}
+	int channels = s_readback_channels(format);
+	if (!channels) return 0;
 	switch (type) {
 	case GL_UNSIGNED_BYTE: case GL_BYTE:                     return channels;
 	case GL_UNSIGNED_SHORT: case GL_SHORT: case GL_HALF_FLOAT: return channels * 2;
 	case GL_UNSIGNED_INT: case GL_INT: case GL_FLOAT:          return channels * 4;
 	default: return 0;
 	}
+}
+
+// Exact for values read from a half-float target.
+static uint16_t s_half_from_float(float value)
+{
+	uint32_t x;
+	CF_MEMCPY(&x, &value, sizeof x);
+	uint32_t sign = (x >> 16) & 0x8000;
+	uint32_t mantissa = x & 0x7fffff;
+	int exponent = (int)((x >> 23) & 0xff);
+	if (exponent == 0xff) return (uint16_t)(sign | 0x7c00 | (mantissa ? 0x200 : 0));
+	exponent -= 127 - 15;
+	if (exponent >= 31) return (uint16_t)(sign | 0x7c00);
+	if (exponent <= 0) return (uint16_t)(exponent < -10 ? sign : sign | ((mantissa | 0x800000) >> (14 - exponent)));
+	return (uint16_t)(sign | ((uint32_t)exponent << 10) | (mantissa >> 13));
+}
+
+static bool s_only_guaranteed_read_pairs;
+
+void CF_CALL cf_gles_only_guaranteed_read_pairs(bool only)
+{
+	s_only_guaranteed_read_pairs = only;
+}
+
+// The type GLES guarantees with RGBA for reading a buffer of this class: UNSIGNED_BYTE for
+// normalized fixed-point, FLOAT for floating-point. GL_NONE where readback has no fallback.
+static GLenum s_guaranteed_read_type(GLenum format, GLenum type)
+{
+	if (format != GL_RED && format != GL_RG && format != GL_RGBA) return GL_NONE;
+	switch (type) {
+	case GL_UNSIGNED_BYTE: return GL_UNSIGNED_BYTE;
+	case GL_HALF_FLOAT: case GL_FLOAT: return GL_FLOAT;
+	default: return GL_NONE;
+	}
+}
+
+// Queries the bound read buffer, so call after glReadBuffer.
+static bool s_read_pair_supported(GLenum format, GLenum type)
+{
+	if (s_only_guaranteed_read_pairs) return false;
+	GLint impl_format = 0, impl_type = 0;
+	glGetIntegerv(GL_IMPLEMENTATION_COLOR_READ_FORMAT, &impl_format);
+	glGetIntegerv(GL_IMPLEMENTATION_COLOR_READ_TYPE, &impl_type);
+	return (GLenum)impl_format == format && (GLenum)impl_type == type;
+}
+
+// Reads with the guaranteed RGBA pair and repacks into the target's own layout.
+static bool s_read_pixels_repacked(int w, int h, GLenum format, GLenum type, GLenum read_type, void* out)
+{
+	int channels = s_readback_channels(format);
+	int count = w * h;
+	void* rgba = CF_ALLOC(count * 4 * (read_type == GL_FLOAT ? 4 : 1));
+	glReadPixels(0, 0, w, h, GL_RGBA, read_type, rgba);
+	bool ok = glGetError() == GL_NO_ERROR;
+	if (ok) {
+		for (int i = 0; i < count; ++i) {
+			for (int c = 0; c < channels; ++c) {
+				int s = i * 4 + c, d = i * channels + c;
+				if (read_type == GL_UNSIGNED_BYTE) ((uint8_t*)out)[d] = ((uint8_t*)rgba)[s];
+				else if (type == GL_FLOAT) ((float*)out)[d] = ((float*)rgba)[s];
+				else ((uint16_t*)out)[d] = s_half_from_float(((float*)rgba)[s]);
+			}
+		}
+	}
+	CF_FREE(rgba);
+	return ok;
 }
 
 CF_Readback cf_gles_canvas_readback2(CF_Canvas canvas, int index)
@@ -3383,14 +3499,22 @@ CF_Readback cf_gles_canvas_readback2(CF_Canvas canvas, int index)
 	// GLES only accepts a few (format, type) pairs per framebuffer: the guaranteed one
 	// of its buffer class -- RGBA/UNSIGNED_BYTE, RGBA/FLOAT, RGBA_INTEGER with
 	// (UNSIGNED_)INT -- plus one the implementation picks, usually the target's own
-	// layout. Anything else is an INVALID_OPERATION that leaves the buffer untouched,
-	// which the error check below turns into a failed readback.
+	// layout. Anything else is an INVALID_OPERATION that leaves the buffer untouched.
 	CF_GL_Readback* rb = (CF_GL_Readback*)CF_ALLOC(sizeof(CF_GL_Readback));
 	rb->size = w * h * texel_size;
 	rb->data = CF_ALLOC(rb->size);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
-	glReadPixels(0, 0, w, h, format, type, rb->data);
-	if (glGetError() != GL_NO_ERROR) {
+	GLenum guaranteed_type = s_guaranteed_read_type(format, type);
+	bool has_fallback = guaranteed_type != GL_NONE && !(format == GL_RGBA && type == guaranteed_type);
+	GLenum err = GL_INVALID_OPERATION;
+	if (!has_fallback || s_read_pair_supported(format, type)) {
+		glReadPixels(0, 0, w, h, format, type, rb->data);
+		err = glGetError();
+	}
+	if (err == GL_INVALID_OPERATION && has_fallback) {
+		err = s_read_pixels_repacked(w, h, format, type, guaranteed_type, rb->data) ? GL_NO_ERROR : GL_INVALID_OPERATION;
+	}
+	if (err != GL_NO_ERROR) {
 		CF_FREE(rb->data);
 		CF_FREE(rb);
 		rb = NULL;

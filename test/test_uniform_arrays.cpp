@@ -12,6 +12,7 @@
 
 #include "test_harness.h"
 #include "test_app_shared.h"
+#include "test_leak.h"
 
 #include <cute.h>
 
@@ -194,8 +195,33 @@ TEST_CASE(test_uniform_array_vertex_stage)
 	return true;
 }
 
+static void s_material_cycle()
+{
+	CF_Material material = cf_make_material();
+	float vals[3][4] = { };
+	CF_M4x4 mats[2] = { cf_m4_identity(), cf_m4_identity() };
+	cf_material_set_uniform_fs(material, "u_vals", vals, CF_UNIFORM_TYPE_FLOAT4, 3);
+	cf_material_set_uniform_fs(material, "u_mats", mats, CF_UNIFORM_TYPE_MAT4, 2);
+	cf_material_set_uniform_vs(material, "u_bones", mats, CF_UNIFORM_TYPE_MAT4, 2);
+	cf_destroy_material(material);
+}
+
+TEST_CASE(test_material_destroy_does_not_leak)
+{
+	if (!test_make_app(W, H)) return true;
+	if (!test_leak_check_enabled()) return true;
+	s_material_cycle(); // Interns the uniform names.
+	TestLeakCheck leak;
+	test_leak_begin(&leak);
+	for (int i = 0; i < 3; ++i) s_material_cycle();
+	REQUIRE(test_leak_report(&leak, "material make/destroy") == 0);
+	test_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_uniform_arrays)
 {
 	RUN_TEST_CASE(test_uniform_array_roundtrip);
 	RUN_TEST_CASE(test_uniform_array_vertex_stage);
+	RUN_TEST_CASE(test_material_destroy_does_not_leak);
 }

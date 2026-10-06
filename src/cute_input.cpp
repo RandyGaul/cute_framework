@@ -512,7 +512,8 @@ static void s_refresh_pixel_scale()
 {
 	if (app->options & CF_APP_OPTIONS_NO_HIGH_DPI_BIT) return;
 	float pixel_scale = SDL_GetWindowPixelDensity(app->window);
-	if (pixel_scale <= 0.0f) pixel_scale = 1.0f;
+	// A window without area has no density (SDL divides 0 by 0); keep the current one.
+	if (!(pixel_scale > 0.0f)) return;
 	if (pixel_scale != app->pixel_scale) {
 		app->pixel_scale = pixel_scale;
 		cf_app_recreate_default_canvas_if_needed();

@@ -1007,7 +1007,10 @@ CF_API CF_Result CF_CALL cf_make_font(const char* path, const char* font_name);
  * @param    size        The size of `data` in bytes.
  * @param    font_name   A unique name for this font. Used by `cf_push_font` and friends.
  * @return   Returns any errors as `CF_Result`.
- * @remarks  Memory is only consumed when you draw a certain glyph (text character). Just loading up the font initially is
+ * @remarks  The font borrows `data` rather than copying it. Keep the buffer alive until `cf_destroy_font` (or `cf_destroy_app`)
+ *           releases the font, then free it yourself; CF never frees `data`.
+ *
+ *           Memory is only consumed when you draw a certain glyph (text character). Just loading up the font initially is
  *           a low-cost operation. You may load up many fonts with low overhead. Please note that bold, italic, etc. are actually
  *           _different fonts_ and each must be loaded up individually.
  * @related  cf_make_font cf_make_font_from_memory cf_destroy_font cf_push_font cf_push_font_size cf_push_font_blur cf_draw_text

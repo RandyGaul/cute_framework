@@ -1438,6 +1438,63 @@ TEST_CASE(test_draw_custom_shapes_advanced)
 	return true;
 }
 
+static const char* s_dedupe_circle_sdf_src = R"(
+// dedupe test: a = center, b.x = radius
+float sdf(vec2 p, ShapeParams s)
+{
+	return length(p - s.a) - s.b.x;
+}
+)";
+
+static const char* s_dedupe_box_sdf_src = R"(
+// dedupe test: a = center, b = half extents
+float sdf(vec2 p, ShapeParams s)
+{
+	vec2 d = abs(p - s.a) - s.b;
+	return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+}
+)";
+
+static CF_CustomShape s_dedupe_shape;
+
+static void s_scene_dedupe_shape()
+{
+	float params[3] = { 0, 0, 40 };
+	cf_draw_push_color(cf_make_color_rgba_f(1, 0, 0, 1));
+	cf_draw_custom_shape_fill(s_dedupe_shape, cf_make_aabb(cf_v2(-40, -40), cf_v2(40, 40)), params, 3);
+	cf_draw_pop_color();
+}
+
+TEST_CASE(test_draw_custom_shape_dedupe)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	CF_CustomShape first = cf_make_custom_shape(s_dedupe_circle_sdf_src);
+	REQUIRE(first.id);
+	CF_Shader draw_shader = app->draw_shader;
+
+	// The same source again is the same shape, with no pipeline rebuild.
+	CF_CustomShape again = cf_make_custom_shape(s_dedupe_circle_sdf_src);
+	REQUIRE(again.id == first.id);
+	REQUIRE(app->draw_shader.id == draw_shader.id);
+
+	CF_CustomShape box = cf_make_custom_shape(s_dedupe_box_sdf_src);
+	REQUIRE(box.id);
+	REQUIRE(box.id != first.id);
+
+	s_dedupe_shape = again;
+	int w = 640, h = 480;
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_dedupe_shape, mode, w, h, px));
+		REQUIRE(s_px_near(s_probe(px, w, h, 0), 255, 0, 0, 255, 3));  // Circle interior.
+		REQUIRE(s_px_near(s_probe(px, w, h, 60), 0, 0, 0, 0, 0));     // Outside the circle.
+	}
+	cf_free(px);
+	test_destroy_app();
+	return true;
+}
+
 // -------------------------------------------------------------------------------------------------
 // CSG shape groups: boolean ops over existing shape calls composited as ONE command.
 // Covers hard subtract, stroked composite outlines, smooth union bridging, translucent
@@ -2461,6 +2518,7 @@ TEST_SUITE(test_draw_tiled)
 	RUN_TEST_CASE_IF(test_draw_arrow_no_overdraw);
 	RUN_TEST_CASE_IF(test_draw_custom_shapes);
 	RUN_TEST_CASE_IF(test_draw_custom_shapes_advanced);
+	RUN_TEST_CASE_IF(test_draw_custom_shape_dedupe);
 	RUN_TEST_CASE_IF(test_draw_shape_groups);
 	RUN_TEST_CASE_IF(test_draw_tiled_budget_fallback);
 	RUN_TEST_CASE_IF(test_draw_text_curves);

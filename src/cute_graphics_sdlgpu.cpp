@@ -2748,6 +2748,7 @@ void cf_sdlgpu_destroy_compute_shader(CF_ComputeShader shader)
 	CF_ComputeShaderInternal* cs = (CF_ComputeShaderInternal*)shader.id;
 	if (!cs) return;
 	SDL_ReleaseGPUComputePipeline(g_ctx.device, cs->pipeline);
+	cs->~CF_ComputeShaderInternal();
 	CF_FREE(cs);
 }
 
