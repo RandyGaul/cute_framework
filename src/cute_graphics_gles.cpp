@@ -550,12 +550,20 @@ static inline CF_GL_Slot* s_acquire_slot(CF_GL_Ring* ring, uint32_t frame, int* 
 	return NULL;
 }
 
+static int s_fence_wait_count;
+
+int cf_gles_fence_wait_count()
+{
+	return s_fence_wait_count;
+}
+
 static inline CF_GL_Slot* s_force_slot(CF_GL_Ring* ring, uint32_t frame, int* out_index)
 {
 	if (!ring->count) return NULL;
 	int index = ring->head;
 	CF_GL_Slot& slot = ring->slots[index];
 	if (!s_slot_ready(slot)) {
+		++s_fence_wait_count;
 		// Block the CPU until the GPU is done with this slot.
 		// If you're seeing this on the hot-path of a profile or flame-graph it means you're GPU bound.
 		if (slot.in_flight_frame == g_ctx.frame_index && !slot.fence) {
@@ -1118,8 +1126,24 @@ static inline bool s_texture_allocate_storage(CF_GL_Texture* t, CF_GL_Slot* slot
 
 static inline CF_GL_Slot* s_prepare_buffer_slot(CF_GL_Buffer* buffer, GLsizeiptr required_bytes, int* out_index)
 {
-	CF_GL_Slot* slot = s_acquire_or_wait(&buffer->ring, g_ctx.frame_index, out_index);
-	if (!slot) return NULL;
+	// Appending past every prior upload cannot overwrite a range a queued draw reads.
+	CF_GL_Ring& ring = buffer->ring;
+	CF_GL_Slot* slot = NULL;
+	int index = buffer->active_slot;
+	if (index >= 0 && index < ring.count) {
+		CF_GL_Slot& active = ring.slots[index];
+		if (required_bytes > 0 && required_bytes <= active.size - active.offset) slot = &active;
+	}
+	if (!slot) slot = s_acquire_slot(&ring, g_ctx.frame_index, &index);
+	// No idle slot: orphan one with glBufferData, GL keeps the old storage for queued draws.
+	bool orphan = slot == NULL;
+	if (orphan) {
+		index = ring.head;
+		slot = &ring.slots[index];
+		ring.head = (index + 1) % ring.count;
+	}
+	slot->last_use_frame = g_ctx.frame_index;
+	if (out_index) *out_index = index;
 	if (!slot->handle) {
 		glGenBuffers(1, &slot->handle);
 		slot->size = 0;
@@ -1129,14 +1153,16 @@ static inline CF_GL_Slot* s_prepare_buffer_slot(CF_GL_Buffer* buffer, GLsizeiptr
 	if (buffer->target == GL_ARRAY_BUFFER) s_bind_array_buffer(slot->handle);
 	else if (buffer->target == GL_ELEMENT_ARRAY_BUFFER) s_bind_element_buffer(slot->handle);
 	else glBindBuffer(buffer->target, slot->handle);
-	if (slot->size < capacity) {
+	if (orphan || slot->size < capacity || (required_bytes > 0 && required_bytes > slot->size - slot->offset)) {
 		glBufferData(buffer->target, capacity, NULL, GL_DYNAMIC_DRAW);
 		slot->size = capacity;
 		slot->offset = 0;
 		buffer->capacity = capacity;
-	} else if (required_bytes > 0 && slot->offset + required_bytes > slot->size) {
-		glBufferData(buffer->target, slot->size, NULL, GL_DYNAMIC_DRAW);
-		slot->offset = 0;
+		if (slot->fence) {
+			glDeleteSync(slot->fence);
+			slot->fence = 0;
+		}
+		slot->in_flight_frame = 0;
 	}
 	return slot;
 }

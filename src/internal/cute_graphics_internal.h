@@ -280,6 +280,8 @@ void cf_gles_begin_frame();
 void cf_gles_blit_canvas(CF_Canvas canvas);
 void cf_gles_end_frame();
 void cf_gles_cleanup();
+// Test hook: how many times a full streaming ring has made the CPU wait on a GPU fence.
+int cf_gles_fence_wait_count();
 
 // Draw system sampler override API.
 // Used by the draw system to dynamically switch between nearest/linear filtering.
