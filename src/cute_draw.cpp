@@ -2441,6 +2441,8 @@ CF_CustomShape cf_make_custom_shape(const char* sdf_src)
 		fprintf(stderr, "cf_make_custom_shape: requires the command renderer (compute-capable backend).\n");
 		return result;
 	}
+	// Re-registering a known snippet must not recompile every draw pipeline.
+	for (int i = 0; i < s_draw->custom_shape_srcs.count(); ++i) if (s_draw->custom_shape_srcs[i] == sdf_src) return { (uint32_t)(i + 1) };
 	s_draw->custom_shape_srcs.add(String(sdf_src));
 
 	// Stitch every registered snippet into custom_shapes.shd: rename each sdf() to
