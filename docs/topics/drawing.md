@@ -23,7 +23,14 @@ The shape renderer in CF has a few extra features that nearly all shapes take ad
 
 - Customizeable antialiasing
 - Border stroke vs fill style
-- Edge rounding (chubbiness)
+- Corner rounding
+- Outlines and glows ([`cf_draw_push_outline`](../draw/function/cf_draw_push_outline.md), [`cf_draw_push_glow`](../draw/function/cf_draw_push_glow.md))
+
+Shapes keep the size you ask for. Nothing CF draws for a shape goes past its extent, except a glow, which is light spilling outside:
+
+- **Rounding** is a corner radius in world units. A 100x40 box with rounding 8 stays 100x40, just with rounded corners. Rounding is clamped to what the shape can hold (half the shortest side of a box, the inscribed circle of a triangle or convex polygon), so at the max a square becomes a circle.
+- **Strokes** of closed shapes (boxes, circles, triangles, shape groups) run inward from the edge: a stroke of thickness 4 covers the 4 units just inside the shape. A line's thickness is its width, centered on the line. Capsule and custom-shape strokes straddle the surface (a custom sdf may have no inside).
+- **Outlines** are a band just inside the edge, drawn over the fill like a CSS border over its background.
 
 For circles, use [`cf_draw_circle`](../draw/function/cf_draw_circle.md), for boxes/rectangles use [`cf_draw_quad`](../draw/function/cf_draw_quad.md), for lines use [`cf_draw_line`](../draw/function/cf_draw_line.md) or [`cf_draw_polyline`](../draw/function/cf_draw_polyline.md), and so on.
 
@@ -145,7 +152,7 @@ The draw API has some settings that can be pushed and popped. Pushing and poppin
 - color
 - shape antialias (0 = off, non-zero = on at that scale, default 1.5)
 - layer
-- chubbiness
+- outline and glow
 - shader
 - blend mode (normal/add/multiply/screen, per draw call — see [Blend Modes](#blend-modes))
 - render state (custom blending/stencil)
