@@ -226,6 +226,86 @@ TEST_CASE(test_draw3d_bench)
 	return true;
 }
 
+// Per-target blends ride the command stream out of line (commands carry only blends[0]), so two
+// submissions differing only in blends[1] must stay distinct commands and each draw with its own
+// mask: target 1 keeps green on the left quad and red on the right. SDL_GPU only -- GLES has no
+// indexed blend.
+TEST_CASE(test_draw3d_mrt_per_target_blend)
+{
+	const char* gles = getenv("CF_TEST_GLES");
+	if (gles && *gles == '1') return true;
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+
+	static const char* white2_fs =
+	"layout (location = 0) in vec4 v_color;\n"
+	"layout (location = 0) out vec4 out_a;\n"
+	"layout (location = 1) out vec4 out_b;\n"
+	"void main() { out_a = vec4(1.0); out_b = vec4(1.0); }\n";
+	CF_Shader shader = cf_make_shader_from_source(s_vs, white2_fs);
+	REQUIRE(shader.id);
+	CF_Mesh mesh = s_make_quad(0.4f);
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.target_count = 2;
+	CF_Canvas canvas = cf_make_canvas(params);
+	REQUIRE(canvas.id);
+	cf_canvas_set_clear_color2(canvas, 0, cf_make_color_rgb_f(0, 0, 0));
+	cf_canvas_set_clear_color2(canvas, 1, cf_make_color_rgb_f(0, 0, 0));
+
+	CF_RenderState green = cf_render_state_defaults();
+	green.blend_count = 2;
+	green.blends[1] = green.blends[0];
+	green.blends[1].write_R_enabled = false;
+	green.blends[1].write_B_enabled = false;
+	CF_RenderState red = green;
+	red.blends[1].write_R_enabled = true;
+	red.blends[1].write_G_enabled = false;
+
+	cf_app_update(NULL);
+	cf_draw3d_push_projection(cf_ortho(-1, 1, -1, 1, -1, 1));
+	cf_draw3d_push_shader(shader);
+	cf_draw3d_push_render_state(green);
+	cf_draw3d_push();
+	cf_draw3d_translate(cf_v3(-0.5f, 0, 0));
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_pop();
+	cf_draw3d_pop_render_state();
+	cf_draw3d_push_render_state(red);
+	cf_draw3d_push();
+	cf_draw3d_translate(cf_v3(0.5f, 0, 0));
+	cf_draw3d_mesh(mesh);
+	cf_draw3d_pop();
+	cf_draw3d_pop_render_state();
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	cf_draw3d_pop_shader();
+	cf_draw3d_pop_projection();
+
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	for (int target = 0; target < 2; ++target) {
+		CF_Readback rb = cf_canvas_readback2(canvas, target);
+		REQUIRE(rb.id);
+		while (!cf_readback_ready(rb)) {}
+		cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+		cf_destroy_readback(rb);
+		CF_Pixel left = s_pixel(px, 0.25f, 0.5f);
+		CF_Pixel right = s_pixel(px, 0.75f, 0.5f);
+		if (target == 0) {
+			REQUIRE(left.colors.r > 200 && left.colors.g > 200 && left.colors.b > 200);
+			REQUIRE(right.colors.r > 200 && right.colors.g > 200 && right.colors.b > 200);
+		} else {
+			REQUIRE(left.colors.g > 200 && left.colors.r < 60 && left.colors.b < 60);
+			REQUIRE(right.colors.r > 200 && right.colors.g < 60 && right.colors.b < 60);
+		}
+	}
+
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_mesh(mesh);
+	cf_destroy_shader(shader);
+	test_destroy_app();
+	return true;
+}
+
 // Geometry arena: two quads packed into one mesh, submitted interleaved as ranges with
 // per-submission attributes. The interleaving that would split per-mesh batches coalesces
 // into ONE command here, and each range still renders its own geometry and color.
@@ -2247,6 +2327,7 @@ TEST_SUITE(test_draw3d)
 	RUN_TEST_CASE(test_draw3d_layers_interleaved_coalesce);
 	RUN_TEST_CASE(test_draw3d_uniform_capture);
 	RUN_TEST_CASE(test_draw3d_escape_hatch);
+	RUN_TEST_CASE(test_draw3d_mrt_per_target_blend);
 	RUN_TEST_CASE(test_draw3d_draw_list);
 	RUN_TEST_CASE(test_draw3d_list_ambient_shader);
 	RUN_TEST_CASE(test_draw3d_list_ambient_uniforms);

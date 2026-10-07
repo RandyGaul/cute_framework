@@ -417,6 +417,7 @@ static struct
 	CF_Filter filter_override;
 	bool has_filter_override;
 	GLint max_combined_texture_units; // GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, queried once.
+	int max_canvas_targets; // min(GL_MAX_DRAW_BUFFERS, GL_MAX_COLOR_ATTACHMENTS, CF_MAX_CANVAS_TARGETS), queried once.
 
 	// One fence per FRAME covers every streaming slot used that frame (GL completes in order,
 	// so any signaled fence from frame >= N proves frame N's reads finished). This replaces the
@@ -920,6 +921,10 @@ void cf_gles_attach(SDL_Window* window)
 	g_ctx.enabled_vertex_attrib_mask = 0;
 	g_ctx.has_filter_override = false;
 	glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &g_ctx.max_combined_texture_units);
+	GLint max_draw_buffers = 4, max_color_attachments = 4; // GLES 3.0 guarantees four of each.
+	glGetIntegerv(GL_MAX_DRAW_BUFFERS, &max_draw_buffers);
+	glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &max_color_attachments);
+	g_ctx.max_canvas_targets = cf_min(cf_min((int)max_draw_buffers, (int)max_color_attachments), CF_MAX_CANVAS_TARGETS);
 	// The render-state diff cache must reset too, or state applied in a previous
 	// context elides the same state in this one (a stale viewport cache left every
 	// draw rasterizing into a 0x0 viewport -- the "Nth context renders nothing" bug).
@@ -1426,10 +1431,15 @@ uint64_t cf_gles_texture_binding_handle(CF_Texture t)
 	return ((CF_GL_Texture*)t.id)->id;
 }
 
+int cf_gles_query_max_canvas_targets()
+{
+	return g_ctx.max_canvas_targets;
+}
+
 CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 {
 	int target_count = params.target_count > 1 ? params.target_count : 1;
-	if (target_count > CF_MAX_CANVAS_TARGETS) target_count = CF_MAX_CANVAS_TARGETS;
+	if (!cf_canvas_target_count_supported(target_count)) return CF_Canvas{};
 	CF_ASSERT(target_count == 1 || params.sample_count == CF_SAMPLE_COUNT_1);
 	for (int i = 0; i < target_count; ++i) {
 		if (!cf_gles_texture_supports_format(params.targets[i].pixel_format, (CF_TextureUsageBits)params.targets[i].usage)) {

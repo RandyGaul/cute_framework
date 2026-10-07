@@ -641,7 +641,7 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 
 	s_refresh_vp();
 	uint64_t state_hash = s_draw3d->user_hash ^ (shape ? s_draw3d->shape_hash : 0);
-	CF_RenderState rs = s_draw3d->render_states.last();
+	CF_CmdRenderState rs = s_draw3d->render_states.last();
 	bool sprite_textured = sprite && !escape;
 
 	// Why a submission failed to join the previous one is the single most useful thing this
@@ -2040,7 +2040,7 @@ void cf_draw3d_process(CF_Command* cmd, CF_Canvas canvas, bool clear)
 	// would corrupt that block's upload. The set calls below re-populate everything this flush
 	// needs, so clearing first is free.
 	cf_material_clear_uniforms(material);
-	cf_material_set_render_state(material, cmd->render_state);
+	cf_material_set_render_state(material, cmd->render_state.expand());
 	// u_image is always bound: the atlas page for sprite-textured draws (below), and the 1x1
 	// white texture otherwise -- shaders sampling u_image degrade gracefully with no sprite
 	// pushed, matching the 2d layer's shape-only draws.

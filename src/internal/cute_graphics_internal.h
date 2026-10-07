@@ -245,6 +245,10 @@ void cf_shader_watch();
 void cf_shader_swap_contents(CF_Shader a, CF_Shader b);
 void cf_compute_shader_swap_contents(CF_ComputeShader a, CF_ComputeShader b);
 
+// Backends call this first in make_canvas: logs and asserts when `target_count` exceeds
+// cf_query_max_canvas_targets, so the caller gets an invalid canvas instead of fewer targets.
+bool cf_canvas_target_count_supported(int target_count);
+
 #ifndef CF_EMSCRIPTEN
 
 CF_Result cf_sdlgpu_init(const char* device_name, bool debug, CF_BackendType* backend_type);

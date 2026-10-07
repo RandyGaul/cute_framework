@@ -1423,8 +1423,18 @@ static bool s_sdl_format_is_depth(SDL_GPUTextureFormat format)
 	}
 }
 
+int cf_sdlgpu_query_max_canvas_targets()
+{
+	// SDL_GPU exposes no color attachment limit. D3D12 and Metal guarantee eight. Vulkan only
+	// guarantees four (maxColorAttachments), and SDL doesn't surface the device's real value.
+	CF_BackendType backend = s_query_backend();
+	if (backend == CF_BACKEND_TYPE_D3D12 || backend == CF_BACKEND_TYPE_METAL) return CF_MAX_CANVAS_TARGETS;
+	return 4;
+}
+
 CF_Canvas cf_sdlgpu_make_canvas(CF_CanvasParams params)
 {
+	if (!cf_canvas_target_count_supported(params.target_count > 1 ? params.target_count : 1)) return CF_Canvas{};
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)CF_CALLOC(sizeof(CF_CanvasInternal));
 	if (params.attach_target.id) {
 		// Render into one face/layer of an existing texture; the canvas owns nothing color-side.
@@ -1522,7 +1532,6 @@ CF_Canvas cf_sdlgpu_make_canvas(CF_CanvasParams params)
 		// Additional MRT color targets. These may be multisampled like target 0; each one
 		// gets its own resolve destination below.
 		canvas->target_count = params.target_count > 1 ? params.target_count : 1;
-		if (canvas->target_count > CF_MAX_CANVAS_TARGETS) canvas->target_count = CF_MAX_CANVAS_TARGETS;
 		for (int i = 1; i < canvas->target_count; ++i) {
 			canvas->cf_textures_mrt[i] = s_make_texture(params.targets[i], params.sample_count);
 			if (canvas->cf_textures_mrt[i].id) {
