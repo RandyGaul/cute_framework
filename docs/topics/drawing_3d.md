@@ -159,7 +159,7 @@ Sprites viewed at a distance or a steep angle in 3D shimmer with swimming pixels
 
 Cameras are live at replay: a recorded level renders under whatever projection/view is current, and the current 3D transform stack moves the whole list for free. Baked instances also get exact inverse-transpose normal matrices (the immediate path reuses the model rows, exact for rigid transforms and uniform scale).
 
-A recording behaves like a **closure**: state set *inside* it is part of the recording; state inherited from outside binds fresh each time the list draws. The transform stack always worked this way, and the shader and uniforms follow the same rule -- set inside `begin`/`end` they record frozen, but ambient state stays a *free variable*: `cf_draw_list` binds whatever is pushed or set then (record-time values as the fallback). That makes multi-pass rendering one-recording cheap:
+A recording behaves like a **closure**: state set *inside* it is part of the recording; state inherited from outside binds fresh each time the list draws. The transform stack always worked this way, and the shader, render state and uniforms follow the same rule -- set inside `begin`/`end` they record frozen, but ambient state stays a *free variable*: `cf_draw_list` binds whatever is pushed or set then (record-time values as the fallback). That makes multi-pass rendering one-recording cheap:
 
 ```cpp
 CF_DrawList city = cf_make_draw_list();
@@ -212,6 +212,7 @@ Each common 3D need has a sample showing the pattern, because each one is a patt
 | Sample | What it proves |
 | --- | --- |
 | `draw3d` | A 10,000-building city recorded ONCE, replayed per pass under each pass's shader (closure semantics: ambient shader + uniforms bind per pass); shadow-mapped sun via a comparison sampler (hardware PCF); fog; procedural window lights |
+| `cel_shading` | Toon shading with inverted-hull outlines: one draw list replayed twice, under the cel shader and then under a hull shader with front-face culling (ambient shader + render state bind per pass); glass props froze their blend state inside the recording |
 | `pixel_3d` | Multi-pass pixel-art pipeline: two shadow maps (color-encoded depth + hand-rolled PCF), lit pass, view-space g-buffer, 2D post-process composite |
 | `skinning` | GPU skinning: joint/weight vertex attributes + a `mat4` array uniform; sixty strands, one shared skeleton, one instanced draw |
 | `billboards` | Sprite-textured camera-facing quads: cutout trees (depth-ordered, no sorting) and additive fireflies (order-independent) |

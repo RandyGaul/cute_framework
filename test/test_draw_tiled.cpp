@@ -383,6 +383,93 @@ static void s_scene_additive()
 	cf_draw_pop_render_state();
 }
 
+// Draw list closure semantics for the render state: untouched inside the recording it is
+// ambient and replay binds whatever is pushed then; pushed inside (even with the same
+// value) it is frozen. A nested replay stays ambient unless the outer recording pushed.
+static CF_DrawList s_rs_list;
+static bool s_rs_list_push_additive;
+
+static void s_record_overlap_quads()
+{
+	cf_draw_push_color(cf_make_color_rgba_f(1, 0, 0, 1));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-80, -40), cf_v2(20, 40)), 0);
+	cf_draw_pop_color();
+	cf_draw_push_color(cf_make_color_rgba_f(0, 1, 0, 1));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-20, -40), cf_v2(80, 40)), 0);
+	cf_draw_pop_color();
+}
+
+static void s_scene_rs_list()
+{
+	CF_RenderState add = cf_render_state_defaults();
+	add.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
+	add.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE;
+	add.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
+	add.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE;
+	if (s_rs_list_push_additive) cf_draw_push_render_state(add);
+	cf_draw_list(s_rs_list);
+	if (s_rs_list_push_additive) cf_draw_pop_render_state();
+}
+
+TEST_CASE(test_draw_list_ambient_render_state)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	CF_DrawList ambient_list = cf_make_draw_list();
+	cf_draw_list_begin(ambient_list);
+	s_record_overlap_quads();
+	cf_draw_list_end();
+
+	CF_DrawList frozen_list = cf_make_draw_list();
+	cf_draw_list_begin(frozen_list);
+	cf_draw_push_render_state(cf_draw_peek_render_state());
+	s_record_overlap_quads();
+	cf_draw_pop_render_state();
+	cf_draw_list_end();
+
+	CF_DrawList nested_ambient_list = cf_make_draw_list();
+	cf_draw_list_begin(nested_ambient_list);
+	cf_draw_list(ambient_list);
+	cf_draw_list_end();
+
+	CF_DrawList nested_frozen_list = cf_make_draw_list();
+	cf_draw_list_begin(nested_frozen_list);
+	cf_draw_push_render_state(cf_draw_peek_render_state());
+	cf_draw_list(ambient_list);
+	cf_draw_pop_render_state();
+	cf_draw_list_end();
+
+	struct { CF_DrawList list; bool push; bool expect_additive; } cases[] = {
+		{ ambient_list, false, false },       // Nothing pushed: renders as recorded.
+		{ ambient_list, true, true },         // The free variable binds the replay state.
+		{ frozen_list, true, false },         // Frozen ignores the replay push.
+		{ nested_ambient_list, false, false },
+		{ nested_ambient_list, true, true },
+		{ nested_frozen_list, true, false },
+	};
+	int w = 640, h = 480;
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	for (int i = 0; i < (int)(sizeof(cases) / sizeof(cases[0])); ++i) {
+		for (int mode = 0; mode <= 1; ++mode) {
+			s_rs_list = cases[i].list;
+			s_rs_list_push_additive = cases[i].push;
+			REQUIRE(s_readback(s_scene_rs_list, mode, w, h, px));
+			REQUIRE(s_px_near(s_probe(px, w, h, -50), 255, 0, 0, 255, 3));
+			// The overlap: red + green when additive, green over red otherwise.
+			REQUIRE(s_px_near(s_probe(px, w, h, 0), cases[i].expect_additive ? 255 : 0, 255, 0, 255, 3));
+			REQUIRE(s_px_near(s_probe(px, w, h, 50), 0, 255, 0, 255, 3));
+		}
+	}
+
+	cf_free(px);
+	cf_destroy_draw_list(ambient_list);
+	cf_destroy_draw_list(frozen_list);
+	cf_destroy_draw_list(nested_ambient_list);
+	cf_destroy_draw_list(nested_frozen_list);
+	test_destroy_app();
+	return true;
+}
+
 TEST_CASE(test_draw_render_states)
 {
 	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
@@ -3004,6 +3091,7 @@ TEST_SUITE(test_draw_tiled)
 	RUN_TEST_CASE_IF(test_draw_render_layers_partial);
 	RUN_TEST_CASE_IF(test_draw_layers_cross_layer_batch);
 	RUN_TEST_CASE_IF(test_draw_list_replay_layers);
+	RUN_TEST_CASE_IF(test_draw_list_ambient_render_state);
 	RUN_TEST_CASE_IF(test_draw_layers_frame_end_prune);
 	RUN_TEST_CASE_IF(test_draw_polyline_segments);
 	RUN_TEST_CASE_IF(test_draw_degenerate_quad_finite);

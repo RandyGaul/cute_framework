@@ -515,6 +515,10 @@ CF_API CF_DrawList CF_CALL cf_make_draw_list(void);
  *           and `cf_draw_list` composes the then-current transform onto the recording at replay.
  *           Layers are list-local too: they record relative to the layer that is current when
  *           recording begins, and replay offsets them onto the then-current layer.
+ *           The render state follows closure rules: one pushed inside the recording
+ *           (`cf_draw_push_render_state`, or `cf_draw3d_push_render_state` for meshes) records
+ *           frozen, even when equal to the current one; draws recorded without one bind the render
+ *           state that is pushed when `cf_draw_list` replays them.
  *           Text records a static snapshot (animated text effects freeze at record time). Canvas
  *           blits (`cf_draw_canvas`) cannot be recorded. End with `cf_draw_list_end`.
  * @related  CF_DrawList cf_make_draw_list cf_draw_list_begin cf_draw_list_end cf_draw_list cf_destroy_draw_list
@@ -1760,8 +1764,10 @@ CF_API CF_Rect CF_CALL cf_draw_peek_scissor(void);
  * @category draw
  * @brief    Pushes a `CF_RenderState` for controlling various rendering settings.
  * @param    render_state  Various types of rendering states.
- * @remarks  Applies to 2d drawing only -- meshes use `cf_draw3d_push_render_state`.
- * @related  CF_RenderState cf_draw_push_render_state cf_draw_pop_render_state cf_draw_peek_render_state
+ * @remarks  Applies to 2d drawing only -- meshes use `cf_draw3d_push_render_state`. Inside a draw list
+ *           recording (`cf_draw_list_begin`) a pushed render state records frozen; draws recorded
+ *           without one use whatever render state is pushed when `cf_draw_list` replays them.
+ * @related  CF_RenderState cf_draw_list_begin cf_draw_list cf_draw_push_render_state cf_draw_pop_render_state cf_draw_peek_render_state
  */
 CF_API void CF_CALL cf_draw_push_render_state(CF_RenderState render_state);
 
