@@ -290,3 +290,78 @@ jobs:
           CF_TEST_GLES: "1"
           SDL_AUDIODRIVER: dummy
           LIBGL_ALWAYS_SOFTWARE: "1"
+
+  system-sdl:
+    name: "linux / system SDL3"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # CF_USE_SYSTEM_SDL=ON against SDL3 installed from source into a prefix, the way a distro or
+    # package manager provides it. Shared-only SDL with static CF also covers the shared fallback.
+    env:
+      SDL_VERSION: 3.4.0
+      SDL_SHA256: 9ac2debb493e0d3e13dbd2729fb91f4bfeb00a0f4dff5e04b73cc9bac276b38d
+      SDL_PREFIX: ${{ github.workspace }}/sdl3-install
+
+    steps:
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+          libgl1-mesa-dev libudev-dev \
+          libx11-dev libxext-dev libxrandr-dev libxi-dev libxcursor-dev libxfixes-dev libxinerama-dev \
+          xvfb mesa-vulkan-drivers libvulkan1
+
+      - uses: actions/checkout@master
+
+      - uses: ./.github/actions/setup-cmake
+
+      - name: Setup CCache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: linux-system-sdl
+
+      - name: Cache SDL3 install
+        id: sdl-cache
+        uses: actions/cache@v4
+        with:
+          path: sdl3-install
+          key: sdl3-${{ env.SDL_VERSION }}-${{ runner.os }}-shared-x11-v1
+
+      - name: Build and install SDL3
+        if: steps.sdl-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -sSL -o sdl3.zip https://github.com/libsdl-org/SDL/releases/download/release-$SDL_VERSION/SDL3-$SDL_VERSION.zip
+          echo "$SDL_SHA256  sdl3.zip" | sha256sum -c -
+          unzip -q sdl3.zip
+          cmake -S SDL3-$SDL_VERSION -B sdl3-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$SDL_PREFIX" \
+            -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST_LIBRARY=OFF -DSDL_EXAMPLES=OFF \
+            -DSDL_ALSA=OFF -DSDL_JACK=OFF -DSDL_KMSDRM=OFF -DSDL_OPENGL=OFF -DSDL_OPENGLES=OFF \
+            -DSDL_PIPEWIRE=OFF -DSDL_PULSEAUDIO=OFF -DSDL_RENDER=OFF -DSDL_SNDIO=OFF -DSDL_WAYLAND=OFF \
+            -DSDL_X11=ON -DSDL_X11_XSCRNSAVER=OFF -DSDL_X11_XTEST=OFF
+          cmake --build sdl3-build
+          cmake --install sdl3-build
+
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCMAKE_PREFIX_PATH="$SDL_PREFIX"
+          -DCF_USE_SYSTEM_SDL=ON
+          -DCF_FRAMEWORK_STATIC=ON
+          -DCF_FRAMEWORK_BUILD_SAMPLES=OFF
+
+      - name: SDL3 was not fetched
+        run: test ! -d build/_deps/sdl3-src
+
+      - name: Build
+        run: cmake --build build --target tests
+
+      - name: Tests (headless GPU)
+        run: xvfb-run -a -s "-screen 0 1280x720x24" ./build/tests test_app test_canvas_clear test_draw3d test_texture_types
+        env:
+          SDL_AUDIODRIVER: dummy
+          LIBGL_ALWAYS_SOFTWARE: "1"

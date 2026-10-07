@@ -52,6 +52,7 @@ set(CF_TEST_HDRS test_harness.h test_app_shared.h test_leak.h jpg_test_vectors.h
 
 add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
 target_link_libraries(tests PRIVATE cute)
+cf_copy_sdl_dll(tests)
 # test_crash drives the crashme sample as a child process; test_sym reads the tests binary's own debug info.
 if (CF_CUTE_SYM AND NOT EMSCRIPTEN AND NOT CMAKE_CROSSCOMPILING)
 	cf_symbols(tests FILE)
