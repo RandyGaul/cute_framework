@@ -406,6 +406,14 @@ struct CF_WPassState
 	int fs_storage_count;
 };
 
+// Owned copies that live only while the label is open: names are often dynamic (frame or entity
+// IDs), so interning them would grow the intern table without bound.
+struct CF_WLabel
+{
+	String name;
+	uint64_t id;
+};
+
 struct CF_WMsaaProbe
 {
 	WGPUTextureFormat format;
@@ -468,6 +476,14 @@ static struct
 	WGPUCommandEncoder encoder;
 	WGPURenderPassEncoder pass;
 	CF_CanvasInternal* canvas;
+
+	// Debug groups must balance within each encoder, and the command encoder takes none while a
+	// pass is open. Labels pushed during a pass go on the pass, the innermost pass_label_count of
+	// them; the command encoder is brought back in line with `labels` whenever no pass is open.
+	Array<CF_WLabel> labels;
+	Array<uint64_t> encoder_labels;
+	int pass_label_count;
+	uint64_t label_serial;
 
 	CF_WPassState ps;
 
@@ -1128,11 +1144,31 @@ static WGPUSampler s_slot_sampler(CF_WSampler* base, CF_WBindKind slot_kind, boo
 //--------------------------------------------------------------------------------------------------
 // Command encoding and submission.
 
+// Pops and pushes groups on the command encoder until they match `labels`, or none when
+// `close_all`. No pass may be open.
+static void s_sync_encoder_labels(bool close_all)
+{
+	CF_ASSERT(!g_ctx.pass);
+	int target = close_all ? 0 : g_ctx.labels.count();
+	int keep = 0;
+	while (keep < g_ctx.encoder_labels.count() && keep < target && g_ctx.encoder_labels[keep] == g_ctx.labels[keep].id) ++keep;
+	while (g_ctx.encoder_labels.count() > keep) {
+		if (!g_ctx.device_lost) wgpuCommandEncoderPopDebugGroup(g_ctx.encoder);
+		g_ctx.encoder_labels.pop();
+	}
+	for (int i = keep; i < target; ++i) {
+		if (!g_ctx.device_lost) wgpuCommandEncoderPushDebugGroup(g_ctx.encoder, s_sv(g_ctx.labels[i].name.c_str()));
+		g_ctx.encoder_labels.add(g_ctx.labels[i].id);
+	}
+}
+
 static WGPUCommandEncoder s_encoder()
 {
 	if (!g_ctx.encoder) {
 		WGPUCommandEncoderDescriptor desc = WGPU_COMMAND_ENCODER_DESCRIPTOR_INIT;
 		g_ctx.encoder = wgpuDeviceCreateCommandEncoder(g_ctx.device, &desc);
+		g_ctx.encoder_labels.clear();
+		s_sync_encoder_labels(false);
 	}
 	return g_ctx.encoder;
 }
@@ -1153,10 +1189,13 @@ static void s_flush_arena_buffers()
 static void s_end_active_pass()
 {
 	if (g_ctx.pass) {
+		for (int i = 0; i < g_ctx.pass_label_count; ++i) wgpuRenderPassEncoderPopDebugGroup(g_ctx.pass);
+		g_ctx.pass_label_count = 0;
 		wgpuRenderPassEncoderEnd(g_ctx.pass);
 		wgpuRenderPassEncoderRelease(g_ctx.pass);
 		g_ctx.pass = NULL;
 		g_ctx.ps = { };
+		s_sync_encoder_labels(false);
 	}
 	s_flush_arena_buffers();
 	g_ctx.shader = NULL;
@@ -1257,6 +1296,7 @@ static void s_submit()
 	if (g_ctx.device_lost) {
 		// Nothing reaches a lost device; the recorded work is dropped.
 		if (g_ctx.encoder) { wgpuCommandEncoderRelease(g_ctx.encoder); g_ctx.encoder = NULL; }
+		g_ctx.encoder_labels.clear();
 		for (int i = 0; i < g_ctx.staging.count(); ++i) s_free_staging_chunk(g_ctx.staging[i]);
 		g_ctx.staging.clear();
 		g_ctx.ring_used = 0;
@@ -1271,6 +1311,7 @@ static void s_submit()
 		wgpuQueueWriteBuffer(g_ctx.queue, g_ctx.arena, 0, g_ctx.arena_cpu, (size_t)g_ctx.arena_used);
 	}
 	if (g_ctx.encoder) {
+		s_sync_encoder_labels(true);
 		WGPUCommandBufferDescriptor cdesc = WGPU_COMMAND_BUFFER_DESCRIPTOR_INIT;
 		WGPUCommandBuffer cmd = wgpuCommandEncoderFinish(g_ctx.encoder, &cdesc);
 		wgpuQueueSubmit(g_ctx.queue, 1, &cmd);
@@ -1887,6 +1928,7 @@ void cf_webgpu_begin_frame()
 		s_submit();
 		s_release_swapchain();
 	}
+	g_ctx.labels.clear();
 	g_ctx.canvas = NULL;
 	g_ctx.skip_drawing = false;
 }
@@ -1971,6 +2013,7 @@ void cf_webgpu_end_frame()
 	if (g_ctx.swapchain_tex) wgpuSurfacePresent(g_ctx.surface);
 #endif
 	s_release_swapchain();
+	g_ctx.labels.clear();
 	g_ctx.canvas = NULL;
 }
 
@@ -2119,10 +2162,9 @@ static CF_Texture s_make_texture(CF_TextureParams params, int samples)
 	}
 	WGPUTextureUsage usage = WGPUTextureUsage_None;
 	if (samples == 1) {
-		usage |= WGPUTextureUsage_TextureBinding;
-		if (!fi.depth || format == WGPUTextureFormat_Depth32Float || format == WGPUTextureFormat_Depth16Unorm) {
-			usage |= WGPUTextureUsage_CopySrc | WGPUTextureUsage_CopyDst;
-		}
+		// Every depth format copies texture to texture (cf_canvas_copy_depth); only buffer copies
+		// are restricted.
+		usage |= WGPUTextureUsage_TextureBinding | WGPUTextureUsage_CopySrc | WGPUTextureUsage_CopyDst;
 		if (params.usage & CF_WGPU_STORAGE_USAGE) usage |= WGPUTextureUsage_StorageBinding;
 	}
 	if (params.usage & (CF_TEXTURE_USAGE_COLOR_TARGET_BIT | CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT)) {
@@ -2383,7 +2425,7 @@ static WGPUTextureView s_target_view(CF_TextureInternal* t, int layer, int mip)
 // SDL_GPU backend does. A render pass needs one count across all of its attachments.
 static int s_canvas_samples(const CF_CanvasParams& params)
 {
-	int target_count = params.target_count > 1 ? cf_min(params.target_count, CF_MAX_CANVAS_TARGETS) : 1;
+	int target_count = params.target_count > 1 ? params.target_count : 1;
 	int samples = s_samples(params.sample_count);
 	while (samples > 1) {
 		bool supported = true;
@@ -2397,8 +2439,14 @@ static int s_canvas_samples(const CF_CanvasParams& params)
 	return samples;
 }
 
+int cf_webgpu_query_max_canvas_targets()
+{
+	return cf_min((int)g_ctx.limits.maxColorAttachments, CF_MAX_CANVAS_TARGETS);
+}
+
 CF_Canvas cf_webgpu_make_canvas(CF_CanvasParams params)
 {
+	if (!cf_canvas_target_count_supported(params.target_count > 1 ? params.target_count : 1)) return CF_Canvas{ };
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)CF_CALLOC(sizeof(CF_CanvasInternal));
 	canvas->sample_count = CF_SAMPLE_COUNT_1;
 	canvas->samples = 1;
@@ -2445,7 +2493,7 @@ CF_Canvas cf_webgpu_make_canvas(CF_CanvasParams params)
 	int samples = s_canvas_samples(params);
 	canvas->samples = samples;
 	canvas->sample_count = samples == 8 ? CF_SAMPLE_COUNT_8 : samples == 4 ? CF_SAMPLE_COUNT_4 : samples == 2 ? CF_SAMPLE_COUNT_2 : CF_SAMPLE_COUNT_1;
-	canvas->target_count = params.target_count > 1 ? cf_min(params.target_count, CF_MAX_CANVAS_TARGETS) : 1;
+	canvas->target_count = params.target_count > 1 ? params.target_count : 1;
 	for (int i = 0; i < canvas->target_count; ++i) {
 		CF_TextureParams tp = i == 0 ? params.target : params.targets[i];
 		tp.width = params.target.width;
@@ -2514,6 +2562,29 @@ CF_Texture cf_webgpu_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
 	return ((CF_CanvasInternal*)canvas_handle.id)->cf_depth_stencil;
 }
 
+static CF_CanvasDepthDesc s_canvas_depth_desc(CF_CanvasInternal* c)
+{
+	CF_CanvasDepthDesc desc = { };
+	if (!c) return desc;
+	CF_TextureInternal* d = c->depth_view ? (CF_TextureInternal*)c->cf_depth_stencil.id : NULL;
+	desc.valid = true;
+	desc.has_depth = d != NULL;
+	desc.w = c->w;
+	desc.h = c->h;
+	desc.format = d ? (uint32_t)d->format : 0;
+	desc.sample_count = c->samples;
+	return desc;
+}
+
+static WGPUTexelCopyTextureInfo s_depth_copy_location(CF_CanvasInternal* c)
+{
+	WGPUTexelCopyTextureInfo loc = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
+	loc.texture = ((CF_TextureInternal*)c->cf_depth_stencil.id)->tex;
+	loc.mipLevel = (uint32_t)(c->attached_depth ? c->attach_mip : 0);
+	loc.origin.z = (uint32_t)(c->attached_depth ? c->attach_layer : 0);
+	return loc;
+}
+
 void cf_webgpu_canvas_get_size(CF_Canvas canvas_handle, int* w, int* h)
 {
 	CF_CanvasInternal* c = (CF_CanvasInternal*)canvas_handle.id;
@@ -2565,6 +2636,26 @@ void cf_webgpu_clear_canvas(CF_Canvas canvas_handle)
 	c->clear = false;
 }
 
+void cf_webgpu_canvas_copy_depth(CF_Canvas dst_handle, CF_Canvas src_handle)
+{
+	CF_CanvasInternal* dst = (CF_CanvasInternal*)dst_handle.id;
+	CF_CanvasInternal* src = (CF_CanvasInternal*)src_handle.id;
+	if (!cf_canvas_copy_depth_check(s_canvas_depth_desc(dst), s_canvas_depth_desc(src), dst && dst == src)) return;
+
+	// Clears requested by cf_apply_canvas wait for the next pass on that canvas. Run them now so
+	// src gives up cleared depth, and a later pass on dst loads the copy instead of clearing it.
+	if (src->clear) cf_webgpu_clear_canvas(src_handle);
+	if (dst->clear) cf_webgpu_clear_canvas(dst_handle);
+
+	// Depth-stencil copies must cover the whole subresource, every aspect.
+	s_end_active_pass();
+	if (g_ctx.device_lost) return;
+	WGPUTexelCopyTextureInfo from = s_depth_copy_location(src);
+	WGPUTexelCopyTextureInfo to = s_depth_copy_location(dst);
+	WGPUExtent3D extent = { (uint32_t)src->w, (uint32_t)src->h, 1 };
+	wgpuCommandEncoderCopyTextureToTexture(s_encoder(), &from, &to, &extent);
+}
+
 void cf_webgpu_canvas_set_clear_color(CF_Canvas canvas_handle, CF_Color color)
 {
 	CF_CanvasInternal* c = (CF_CanvasInternal*)canvas_handle.id;
@@ -2607,6 +2698,11 @@ void cf_webgpu_current_canvas_size(int* w, int* h)
 	CF_ASSERT(g_ctx.canvas);
 	*w = g_ctx.canvas->w;
 	*h = g_ctx.canvas->h;
+}
+
+bool cf_webgpu_current_canvas_has_depth()
+{
+	return g_ctx.canvas && g_ctx.canvas->depth_view;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -3895,9 +3991,34 @@ void cf_webgpu_set_sampler_override(void* sampler)
 	if (sampler) g_ctx.filter_override = (CF_Filter)((uintptr_t)sampler - 1);
 }
 
-// Debug groups must nest inside one encoder or pass, which CF's labels do not respect.
-void cf_webgpu_push_gpu_label(const char* name) { CF_UNUSED(name); }
-void cf_webgpu_pop_gpu_label() { }
+void cf_webgpu_push_gpu_label(const char* name)
+{
+	CF_WLabel label;
+	label.name = String(name);
+	label.id = ++g_ctx.label_serial;
+	g_ctx.labels.add(label);
+	if (g_ctx.pass) {
+		wgpuRenderPassEncoderPushDebugGroup(g_ctx.pass, s_sv(name));
+		g_ctx.pass_label_count++;
+	} else if (g_ctx.encoder) {
+		s_sync_encoder_labels(false);
+	}
+}
+
+void cf_webgpu_pop_gpu_label()
+{
+	if (!g_ctx.labels.count()) return;
+	g_ctx.labels.pop();
+	if (g_ctx.pass) {
+		// A label opened before the pass closes on the command encoder once the pass ends.
+		if (g_ctx.pass_label_count) {
+			wgpuRenderPassEncoderPopDebugGroup(g_ctx.pass);
+			g_ctx.pass_label_count--;
+		}
+	} else if (g_ctx.encoder) {
+		s_sync_encoder_labels(false);
+	}
+}
 
 //--------------------------------------------------------------------------------------------------
 // Compute.
@@ -4093,6 +4214,12 @@ void cf_webgpu_dispatch_compute(CF_ComputeShader shader, CF_Material material_ha
 	wgpuBindGroupRelease(bg1);
 }
 
+// The canvas stays applied and keeps any clear not yet run; a pass already begun resumes with LOAD.
+void cf_webgpu_gpu_submit()
+{
+	s_submit();
+}
+
 void cf_webgpu_gpu_sync()
 {
 	s_submit();
@@ -4246,6 +4373,8 @@ void cf_webgpu_cleanup()
 	g_ctx.dummy_textures.~Array();
 	g_ctx.msaa_probes.~Array();
 	g_ctx.supported_present_modes.~Array();
+	g_ctx.labels.~Array();
+	g_ctx.encoder_labels.~Array();
 	CF_MEMSET(&g_ctx, 0, sizeof(g_ctx));
 }
 
