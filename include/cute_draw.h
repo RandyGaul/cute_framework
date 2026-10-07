@@ -798,8 +798,11 @@ CF_API int CF_CALL cf_draw_peek_layer(void);
  *           Depth only exists on canvases made with `depth_stencil_enable`; elsewhere Z does nothing. Draws with Z
  *           always take the instanced path (the tiled path can't depth test). Draw lists record Z relative to the
  *           Z current at `cf_draw_list_begin` and add the Z current at `cf_draw_list` on replay, like layers, under
- *           the 3d camera live at replay. A draw shader that writes `gl_FragDepth` replaces the Z depth; read
- *           `gl_FragCoord.z` for the Z depth to offset from. Canvas blits (`cf_draw_canvas`) ignore Z.
+ *           the 3d camera live at replay. A custom draw shader (`cf_draw_push_shader`) has the last word on alpha,
+ *           so its draws only test depth unless the pushed render state enables `depth_write_enabled`; then
+ *           opaque draws write depth with the same half-coverage cut, applied to the shader's output. A draw
+ *           shader that writes `gl_FragDepth` replaces the Z depth; read `gl_FragCoord.z` for the Z depth to
+ *           offset from. Canvas blits (`cf_draw_canvas`) ignore Z.
  * @related  cf_draw_push_z cf_draw_pop_z cf_draw_peek_z cf_draw_push_layer cf_draw3d_push_projection cf_draw3d_push_view
  */
 CF_API void CF_CALL cf_draw_push_z(float z);

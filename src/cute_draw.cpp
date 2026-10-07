@@ -5641,16 +5641,23 @@ static void s_flush_pending_geoms()
 	int start = 0;
 	uint64_t run_tex = 0;
 	int run_w = 1, run_h = 1;
-	// Z means nothing on a canvas without depth: draw exactly as if none was pushed.
-	bool canvas_depth = cf_current_canvas_has_depth();
+	// Z means nothing on a canvas without depth: draw exactly as if none was pushed. A custom
+	// draw shader has the last word on alpha, so geometry that looks opaque on the CPU may not
+	// be: its runs only test depth, unless the caller pushed a render state that writes it.
+	int depth_cap = 2;
+	const CF_Command* pcmd = s_draw->processing_cmd;
+	if (!cf_current_canvas_has_depth()) {
+		depth_cap = 0;
+	} else if (pcmd && pcmd->shader.id != app->draw_shader.id && !pcmd->render_state.depth_write_enabled) {
+		depth_cap = 1;
+	}
 	int run_blend = n ? geoms[0].blend : 0;
-	int run_depth = n && canvas_depth ? s_depth_mode(geoms[0]) : 0;
-	for (int i = 0; i < n; ++i) {
+	int run_depth = n ? cf_min(s_depth_mode(geoms[0]), depth_cap) : 0;	for (int i = 0; i < n; ++i) {
 		const BatchGeometry& g = geoms[i];
 		if (g.csg_operand) continue; // Rides with its CSG head.
 		// Blend mode and depth mode changes split the stream: each run renders with its
 		// mode's exact fixed-function canvas state, and run sequencing preserves paint order.
-		int depth = canvas_depth ? s_depth_mode(g) : 0;
+		int depth = cf_min(s_depth_mode(g), depth_cap);
 		if (g.blend != run_blend || depth != run_depth) {
 			s_draw_report_range(geoms, uvs, start, i, run_tex, run_w, run_h, run_blend, run_depth);
 			start = i;

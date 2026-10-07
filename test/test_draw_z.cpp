@@ -6,8 +6,8 @@
 */
 
 // 2d depth (cf_draw_push_z): 2d against 3d meshes through the shared depth buffer, 2d against
-// 2d, halo-free opaque edges, unchanged output without Z, path selection, draw lists, and
-// gl_FragDepth from a draw shader.
+// 2d, halo-free opaque edges, unchanged output without Z, path selection, draw lists,
+// gl_FragDepth and alpha from draw shaders, and custom shapes.
 
 #include "test_harness.h"
 #include "test_app_shared.h"
@@ -48,6 +48,19 @@ static const char* s_frag_depth_shd =
 "{\n"
 "	gl_FragDepth = gl_FragCoord.z - 0.1;\n"
 "	return color;\n"
+"}\n";
+
+static const char* s_quarter_alpha_shd =
+"vec4 shader(vec4 color, ShaderParams params)\n"
+"{\n"
+"	return color * 0.25;\n"
+"}\n";
+
+// params: a = center, b.x = radius.
+static const char* s_disc_sdf_src =
+"float sdf(vec2 p, ShapeParams s)\n"
+"{\n"
+"	return length(p - s.a) - s.b.x;\n"
 "}\n";
 
 static CF_Mesh s_make_quad(float half)
@@ -387,7 +400,12 @@ TEST_CASE(test_draw_z_frag_depth)
 	cf_app_update(NULL);
 	cf_draw_push_z(0);
 	cf_draw_push_shader(shd);
+	// Custom draw shaders only test depth unless the render state asks for writes.
+	CF_RenderState rs = cf_draw_peek_render_state();
+	rs.depth_write_enabled = true;
+	cf_draw_push_render_state(rs);
 	s_box(8, 8, 56, 56, cf_color_red());
+	cf_draw_pop_render_state();
 	cf_draw_pop_shader();
 	cf_draw_pop_z();
 	cf_draw_push_z(1000);
@@ -411,6 +429,77 @@ TEST_CASE(test_draw_z_frag_depth)
 	return true;
 }
 
+// A custom draw shader has the last word on alpha: an opaque red box it turns 25% opaque must
+// still show (not lose its "fringe" to the depth-write cut) and must not occlude a later
+// lower-Z box behind it.
+TEST_CASE(test_draw_z_shader_alpha)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+
+	CF_Shader shd = cf_make_draw_shader_from_source(s_quarter_alpha_shd);
+	REQUIRE(shd.id);
+	CF_Canvas canvas = s_make_canvas(true);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	cf_app_update(NULL);
+	cf_clear_color(0, 0, 0, 1);
+	cf_draw_push_z(5);
+	cf_draw_push_shader(shd);
+	s_box(8, 8, 56, 56, cf_color_red());
+	cf_draw_pop_shader();
+	cf_draw_pop_z();
+	cf_draw_push_z(1);
+	s_box(32, 0, 64, 64, cf_color_blue()); // Drawn later, behind: not occluded.
+	cf_draw_pop_z();
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	s_readback(canvas, px);
+
+	CF_Pixel tint = px[32 * W + 20];
+	REQUIRE(tint.colors.r > 40 && tint.colors.r < 100); // Quarter red over black, still drawn.
+	REQUIRE(s_is(px, 44, 32, 0, 0, 255));
+
+	cf_clear_color(0, 0, 0, 0);
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_shader(shd);
+	test_destroy_app();
+	return true;
+}
+
+// Custom SDF shapes (untrusted fields with slope-based AA) depth test and write like any shape.
+TEST_CASE(test_draw_z_custom_shape)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+
+	CF_CustomShape disc = cf_make_custom_shape(s_disc_sdf_src);
+	REQUIRE(disc.id);
+	CF_Canvas canvas = s_make_canvas(true);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	cf_app_update(NULL);
+	cf_draw_push_z(5);
+	cf_draw_push_color(cf_color_green());
+	float params[3] = { 0, 0, 16 }; // Center, radius.
+	cf_draw_custom_shape_fill(disc, cf_make_aabb(cf_v2(-18, -18), cf_v2(18, 18)), params, 3);
+	cf_draw_pop_color();
+	cf_draw_pop_z();
+	cf_draw_push_z(1);
+	s_box(0, 0, W, H, cf_color_red()); // Later, behind the disc.
+	cf_draw_pop_z();
+	cf_render_to(canvas, true);
+	cf_app_draw_onto_screen(false);
+	s_readback(canvas, px);
+
+	REQUIRE(s_is(px, 32, 32, 0, 255, 0));
+	REQUIRE(s_is(px, 2, 2, 255, 0, 0));
+
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	test_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_draw_z)
 {
 	RUN_TEST_CASE(test_draw_z_vs_3d);
@@ -420,4 +509,6 @@ TEST_SUITE(test_draw_z)
 	RUN_TEST_CASE(test_draw_z_path_selection);
 	RUN_TEST_CASE(test_draw_z_draw_list);
 	RUN_TEST_CASE(test_draw_z_frag_depth);
+	RUN_TEST_CASE(test_draw_z_shader_alpha);
+	RUN_TEST_CASE(test_draw_z_custom_shape);
 }
