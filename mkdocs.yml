@@ -115,6 +115,7 @@ nav:
       - Data Structures: topics/data_structures.md
       - High-DPI Rendering: topics/hidpi.md
       - Web Builds with Emscripten: topics/emscripten.md
+      - WebGPU: topics/webgpu.md
       - Input: topics/input.md
       - Input Bindings: topics/input_bindings.md
       - macOS + iOS Builds: topics/ios.md

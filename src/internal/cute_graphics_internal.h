@@ -274,6 +274,32 @@ void cf_sdlgpu_cleanup();
 
 #endif
 
+#ifdef CF_WEBGPU
+
+CF_Result cf_webgpu_init(bool debug);
+const char* cf_webgpu_adapter_name();
+void cf_webgpu_attach(SDL_Window* window);
+bool cf_webgpu_supports_msaa(int sample_count);
+void cf_webgpu_flush();
+bool cf_webgpu_set_present_mode(CF_PresentMode mode);
+void cf_webgpu_begin_frame();
+void cf_webgpu_blit_canvas(CF_Canvas canvas);
+void cf_webgpu_end_frame();
+void cf_webgpu_cleanup();
+void cf_webgpu_imgui_init();
+void cf_webgpu_imgui_new_frame();
+void cf_webgpu_imgui_draw();
+void cf_webgpu_imgui_shutdown();
+
+// Test hooks. cf_webgpu_lose_device simulates a device loss; the app never recovers from it.
+bool cf_webgpu_device_is_lost();
+int cf_webgpu_error_count();
+int cf_webgpu_render_pass_count(); // Render passes begun since init, blits excluded.
+int cf_webgpu_submit_count(); // Queue submits since init.
+void cf_webgpu_lose_device();
+
+#endif
+
 CF_Result cf_gles_init(bool debug);
 SDL_GLContext cf_gles_get_gl_context();
 void cf_gles_attach(SDL_Window* window);
@@ -313,9 +339,10 @@ bool cf_current_canvas_has_depth();
 // Region-granular texture ops used by the draw layer's atlas cache to rebuild atlas pages
 // GPU-side (repacks become texture->texture copies instead of CPU pixel re-fetch + upload).
 // Dispatch shims live in cute_graphics.cpp, implemented in both backends. 2D textures only.
-// Coordinates are in pixels, row 0 being the first row of uploaded pixel data.
-void cf_texture_update_region(CF_Texture texture, int x, int y, int w, int h, void* pixels);
-void cf_texture_copy_region(CF_Texture dst, int dst_x, int dst_y, CF_Texture src, int src_x, int src_y, int w, int h);
+// Coordinates are in pixels, row 0 being the first row of uploaded pixel data. Exported for the
+// tests in shared builds.
+CF_API void CF_CALL cf_texture_update_region(CF_Texture texture, int x, int y, int w, int h, void* pixels);
+CF_API void CF_CALL cf_texture_copy_region(CF_Texture dst, int dst_x, int dst_y, CF_Texture src, int src_x, int src_y, int w, int h);
 
 // Mesh introspection for the draw3d layer (cute_draw3d.cpp): whether an attribute with this
 // name exists (used to detect its reserved instance attributes), and the mesh's instance

@@ -298,8 +298,21 @@ TEST_CASE(test_split_for_memleaks)
 	return true;
 }
 
+// A String made from a range inside a longer buffer must end exactly at the range.
+TEST_CASE(test_string_from_range)
+{
+	const char* text = "Device lost: more text after the range";
+	for (int i = 0; i < 64; ++i) {
+		String s(text, text + 11);
+		REQUIRE(s.len() == 11);
+		REQUIRE(CF_STRCMP(s.c_str(), "Device lost") == 0);
+	}
+	return true;
+}
+
 TEST_SUITE(test_string)
 {
+	RUN_TEST_CASE(test_string_from_range);
 	RUN_TEST_CASE(test_array_macros_simple);
 	RUN_TEST_CASE(test_string_macros_simple);
  	RUN_TEST_CASE(test_string_macros_advanced);

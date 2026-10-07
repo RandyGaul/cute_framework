@@ -32,6 +32,22 @@ static char* s_cf_strdup(const char* s)
 	return copy;
 }
 
+// Matches cspv_wg_format: unknown formats emit as rgba8unorm. CF_PixelFormat has no r32ui.
+static CF_PixelFormat s_pixel_format_from_spirv(int image_format)
+{
+	switch (image_format) {
+	case 1:  return CF_PIXEL_FORMAT_R32G32B32A32_FLOAT;
+	case 2:  return CF_PIXEL_FORMAT_R16G16B16A16_FLOAT;
+	case 3:  return CF_PIXEL_FORMAT_R32_FLOAT;
+	case 6:  return CF_PIXEL_FORMAT_R32G32_FLOAT;
+	case 7:  return CF_PIXEL_FORMAT_R16G16_FLOAT;
+	case 9:  return CF_PIXEL_FORMAT_R16_FLOAT;
+	case 32: return CF_PIXEL_FORMAT_R8G8B8A8_UINT;
+	case 33: return CF_PIXEL_FORMAT_INVALID;
+	default: return CF_PIXEL_FORMAT_R8G8B8A8_UNORM;
+	}
+}
+
 //--------------------------------------------------------------------------------------------------
 // Default filesystem VFS (mirrors cute_shader.cpp's libc vfs).
 
@@ -207,6 +223,8 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	opts.emit_hlsl = !config.skip_hlsl;
 	// MSL transpilation, for Metal (the OS compiles the source at runtime).
 	opts.emit_msl = !config.skip_msl;
+	// WGSL transpilation, for WebGPU.
+	opts.emit_wgsl = !config.skip_wgsl;
 
 	CSPV_Result r = cspv_compile_ex(source, cspv_stage, &opts);
 
@@ -251,6 +269,15 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 		msl_src_size = strlen(r.msl);
 		msl_src = (char*)cf_alloc(msl_src_size + 1);
 		memcpy(msl_src, r.msl, msl_src_size + 1);
+	}
+
+	// WGSL source likewise.
+	char* wgsl_src = NULL;
+	size_t wgsl_src_size = 0;
+	if (r.wgsl) {
+		wgsl_src_size = strlen(r.wgsl);
+		wgsl_src = (char*)cf_alloc(wgsl_src_size + 1);
+		memcpy(wgsl_src, r.wgsl, wgsl_src_size + 1);
 	}
 
 	// Reflection: map CSPV_Reflection to CF_ShaderInfo. Arrays are cf_alloc'd (freed by
@@ -374,6 +401,59 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 		}
 	}
 
+	// The WGSL bind groups (see CF_ShaderWgslBinding / CF_ShaderWgslSplit).
+	int num_wgsl_bindings = r.wgsl ? (int)asize(rf->wgsl_bindings) : 0;
+	CF_ShaderWgslBinding* wgsl_bindings = NULL;
+	if (num_wgsl_bindings > 0) {
+		wgsl_bindings = (CF_ShaderWgslBinding*)cf_alloc(sizeof(CF_ShaderWgslBinding) * num_wgsl_bindings);
+		for (int i = 0; i < num_wgsl_bindings; ++i) {
+			const CSPV_WgslBinding* b = rf->wgsl_bindings + i;
+			wgsl_bindings[i].name = b->name;
+			wgsl_bindings[i].set = b->set;
+			wgsl_bindings[i].slot = b->slot;
+			wgsl_bindings[i].binding = b->binding;
+			switch (b->kind) {
+			case CSPV_WGSL_SAMPLED_TEXTURE: wgsl_bindings[i].kind = CF_SHADER_WGSL_BINDING_KIND_SAMPLED_TEXTURE; break;
+			case CSPV_WGSL_SAMPLER: wgsl_bindings[i].kind = CF_SHADER_WGSL_BINDING_KIND_SAMPLER; break;
+			case CSPV_WGSL_STORAGE_TEXTURE: wgsl_bindings[i].kind = CF_SHADER_WGSL_BINDING_KIND_STORAGE_TEXTURE; break;
+			case CSPV_WGSL_STORAGE_BUFFER: wgsl_bindings[i].kind = CF_SHADER_WGSL_BINDING_KIND_STORAGE_BUFFER; break;
+			case CSPV_WGSL_UNIFORM_BUFFER: wgsl_bindings[i].kind = CF_SHADER_WGSL_BINDING_KIND_UNIFORM_BUFFER; break;
+			default: wgsl_bindings[i].kind = CF_SHADER_WGSL_BINDING_KIND_SPLIT_LOAD_TEXTURE; break;
+			}
+			switch (b->dim) {
+			case CSPV_WGSL_DIM_CUBE: wgsl_bindings[i].dimension = CF_TEXTURE_TYPE_CUBE; break;
+			case CSPV_WGSL_DIM_3D: wgsl_bindings[i].dimension = CF_TEXTURE_TYPE_3D; break;
+			case CSPV_WGSL_DIM_2D_ARRAY: wgsl_bindings[i].dimension = CF_TEXTURE_TYPE_2D_ARRAY; break;
+			default: wgsl_bindings[i].dimension = CF_TEXTURE_TYPE_2D; break;
+			}
+			switch (b->sample_type) {
+			case CSPV_WGSL_SAMPLE_UINT: wgsl_bindings[i].sample_type = CF_SHADER_WGSL_SAMPLE_TYPE_UINT; break;
+			case CSPV_WGSL_SAMPLE_DEPTH: wgsl_bindings[i].sample_type = CF_SHADER_WGSL_SAMPLE_TYPE_DEPTH; break;
+			default: wgsl_bindings[i].sample_type = CF_SHADER_WGSL_SAMPLE_TYPE_FLOAT; break;
+			}
+			wgsl_bindings[i].multisampled = false;
+			bool texel_format = b->kind == CSPV_WGSL_STORAGE_TEXTURE || b->kind == CSPV_WGSL_SPLIT_LOAD_TEXTURE;
+			wgsl_bindings[i].storage_format = texel_format ? s_pixel_format_from_spirv(b->image_format) : CF_PIXEL_FORMAT_INVALID;
+			switch (b->access) {
+			case CSPV_WGSL_ACCESS_WRITE: wgsl_bindings[i].storage_access = CF_SHADER_WGSL_ACCESS_WRITE; break;
+			case CSPV_WGSL_ACCESS_READ_WRITE: wgsl_bindings[i].storage_access = CF_SHADER_WGSL_ACCESS_READ_WRITE; break;
+			default: wgsl_bindings[i].storage_access = CF_SHADER_WGSL_ACCESS_READ; break;
+			}
+			wgsl_bindings[i].comparison = b->comparison;
+		}
+	}
+	int num_wgsl_splits = r.wgsl ? (int)asize(rf->wgsl_splits) : 0;
+	CF_ShaderWgslSplit* wgsl_splits = NULL;
+	if (num_wgsl_splits > 0) {
+		wgsl_splits = (CF_ShaderWgslSplit*)cf_alloc(sizeof(CF_ShaderWgslSplit) * num_wgsl_splits);
+		for (int i = 0; i < num_wgsl_splits; ++i) {
+			wgsl_splits[i].name = rf->wgsl_splits[i].name;
+			wgsl_splits[i].set = rf->wgsl_splits[i].set;
+			wgsl_splits[i].store_binding = rf->wgsl_splits[i].store_binding;
+			wgsl_splits[i].load_binding = rf->wgsl_splits[i].load_binding;
+		}
+	}
+
 	// Captured before cspv_free wipes the result.
 	int local_size[3] = { r.reflection.local_size[0], r.reflection.local_size[1], r.reflection.local_size[2] };
 
@@ -413,6 +493,12 @@ CF_ShaderCompilerResult cute_shader_compile(const char* source, CF_ShaderCompile
 	result.bytecode.shader_info.storage_buffer_infos = storage_buffer_infos;
 	result.bytecode.shader_info.num_write_sites = num_write_sites;
 	result.bytecode.shader_info.write_sites = write_sites;
+	result.bytecode.shader_info.num_wgsl_bindings = num_wgsl_bindings;
+	result.bytecode.shader_info.wgsl_bindings = wgsl_bindings;
+	result.bytecode.shader_info.num_wgsl_splits = num_wgsl_splits;
+	result.bytecode.shader_info.wgsl_splits = wgsl_splits;
+	result.bytecode.wgsl_src = wgsl_src;
+	result.bytecode.wgsl_src_size = wgsl_src_size;
 	result.preprocessed_source = preprocessed_copy;
 	result.preprocessed_source_size = preprocessed_size;
 	return result;
@@ -430,10 +516,13 @@ void cute_shader_free_result(CF_ShaderCompilerResult result)
 	cf_free(shader_info->storage_image_infos);
 	cf_free(shader_info->storage_buffer_infos);
 	cf_free(shader_info->write_sites);
+	cf_free(shader_info->wgsl_bindings);
+	cf_free(shader_info->wgsl_splits);
 
 	cf_free((void*)result.bytecode.glsl300_src);
 	cf_free((void*)result.bytecode.hlsl_src);
 	cf_free((void*)result.bytecode.msl_src);
+	cf_free((void*)result.bytecode.wgsl_src);
 	cf_free((void*)result.bytecode.content);
 	cf_free((char*)result.preprocessed_source);
 	cf_free((char*)result.error_message);

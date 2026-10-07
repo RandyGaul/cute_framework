@@ -20,6 +20,7 @@
 #define FLAG_VARNAME "-varname="
 #define FLAG_TYPE "-type="
 #define FLAG_NOGLES "-nogles"
+#define FLAG_NOWGSL "-nowgsl"
 #define FLAG_VERBOSE "-verbose"
 #define FLAG_INVALID "-"
 #define MAX_INCLUDES 64
@@ -156,6 +157,24 @@ static bool write_bytecode(
 		fprintf(file, "#define %s%s_msl_src NULL\n", var_name, suffix);
 	}
 
+	// Write WGSL (for WebGPU).
+	if (compile_result.bytecode.wgsl_src) {
+		fprintf(file, "static const char %s%s_wgsl_src[%zu] =\n\"", var_name, suffix, compile_result.bytecode.wgsl_src_size + 1);
+		for (size_t i = 0; i < compile_result.bytecode.wgsl_src_size; ++i) {
+			char ch = compile_result.bytecode.wgsl_src[i];
+			if (ch == '\n') {  // Escape new line as \n and start an actual new line
+				fprintf(file, "\\n\"\n\"");
+			} else if (ch == '"' || ch == '\\') {
+				fprintf(file, "\\%c", ch);
+			} else {
+				fprintf(file, "%c", ch);
+			}
+		}
+		fprintf(file, "\";\n");
+	} else {
+		fprintf(file, "#define %s%s_wgsl_src NULL\n", var_name, suffix);
+	}
+
 	// Write reflection info.
 	const CF_ShaderInfo* shader_info = &compile_result.bytecode.shader_info;
 
@@ -247,6 +266,31 @@ static bool write_bytecode(
 		fprintf(file, "#define %s%s_write_sites NULL\n", var_name, suffix);
 	}
 
+	// The WGSL bind groups: the WebGPU backend reads them.
+	if (shader_info->num_wgsl_bindings > 0) {
+		fprintf(file, "static CF_ShaderWgslBinding %s%s_wgsl_bindings[%d] = {\n", var_name, suffix, shader_info->num_wgsl_bindings);
+		for (int i = 0; i < shader_info->num_wgsl_bindings; ++i) {
+			const CF_ShaderWgslBinding* b = &shader_info->wgsl_bindings[i];
+			fprintf(file, "\t{ .name = \"%s\", .kind = %s, .set = %d, .slot = %d, .binding = %d, .dimension = %s, .sample_type = %s, .multisampled = %s, .storage_format = %s, .storage_access = %s, .comparison = %s },\n",
+				b->name, cf_shader_wgsl_binding_kind_to_string(b->kind), b->set, b->slot, b->binding,
+				cf_texture_type_to_string(b->dimension), cf_shader_wgsl_sample_type_to_string(b->sample_type), b->multisampled ? "true" : "false",
+				cf_pixel_format_to_string(b->storage_format), cf_shader_wgsl_access_to_string(b->storage_access), b->comparison ? "true" : "false");
+		}
+		fprintf(file, "};\n");
+	} else {
+		fprintf(file, "#define %s%s_wgsl_bindings NULL\n", var_name, suffix);
+	}
+	if (shader_info->num_wgsl_splits > 0) {
+		fprintf(file, "static CF_ShaderWgslSplit %s%s_wgsl_splits[%d] = {\n", var_name, suffix, shader_info->num_wgsl_splits);
+		for (int i = 0; i < shader_info->num_wgsl_splits; ++i) {
+			const CF_ShaderWgslSplit* sp = &shader_info->wgsl_splits[i];
+			fprintf(file, "\t{ .name = \"%s\", .set = %d, .store_binding = %d, .load_binding = %d },\n", sp->name, sp->set, sp->store_binding, sp->load_binding);
+		}
+		fprintf(file, "};\n");
+	} else {
+		fprintf(file, "#define %s%s_wgsl_splits NULL\n", var_name, suffix);
+	}
+
 	return ferror(file) == 0;
 }
 
@@ -273,6 +317,8 @@ static bool write_bytecode_struct_contents(
 	TABS(); fprintf(file, ".hlsl_src_size = %zu,\n", compile_result.bytecode.hlsl_src_size);
 	TABS(); fprintf(file, ".msl_src = %s%s_msl_src,\n", var_name, suffix);
 	TABS(); fprintf(file, ".msl_src_size = %zu,\n", compile_result.bytecode.msl_src_size);
+	TABS(); fprintf(file, ".wgsl_src = %s%s_wgsl_src,\n", var_name, suffix);
+	TABS(); fprintf(file, ".wgsl_src_size = %zu,\n", compile_result.bytecode.wgsl_src_size);
 	TABS(); fprintf(file, ".shader_info = {\n");
 	TABS(); fprintf(file, "\t.num_samplers = %d,\n", shader_info->num_samplers);
 	TABS(); fprintf(file, "\t.num_storage_textures = %d,\n", shader_info->num_storage_textures);
@@ -295,6 +341,10 @@ static bool write_bytecode_struct_contents(
 	TABS(); fprintf(file, "\t.storage_buffer_infos = %s%s_storage_buffer_infos,\n", var_name, suffix);
 	TABS(); fprintf(file, "\t.num_write_sites = %d,\n", shader_info->num_write_sites);
 	TABS(); fprintf(file, "\t.write_sites = %s%s_write_sites,\n", var_name, suffix);
+	TABS(); fprintf(file, "\t.num_wgsl_bindings = %d,\n", shader_info->num_wgsl_bindings);
+	TABS(); fprintf(file, "\t.wgsl_bindings = %s%s_wgsl_bindings,\n", var_name, suffix);
+	TABS(); fprintf(file, "\t.num_wgsl_splits = %d,\n", shader_info->num_wgsl_splits);
+	TABS(); fprintf(file, "\t.wgsl_splits = %s%s_wgsl_splits,\n", var_name, suffix);
 	TABS(); fprintf(file, "},\n");
 
 #undef TABS
@@ -433,6 +483,7 @@ int main(int argc, const char* argv[])
 	int num_includes = 0;
 	bool type_set = false;
 	bool nogles = false;
+	bool nowgsl = false;
 	bool verbose = false;
 	shader_type_t type = SHADER_TYPE_DRAW;
 	const char* include_dirs[MAX_INCLUDES];
@@ -455,6 +506,8 @@ int main(int argc, const char* argv[])
 				"                   Also requires -varname.\n"
 				"-varname=<file>    The variable name inside the C header.\n"
 				"-obytecode=<file>  (Optional) Where to write the raw SPIRV blob.\n"
+				"-nogles            Skip GLSL 300 output (the bytecode will not run on GLES3/WebGL2).\n"
+				"-nowgsl            Skip WGSL output (the bytecode will not run on WebGPU).\n"
 			);
 			return 0;
 		} else if ((flag_value = parse_flag(arg, FLAG_INCLUDE)) != NULL) {
@@ -466,6 +519,8 @@ int main(int argc, const char* argv[])
 			}
 		} else if (strcmp(arg, FLAG_NOGLES) == 0) {
 			nogles = true;
+		} else if (strcmp(arg, FLAG_NOWGSL) == 0) {
+			nowgsl = true;
 		} else if (strcmp(arg, FLAG_VERBOSE) == 0) {
 			verbose = true;
 		} else if ((flag_value = parse_flag(arg, FLAG_TYPE)) != NULL) {
@@ -588,6 +643,7 @@ int main(int argc, const char* argv[])
 			// The SSBO draw flavor cannot transpile to GLSL 300 es; the GLES flavor's
 			// transpile is grafted in below.
 			.skip_glsl300 = true,
+			.skip_wgsl = nowgsl,
 		};
 
 		// The payload storage buffer binds right after the stub's last sampler.
@@ -624,6 +680,7 @@ int main(int argc, const char* argv[])
 			config.skip_glsl300 = false;
 			config.skip_hlsl = true; // Only the GLSL 300 output is grafted from this flavor.
 			config.skip_msl = true;
+			config.skip_wgsl = true;
 			defines[num_defines++] = { "CF_GLES", "1" };
 			config.num_builtin_defines = num_defines;
 			draw_gles_result = cute_shader_compile(
@@ -644,6 +701,7 @@ int main(int argc, const char* argv[])
 			config.num_builtin_defines = --num_defines;
 			config.skip_hlsl = false;
 			config.skip_msl = false;
+			config.skip_wgsl = nowgsl;
 		} else {
 			config.skip_glsl300 = true;
 		}
@@ -694,6 +752,7 @@ int main(int argc, const char* argv[])
 			.automatic_include_guard = true,
 			.return_preprocessed_source = verbose,
 			.skip_glsl300 = nogles,
+			.skip_wgsl = nowgsl,
 		};
 
 		CF_ShaderCompilerStage compile_stage = CUTE_SHADER_STAGE_FRAGMENT;

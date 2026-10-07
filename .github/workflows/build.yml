@@ -291,6 +291,167 @@ jobs:
           SDL_AUDIODRIVER: dummy
           LIBGL_ALWAYS_SOFTWARE: "1"
 
+  emscripten-webgpu:
+    name: "emscripten / emcc / webgpu"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # The web build with CF_WEBGPU=ON carries both backends and picks WebGPU at runtime when the
+    # browser offers an adapter. This compiles that configuration (emdawnwebgpu port included) for
+    # tools/web_smoke.c alone -- the emscripten job already builds every sample -- then loads its
+    # page in Chrome twice: once with WebGPU, once without, where it must fall back to WebGL 2.
+    steps:
+      - uses: actions/checkout@master
+
+      - uses: ./.github/actions/setup-cmake
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: latest
+          actions-cache-folder: "emsdk-cache"
+
+      - name: Setup CCache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: emscripten-webgpu
+
+      - name: Configure
+        run: >
+          emcmake cmake -B build -GNinja
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCF_FRAMEWORK_STATIC=ON
+          -DCF_FRAMEWORK_BUILD_SAMPLES=OFF
+          -DCF_FRAMEWORK_BUILD_TESTS=OFF
+          -DCF_WEBGPU=ON
+
+      - name: Build
+        run: cmake --build build -j --target cute-web-smoke
+
+      # Chrome on a GPU-less Linux runner can only present a WebGPU canvas windowed (xvfb) over a
+      # real Vulkan driver: with SwiftShader, headless or not, the GPU process dies creating the
+      # canvas swapchain (no SharedImage backing), even for a plain JS page. Mesa's lavapipe works.
+      - name: Install Mesa Vulkan
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq mesa-vulkan-drivers xvfb
+
+      # The page reports its backend, a readback pixel of the red box it draws, and every console
+      # error; tools/web_smoke.py fails on any mismatch or after 60s.
+      - name: Smoke test (WebGPU, Chrome)
+        run: >
+          xvfb-run -a -s "-screen 0 1280x720x24"
+          python3 tools/web_smoke.py --headful --browser google-chrome --dir build --expect CF_BACKEND_TYPE_WEBGPU --
+          --no-sandbox --enable-unsafe-webgpu --enable-features=Vulkan --use-vulkan=native
+
+      # A browser without WebGPU is the normal case, so the fallback must log no console error.
+      - name: Smoke test (WebGPU disabled, WebGL 2 fallback)
+        run: >
+          python3 tools/web_smoke.py --browser google-chrome --dir build --expect CF_BACKEND_TYPE_GLES3 --
+          --no-sandbox --disable-blink-features=WebGPU --use-angle=swiftshader --enable-unsafe-swiftshader
+
+  webgpu-tests:
+    name: "linux / webgpu (wgpu-native)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    # Runs the test suite on the WebGPU backend natively: wgpu-native over Mesa's lavapipe Vulkan
+    # rasterizer, the same backend code the web build runs through emdawnwebgpu. CMake fetches the
+    # pinned wgpu-native release (CF_WGPU_NATIVE_DIR left empty).
+    steps:
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+          libgl1-mesa-dev libudev-dev \
+          libx11-dev libxext-dev libxrandr-dev libxi-dev libxcursor-dev libxfixes-dev libxinerama-dev \
+          xvfb mesa-vulkan-drivers libvulkan1
+
+      - uses: actions/checkout@master
+
+      - uses: ./.github/actions/setup-cmake
+
+      - name: Setup CCache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: linux-webgpu
+
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DSDL_ALSA=OFF
+          -DSDL_CCACHE=ON
+          -DSDL_JACK=OFF
+          -DSDL_KMSDRM=OFF
+          -DSDL_OPENGL=OFF
+          -DSDL_OPENGLES=OFF
+          -DSDL_PIPEWIRE=OFF
+          -DSDL_PULSEAUDIO=OFF
+          -DSDL_RENDER=OFF
+          -DSDL_SNDIO=OFF
+          -DSDL_WAYLAND=OFF
+          -DSDL_X11=ON
+          -DSDL_X11_XSCRNSAVER=OFF
+          -DSDL_X11_XTEST=OFF
+          -DCF_FRAMEWORK_STATIC=ON
+          -DCF_WEBGPU=ON
+
+      - name: Build
+        run: cmake --build build --target tests
+
+      # With CF_TEST_WEBGPU=1 the runner exits nonzero unless the app comes up on WebGPU, so a
+      # backend that never starts can't pass as a run of skipped GPU tests.
+      - name: Tests (WebGPU, headless GPU)
+        run: xvfb-run -a -s "-screen 0 1280x720x24" ./build/tests
+        env:
+          CF_TEST_WEBGPU: "1"
+          SDL_AUDIODRIVER: dummy
+
+  macos-webgpu-tests:
+    name: "macos / webgpu (wgpu-native, Metal)"
+    runs-on: macos-latest
+    timeout-minutes: 25
+    # macOS runners are scarce: manual runs only (Actions tab, Run workflow).
+    if: github.event_name == 'workflow_dispatch'
+
+    # wgpu-native over Metal through the SDL_Metal_CreateView surface path. Two suites are enough
+    # to create the surface, draw, present, and read back; the full suite runs on Linux.
+    steps:
+      - uses: actions/checkout@master
+
+      - uses: ./.github/actions/setup-cmake
+
+      - name: Setup CCache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: macos-webgpu
+
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DSDL_CCACHE=ON
+          -DCF_FRAMEWORK_STATIC=ON
+          -DCF_WEBGPU=ON
+
+      - name: Build
+        run: cmake --build build --target tests
+
+      # The release dylib's install name is @rpath/libwgpu_native.dylib, so the executable needs
+      # an LC_RPATH that reaches it; a missing one is a load failure, not a test failure.
+      - name: Check wgpu-native linkage
+        run: |
+          otool -L build/tests | grep -F "@rpath/libwgpu_native.dylib"
+          otool -l build/tests | grep -A2 LC_RPATH
+
+      # With CF_TEST_WEBGPU=1 the runner exits nonzero unless the app comes up on WebGPU.
+      - name: Tests (WebGPU over Metal)
+        run: ./build/tests test_canvas_clear test_draw3d
+        env:
+          CF_TEST_WEBGPU: "1"
+
   system-sdl:
     name: "linux / system SDL3"
     runs-on: ubuntu-latest

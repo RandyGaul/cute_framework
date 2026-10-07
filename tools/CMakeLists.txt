@@ -51,6 +51,16 @@ if (CMAKE_CURRENT_SOURCE_DIR STREQUAL "${CMAKE_SOURCE_DIR}/tools")
 	endforeach()
 endif()
 
+# cute-web-smoke, the page tools/web_smoke.py loads in Chrome to check the web build's backend
+# pick (WebGPU, or the WebGL 2 fallback) and a readback. Emscripten's default shell is enough.
+if (EMSCRIPTEN AND CF_WEBGPU AND CMAKE_CURRENT_SOURCE_DIR STREQUAL "${CMAKE_SOURCE_DIR}/tools")
+	add_executable(cute-web-smoke ${CMAKE_CURRENT_SOURCE_DIR}/web_smoke.c)
+	target_link_libraries(cute-web-smoke PRIVATE cute)
+	set_target_properties(cute-web-smoke PROPERTIES FOLDER "tools" RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} OUTPUT_NAME web_smoke SUFFIX ".html")
+	target_compile_options(cute-web-smoke PRIVATE -O1)
+	target_link_options(cute-web-smoke PRIVATE -O1)
+endif()
+
 # cute-sym, the crash reporter's symbol table tool (libraries/cute/cute_sym.h): reads a binary's
 # debug info (PDB, dSYM or debug map, ELF DWARF) into one `.sym` table, writes it beside the
 # binary or embeds it in the reserved slot, and resolves or prints reports. Plain C, no

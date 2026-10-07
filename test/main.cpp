@@ -24,6 +24,7 @@
 #include <pico/pico_unit.h>
 
 #include <cute.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "test_app_shared.h"
@@ -59,6 +60,7 @@ TEST_SUITE(test_texture_types);
 TEST_SUITE(test_shadow_sampling);
 TEST_SUITE(test_canvas_copy_depth);
 TEST_SUITE(test_instancing);
+TEST_SUITE(test_buffer_updates);
 TEST_SUITE(test_draw3d);
 TEST_SUITE(test_uniform_arrays);
 TEST_SUITE(test_gles);
@@ -78,6 +80,8 @@ TEST_SUITE(test_jpg);
 TEST_SUITE(test_dds);
 TEST_SUITE(test_sym);
 TEST_SUITE(test_crash);
+TEST_SUITE(test_imgui);
+TEST_SUITE(test_device_loss);
 
 #include <SDL3/SDL.h>
 
@@ -125,6 +129,23 @@ int main(int argc, char* argv[])
 		return false;
 	};
 
+	// Every GPU test skips when no app comes up, so a WebGPU run that silently lands on another
+	// backend, or on none, would pass. Refuse to run instead.
+	const char* webgpu = getenv("CF_TEST_WEBGPU");
+	if (webgpu && *webgpu == '1') {
+		CF_Result result = cf_make_app(NULL, 0, 0, 0, 64, 64, test_app_options(0), NULL);
+		CF_BackendType backend = cf_is_error(result) ? CF_BACKEND_TYPE_INVALID : cf_query_backend();
+		cf_destroy_app();
+		if (cf_is_error(result)) {
+			fprintf(stderr, "FATAL: CF_TEST_WEBGPU=1 but cf_make_app failed: %s\n", result.details ? result.details : "no details");
+			return 1;
+		}
+		if (backend != CF_BACKEND_TYPE_WEBGPU) {
+			fprintf(stderr, "FATAL: CF_TEST_WEBGPU=1 but the app came up on %s, not CF_BACKEND_TYPE_WEBGPU.\n", cf_backend_type_to_string(backend));
+			return 1;
+		}
+	}
+
 #define RUN_TRACED(suite_fp) if (suite_enabled(#suite_fp)) { fprintf(stderr, ">>> " #suite_fp "\n"); RUN_TEST_SUITE(suite_fp); fprintf(stderr, "<<< " #suite_fp "\n"); }
 	RUN_TRACED(test_alloc);
 	RUN_TRACED(test_app);
@@ -155,6 +176,7 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_shadow_sampling);
 	RUN_TRACED(test_canvas_copy_depth);
 	RUN_TRACED(test_instancing);
+	RUN_TRACED(test_buffer_updates);
 	RUN_TRACED(test_draw3d);
 	RUN_TRACED(test_uniform_arrays);
 	RUN_TRACED(test_gles);
@@ -178,6 +200,9 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_sym);
 	RUN_TRACED(test_crash);
 	RUN_TRACED(test_video);
+	// Private apps from here on: each suite below leaves its app unfit to share.
+	RUN_TRACED(test_imgui);
+	RUN_TRACED(test_device_loss);
 #undef RUN_TRACED
 
 	test_shutdown_shared_app(); // The shared GPU app dies here so the leak checker sees a clean exit.

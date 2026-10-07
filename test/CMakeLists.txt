@@ -32,6 +32,7 @@ set(CF_TEST_SRCS
 	test_shadow_sampling.cpp
 	test_canvas_copy_depth.cpp
 	test_instancing.cpp
+	test_buffer_updates.cpp
 	test_draw3d.cpp
 	test_uniform_arrays.cpp
 	test_gles.cpp
@@ -47,6 +48,8 @@ set(CF_TEST_SRCS
 	test_dds.cpp
 	test_sym.cpp
 	test_crash.cpp
+	test_imgui.cpp
+	test_device_loss.cpp
 	test_app_shared.cpp
 )
 set(CF_TEST_HDRS test_harness.h test_app_shared.h test_leak.h jpg_test_vectors.h)

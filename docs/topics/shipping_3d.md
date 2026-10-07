@@ -4,7 +4,7 @@ Everything on this page is documented somewhere -- a header remark here, a sampl
 
 ## The Backend Caveat Checklist
 
-CF renders through SDL_GPU (Vulkan, Metal, D3D12, D3D11) plus its own GLES3 backend for web. The API is one surface, but the floors differ. `cf_query_backend()` tells you where you landed at runtime.
+CF renders through SDL_GPU (Vulkan, Metal, D3D12, D3D11) plus its own GLES3 backend for web, and an optional [WebGPU](webgpu.md) backend that web builds pick when the browser supports it. The API is one surface, but the floors differ. `cf_query_backend()` tells you where you landed at runtime.
 
 ### Windows (D3D12 -- SDL_GPU's default driver there)
 
@@ -21,7 +21,7 @@ The web tier trades capability for reach. If browsers are a release target, desi
 
 | Missing on web | Ship instead |
 | --- | --- |
-| Compute shaders, compute-writable storage buffers | CPU-side preparation, or gate the feature per backend |
+| Compute shaders using shared memory, barriers, atomics, or writes inside loops (compute is [emulated with draws](emscripten.md#gles3-backend-capabilities)) | Simpler one-write-per-invocation shaders, CPU-side preparation, or gate the feature per backend |
 | Indirect draws (hard assert) | Ordinary submissions; baked draw lists cover most GPU-driven wins |
 | MSAA (none at all) | Post AA -- see the anti-aliasing stance below |
 | BCn compressed textures | PNG/JPG fallbacks -- see the texture recipe below |
@@ -31,6 +31,10 @@ The web tier trades capability for reach. If browsers are a release target, desi
 | Async readback | Same API, but it stalls the pipeline -- keep it out of the frame loop |
 
 Read-only storage buffers *do* work on web -- emulated through texture fetches, transparently -- limited to 4 per stage, each an anonymous block with a single runtime `vec4[]` tail. The storage-buffer skinning pattern ships on web unchanged (`model3d --gles` exercises exactly this).
+
+### Web (WebGPU)
+
+A web build with `CF_WEBGPU=ON` runs on WebGPU when the browser offers it, and on the GLES3 tier above otherwise -- so the table above is still the floor. WebGPU itself has compute, writable storage, indirect draws, per-target blends, BCn (where the device supports it), and 4x MSAA. Its own gaps are short and listed on the [WebGPU page](webgpu.md#whats-not-supported).
 
 ### Everywhere
 

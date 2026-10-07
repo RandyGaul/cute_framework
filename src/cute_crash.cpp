@@ -258,8 +258,15 @@ void cf_crash_thread_attach_internal(const char* name)
 void cf_crash_app_made_internal()
 {
 	if (!s_active || !app) return;
+#ifdef CF_WEBGPU
+	if (app->gfx_enabled && app->gfx_backend_type == CF_BACKEND_TYPE_WEBGPU) {
+		cc_set("backend", cf_backend_type_to_string(app->gfx_backend_type));
+		const char* gpu = cf_webgpu_adapter_name();
+		if (gpu && *gpu) cc_set("gpu", gpu);
+	}
+#endif
 #ifndef CF_EMSCRIPTEN
-	if (app->gfx_enabled) {
+	if (app->gfx_enabled && app->gfx_backend_type != CF_BACKEND_TYPE_WEBGPU) {
 		cc_set("backend", cf_backend_type_to_string(app->gfx_backend_type));
 		SDL_GPUDevice* device = cf_sdlgpu_get_device();
 		if (device) {

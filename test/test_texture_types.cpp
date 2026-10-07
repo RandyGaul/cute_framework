@@ -14,6 +14,7 @@
 #include "test_app_shared.h"
 
 #include <cute.h>
+#include <internal/cute_graphics_internal.h>
 
 using namespace Cute;
 
@@ -242,6 +243,117 @@ static const char* s_quad_vs =
 static const char* s_red_fs =
 "layout (location = 0) out vec4 result;\n"
 "void main() { result = vec4(1.0, 0.0, 0.0, 1.0); }\n";
+
+// A canvas on one slice of a 3D texture: cleared, then read back from that slice.
+TEST_CASE(test_render_to_3d_slice)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	CF_BackendType backend = cf_query_backend();
+	// SDL_GPU's canvas readback reads slice 0 of a 3D attachment, whichever slice was drawn.
+	if (backend != CF_BACKEND_TYPE_WEBGPU && backend != CF_BACKEND_TYPE_GLES3) { test_destroy_app(); return true; }
+
+	CF_TextureParams tp = cf_texture_defaults(16, 16);
+	tp.texture_type = CF_TEXTURE_TYPE_3D;
+	tp.layer_count = 4;
+	tp.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
+	CF_Texture volume = cf_make_texture(tp);
+	REQUIRE(volume.id);
+	CF_CanvasParams params = cf_canvas_defaults(16, 16);
+	params.attach_target = volume;
+	params.attach_layer = 2;
+	CF_Canvas canvas = cf_make_canvas(params);
+	REQUIRE(canvas.id);
+
+	cf_app_update(NULL);
+	cf_canvas_set_clear_color(canvas, cf_make_color_rgb_f(0, 1.0f, 0));
+	cf_clear_canvas(canvas);
+	cf_app_draw_onto_screen(false);
+	CF_Pixel px[16 * 16];
+	CF_Readback rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, (int)sizeof(px));
+	cf_destroy_readback(rb);
+	CF_Pixel c = px[8 * 16 + 8];
+
+	cf_destroy_canvas(canvas);
+	cf_destroy_texture(volume);
+	test_destroy_app();
+	REQUIRE(c.colors.g > 200 && c.colors.r < 60 && c.colors.b < 60);
+	return true;
+}
+
+static int s_backend_error_count()
+{
+#ifdef CF_WEBGPU
+	if (cf_query_backend() == CF_BACKEND_TYPE_WEBGPU) return cf_webgpu_error_count();
+#endif
+	return 0;
+}
+
+static bool s_frame_still_renders()
+{
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(16, 16));
+	cf_app_update(NULL);
+	cf_canvas_set_clear_color(canvas, cf_make_color_rgb_f(0, 0, 1.0f));
+	cf_clear_canvas(canvas);
+	cf_app_draw_onto_screen(false);
+	CF_Pixel px[16 * 16];
+	CF_Readback rb = cf_canvas_readback(canvas);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, (int)sizeof(px));
+	cf_destroy_readback(rb);
+	cf_destroy_canvas(canvas);
+	return px[8 * 16 + 8].colors.b > 200 && px[8 * 16 + 8].colors.r < 60;
+}
+
+// Region copies and uploads that reach past a texture are skipped, rather than taking the frame
+// (or, on wgpu-native, the process) down with them.
+TEST_CASE(test_texture_region_out_of_bounds)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	CF_Texture a = cf_make_texture(cf_texture_defaults(16, 16));
+	CF_Texture b = cf_make_texture(cf_texture_defaults(16, 16));
+	CF_Pixel pixels[16 * 16] = { };
+
+	int errors = s_backend_error_count();
+	cf_app_update(NULL);
+	cf_texture_copy_region(b, 8, 8, a, 0, 0, 16, 16);
+	cf_texture_update_region(a, 4, 4, 16, 16, pixels);
+	cf_app_draw_onto_screen(false);
+	bool renders = s_frame_still_renders();
+	int new_errors = s_backend_error_count() - errors;
+
+	cf_destroy_texture(a);
+	cf_destroy_texture(b);
+	test_destroy_app();
+	REQUIRE(renders);
+	REQUIRE(new_errors == 0);
+	return true;
+}
+
+// Any command WebGPU rejects (here a copy between formats) invalidates its whole submission.
+// The submission is dropped and later frames render.
+TEST_CASE(test_webgpu_invalid_submission_dropped)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	if (cf_query_backend() != CF_BACKEND_TYPE_WEBGPU) { test_destroy_app(); return true; }
+	CF_Texture a = cf_make_texture(cf_texture_defaults(16, 16));
+	CF_TextureParams tp = cf_texture_defaults(16, 16);
+	tp.pixel_format = CF_PIXEL_FORMAT_R8_UNORM;
+	CF_Texture b = cf_make_texture(tp);
+
+	cf_app_update(NULL);
+	cf_texture_copy_region(b, 0, 0, a, 0, 0, 16, 16);
+	cf_app_draw_onto_screen(false);
+	bool renders = s_frame_still_renders();
+
+	cf_destroy_texture(a);
+	cf_destroy_texture(b);
+	test_destroy_app();
+	REQUIRE(renders);
+	return true;
+}
 
 // Pins the cube-face T-axis convention that samples/point_light.c relies on: a face camera
 // built with cf_look_at + a Y-mirrored cf_perspective (see that sample's face_projection
@@ -643,13 +755,225 @@ TEST_CASE(test_standalone_sampler)
 	return true;
 }
 
+// A 4x4 texture with three solid mips: red, green, blue.
+static CF_Texture s_make_mip_chain()
+{
+	CF_TextureParams tp = cf_texture_defaults(4, 4);
+	tp.filter = CF_FILTER_NEAREST;
+	tp.mip_filter = CF_MIP_FILTER_NEAREST;
+	tp.allocate_mipmaps = true;
+	tp.mip_count = 3;
+	CF_Texture tex = cf_make_texture(tp);
+	CF_Pixel colors[3] = { cf_make_pixel_rgb(255, 0, 0), cf_make_pixel_rgb(0, 255, 0), cf_make_pixel_rgb(0, 0, 255) };
+	for (int mip = 0; mip < 3; ++mip) {
+		CF_Pixel texels[16];
+		int n = (4 >> mip) * (4 >> mip);
+		for (int i = 0; i < n; ++i) texels[i] = colors[mip];
+		cf_texture_update_mip(tex, texels, n * (int)sizeof(CF_Pixel), mip);
+	}
+	return tex;
+}
+
+// min_lod == max_lod pins sampling to that one mip, even when the shader asks for another.
+TEST_CASE(test_sampler_equal_lod_clamp)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+
+	CF_Texture tex = s_make_mip_chain();
+	REQUIRE(tex.id);
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_lod_fs);
+	REQUIRE(shader.id);
+	CF_Mesh mesh = s_make_fullscreen_quad();
+	CF_Material material = cf_make_material();
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	CF_SamplerParams sp = cf_sampler_defaults();
+	sp.filter = CF_FILTER_NEAREST;
+	sp.mip_filter = CF_MIP_FILTER_NEAREST;
+	sp.min_lod = 1;
+	sp.max_lod = 1;
+	CF_Sampler pinned = cf_make_sampler(sp);
+	REQUIRE(pinned.id);
+	cf_material_set_texture_fs_sampler(material, "u_tex", tex, pinned);
+	float lods[3] = { 0, 1, 2 };
+	for (int i = 0; i < 3; ++i) {
+		float lod[4] = { lods[i], 0, 0, 0 };
+		cf_material_set_uniform_fs(material, "u_lod", lod, CF_UNIFORM_TYPE_FLOAT4, 1);
+		CF_Pixel c = s_draw_and_read(canvas, mesh, shader, material, px);
+		REQUIRE(c.colors.g > 200 && c.colors.r < 60 && c.colors.b < 60);
+	}
+
+	cf_destroy_sampler(pinned);
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_material(material);
+	cf_destroy_mesh(mesh);
+	cf_destroy_shader(shader);
+	cf_destroy_texture(tex);
+	test_destroy_app();
+	return true;
+}
+
+// Destroying a sampler releases it. Thousands of distinct samplers made and destroyed one at a
+// time must not pile up past the driver's sampler limit, and a sampler recreated after its
+// twin was destroyed still works.
+TEST_CASE(test_sampler_destroy_recreate)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+
+	CF_Texture tex = s_make_mip_chain();
+	REQUIRE(tex.id);
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_lod_fs);
+	REQUIRE(shader.id);
+	CF_Mesh mesh = s_make_fullscreen_quad();
+	CF_Material material = cf_make_material();
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	float lod[4] = { 0, 0, 0, 0 };
+	cf_material_set_uniform_fs(material, "u_lod", lod, CF_UNIFORM_TYPE_FLOAT4, 1);
+
+	CF_SamplerParams sp = cf_sampler_defaults();
+	sp.filter = CF_FILTER_NEAREST;
+	sp.mip_filter = CF_MIP_FILTER_NEAREST;
+	for (int i = 0; i < 5000; ++i) {
+		sp.max_lod = 2.0f + (float)i * 0.001f;
+		CF_Sampler s = cf_make_sampler(sp);
+		REQUIRE(s.id);
+		cf_destroy_sampler(s);
+	}
+
+	// Pinned to mip 2 (blue), destroyed, then the same parameters again.
+	sp.min_lod = 2;
+	sp.max_lod = 2;
+	CF_Sampler s = cf_make_sampler(sp);
+	cf_material_set_texture_fs_sampler(material, "u_tex", tex, s);
+	CF_Pixel c = s_draw_and_read(canvas, mesh, shader, material, px);
+	REQUIRE(c.colors.b > 200 && c.colors.r < 60 && c.colors.g < 60);
+	cf_destroy_sampler(s);
+	s = cf_make_sampler(sp);
+	REQUIRE(s.id);
+	cf_material_set_texture_fs_sampler(material, "u_tex", tex, s);
+	c = s_draw_and_read(canvas, mesh, shader, material, px);
+	REQUIRE(c.colors.b > 200 && c.colors.r < 60 && c.colors.g < 60);
+	cf_destroy_sampler(s);
+
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_material(material);
+	cf_destroy_mesh(mesh);
+	cf_destroy_shader(shader);
+	cf_destroy_texture(tex);
+	test_destroy_app();
+	return true;
+}
+
+// A texture destroyed and replaced between draws, likely at the same address, must not leave a
+// cached binding pointing at the old one.
+TEST_CASE(test_texture_recreate_rebinds)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+
+	const char* fs =
+		"layout (location = 0) out vec4 result;\n"
+		"layout (set = 2, binding = 0) uniform sampler2D u_tex;\n"
+		"void main() { result = texture(u_tex, vec2(0.5, 0.5)); }\n";
+	CF_Shader shader = cf_make_shader_from_source(s_vs, fs);
+	REQUIRE(shader.id);
+	CF_Mesh mesh = s_make_fullscreen_quad();
+	CF_Material material = cf_make_material();
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	CF_Pixel colors[3] = { cf_make_pixel_rgb(255, 0, 0), cf_make_pixel_rgb(0, 255, 0), cf_make_pixel_rgb(0, 0, 255) };
+	for (int i = 0; i < 32; ++i) {
+		CF_Pixel color = colors[i % 3];
+		CF_TextureParams tp = cf_texture_defaults(1, 1);
+		tp.filter = CF_FILTER_NEAREST;
+		CF_Texture tex = cf_make_texture(tp);
+		REQUIRE(tex.id);
+		cf_texture_update(tex, &color, (int)sizeof(CF_Pixel));
+		cf_material_set_texture_fs(material, "u_tex", tex);
+		CF_Pixel c = s_draw_and_read(canvas, mesh, shader, material, px);
+		REQUIRE(c.colors.r == color.colors.r && c.colors.g == color.colors.g && c.colors.b == color.colors.b);
+		cf_destroy_texture(tex);
+	}
+
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_material(material);
+	cf_destroy_mesh(mesh);
+	cf_destroy_shader(shader);
+	test_destroy_app();
+	return true;
+}
+
+// BC1 mips below the 4x4 block size (2x2, 1x1) upload whole blocks; each mip samples its color.
+TEST_CASE(test_bc1_small_mips)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	if (!cf_texture_supports_format(CF_PIXEL_FORMAT_BC1_RGBA_UNORM, CF_TEXTURE_USAGE_SAMPLER_BIT)) { test_destroy_app(); return true; }
+
+	CF_TextureParams tp = cf_texture_defaults(8, 8);
+	tp.pixel_format = CF_PIXEL_FORMAT_BC1_RGBA_UNORM;
+	tp.filter = CF_FILTER_NEAREST;
+	tp.mip_filter = CF_MIP_FILTER_NEAREST;
+	tp.allocate_mipmaps = true;
+	tp.mip_count = 4;
+	CF_Texture tex = cf_make_texture(tp);
+	REQUIRE(tex.id);
+	// Solid blocks: color0 in RGB565, color1 = 0 (four-color mode), every index 0.
+	uint16_t c565[4] = { 0xF800, 0x07E0, 0x001F, 0xFFFF };
+	int expect[4][3] = { { 255, 0, 0 }, { 0, 255, 0 }, { 0, 0, 255 }, { 255, 255, 255 } };
+	for (int mip = 0; mip < 4; ++mip) {
+		int blocks_w = ((8 >> mip) + 3) / 4;
+		int blocks = blocks_w * blocks_w;
+		uint8_t data[4 * 8] = { };
+		for (int b = 0; b < blocks; ++b) {
+			data[b * 8 + 0] = (uint8_t)(c565[mip] & 0xFF);
+			data[b * 8 + 1] = (uint8_t)(c565[mip] >> 8);
+		}
+		cf_texture_update_mip(tex, data, blocks * 8, mip);
+	}
+
+	CF_Shader shader = cf_make_shader_from_source(s_vs, s_lod_fs);
+	REQUIRE(shader.id);
+	CF_Mesh mesh = s_make_fullscreen_quad();
+	CF_Material material = cf_make_material();
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	cf_material_set_texture_fs(material, "u_tex", tex);
+	for (int mip = 0; mip < 4; ++mip) {
+		float lod[4] = { (float)mip, 0, 0, 0 };
+		cf_material_set_uniform_fs(material, "u_lod", lod, CF_UNIFORM_TYPE_FLOAT4, 1);
+		CF_Pixel c = s_draw_and_read(canvas, mesh, shader, material, px);
+		REQUIRE(cf_abs(c.colors.r - expect[mip][0]) < 8 && cf_abs(c.colors.g - expect[mip][1]) < 8 && cf_abs(c.colors.b - expect[mip][2]) < 8);
+	}
+
+	cf_free(px);
+	cf_destroy_canvas(canvas);
+	cf_destroy_material(material);
+	cf_destroy_mesh(mesh);
+	cf_destroy_shader(shader);
+	cf_destroy_texture(tex);
+	test_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_texture_types)
 {
 	RUN_TEST_CASE(test_cube_map_sample);
 	RUN_TEST_CASE(test_texture_array_sample);
 	RUN_TEST_CASE(test_render_to_cube_face);
+	RUN_TEST_CASE(test_render_to_3d_slice);
+	RUN_TEST_CASE(test_texture_region_out_of_bounds);
+	RUN_TEST_CASE(test_webgpu_invalid_submission_dropped);
 	RUN_TEST_CASE(test_cube_face_orientation);
 	RUN_TEST_CASE(test_depth_attach);
 	RUN_TEST_CASE(test_attach_mip);
 	RUN_TEST_CASE(test_standalone_sampler);
+	RUN_TEST_CASE(test_sampler_equal_lod_clamp);
+	RUN_TEST_CASE(test_sampler_destroy_recreate);
+	RUN_TEST_CASE(test_texture_recreate_rebinds);
+	RUN_TEST_CASE(test_bc1_small_mips);
 }

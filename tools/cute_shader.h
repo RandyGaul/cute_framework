@@ -57,6 +57,10 @@ typedef struct CF_ShaderCompilerConfig
 	// except Metal-without-SPIR-V; offline compilation keeps it.
 	bool skip_msl;
 
+	// Skip transpilation to WGSL. Runtime compilation skips it on every backend
+	// except WebGPU; offline compilation keeps it.
+	bool skip_wgsl;
+
 	// Optional: when a user draw shader is injected as shader_stub.shd, report its
 	// errors under this name (usually the user's shader path) instead.
 	const char* shader_stub_display_name;

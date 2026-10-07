@@ -116,7 +116,8 @@ typedef struct CF_Canvas { uint64_t id; } CF_Canvas;
  *           half-float, ...) only where the driver's implementation-defined read pair matches
  *           the target. A target it cannot read returns a zero'd handle; BGRA targets come back
  *           in RGBA byte order.
- *           The GLES backend (which is what web/Emscripten builds use) implements readback
+ *           WebGPU (desktop and web) reads back asynchronously, like SDL_GPU.
+ *           The GLES backend (WebGL2 on the web) implements readback
  *           synchronously: the copy has already happened by the time `cf_canvas_readback` returns and
  *           `cf_readback_ready` is immediately true. The API shape is the same either way, so polling
  *           code stays portable, but expect a pipeline stall there rather than an async copy.
@@ -207,6 +208,8 @@ typedef struct CF_StorageBuffer { uint64_t id; } CF_StorageBuffer;
 	CF_ENUM(BACKEND_TYPE_PRIVATE,  4)                                              \
 	/* @entry OpenGL ES 3 backend. */                                              \
 	CF_ENUM(BACKEND_TYPE_GLES3,  5)                                                \
+	/* @entry WebGPU backend. */                                                   \
+	CF_ENUM(BACKEND_TYPE_WEBGPU, 6)                                                \
 	/* @end */
 
 typedef enum CF_BackendType
@@ -238,153 +241,6 @@ CF_INLINE const char* cf_backend_type_to_string(CF_BackendType type) {
  * @related  CF_BackendType cf_backend_type_to_string cf_query_backend
  */
 CF_API CF_BackendType CF_CALL cf_query_backend(void);
-
-/**
- * @enum     CF_PixelFormat
- * @category graphics
- * @brief    The various supported pixel formats for GPU.
- * @remarks  Pixel format support varies depending on driver, hardware, and usage flags.
- *           The `PIXEL_FORMAT_R8G8B8A8_UNORM` represents a safe default format.
- * @related  CF_PixelFormat cf_pixel_format_to_string CF_PixelFormatOp
- */
-#define CF_PIXEL_FORMAT_DEFS \
-	/* @entry Invalid pixel format. */                                                         \
-	CF_ENUM(PIXEL_FORMAT_INVALID,                -1)                                           \
-	/* @entry 8-bit alpha channel, 8 bits total, unsigned normalized. */                       \
-	CF_ENUM(PIXEL_FORMAT_A8_UNORM,                0)                                           \
-	/* @entry 8-bit red channel, 8 bits total, unsigned normalized. */                         \
-	CF_ENUM(PIXEL_FORMAT_R8_UNORM,                1)                                           \
-	/* @entry 8-bit red/green channels, 16 bits total, unsigned normalized. */                 \
-	CF_ENUM(PIXEL_FORMAT_R8G8_UNORM,              2)                                           \
-	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, unsigned normalized. */      \
-	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_UNORM,          3)                                           \
-	/* @entry 16-bit red channel, 16 bits total, unsigned normalized. */                       \
-	CF_ENUM(PIXEL_FORMAT_R16_UNORM,               4)                                           \
-	/* @entry 16-bit red/green channels, 32 bits total, unsigned normalized. */                \
-	CF_ENUM(PIXEL_FORMAT_R16G16_UNORM,            5)                                           \
-	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total, unsigned normalized. */     \
-	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_UNORM,      6)                                           \
-	/* @entry 10-bit red/green/blue channels, 2-bit alpha channel, 32 bits total, unsigned normalized. */\
-	CF_ENUM(PIXEL_FORMAT_R10G10B10A2_UNORM,       7)                                           \
-	/* @entry 5-bit blue, 6-bit green, 5-bit red channels, 16 bits total, unsigned normalized. */\
-	CF_ENUM(PIXEL_FORMAT_B5G6R5_UNORM,            8)                                           \
-	/* @entry 5-bit blue/green/red channels, 1-bit alpha channel, 16 bits total, unsigned normalized. */\
-	CF_ENUM(PIXEL_FORMAT_B5G5R5A1_UNORM,          9)                                           \
-	/* @entry 4-bit blue/green/red/alpha channels, 16 bits total, unsigned normalized. */      \
-	CF_ENUM(PIXEL_FORMAT_B4G4R4A4_UNORM,         10)                                           \
-	/* @entry 8-bit blue/green/red/alpha channels, 32 bits total, unsigned normalized. */      \
-	CF_ENUM(PIXEL_FORMAT_B8G8R8A8_UNORM,         11)                                           \
-	/* @entry BC1 compressed format, unsigned normalized. */                                   \
-	CF_ENUM(PIXEL_FORMAT_BC1_RGBA_UNORM,         12)                                           \
-	/* @entry BC2 compressed format, unsigned normalized. */                                   \
-	CF_ENUM(PIXEL_FORMAT_BC2_RGBA_UNORM,         13)                                           \
-	/* @entry BC3 compressed format, unsigned normalized. */                                   \
-	CF_ENUM(PIXEL_FORMAT_BC3_RGBA_UNORM,         14)                                           \
-	/* @entry BC4 compressed format, unsigned normalized. */                                   \
-	CF_ENUM(PIXEL_FORMAT_BC4_R_UNORM,            15)                                           \
-	/* @entry BC5 compressed format, unsigned normalized. */                                   \
-	CF_ENUM(PIXEL_FORMAT_BC5_RG_UNORM,           16)                                           \
-	/* @entry BC7 compressed format, unsigned normalized. */                                   \
-	CF_ENUM(PIXEL_FORMAT_BC7_RGBA_UNORM,         17)                                           \
-	/* @entry BC6H compressed format, signed float. */                                         \
-	CF_ENUM(PIXEL_FORMAT_BC6H_RGB_FLOAT,         18)                                           \
-	/* @entry BC6H compressed format, unsigned float. */                                       \
-	CF_ENUM(PIXEL_FORMAT_BC6H_RGB_UFLOAT,        19)                                           \
-	/* @entry 8-bit red channel, 8 bits total, signed normalized. */                           \
-	CF_ENUM(PIXEL_FORMAT_R8_SNORM,               20)                                           \
-	/* @entry 8-bit red/green channels, 16 bits total, signed normalized. */                   \
-	CF_ENUM(PIXEL_FORMAT_R8G8_SNORM,             21)                                           \
-	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, signed normalized. */        \
-	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_SNORM,         22)                                           \
-	/* @entry 16-bit red channel, 16 bits total, signed normalized. */                         \
-	CF_ENUM(PIXEL_FORMAT_R16_SNORM,              23)                                           \
-	/* @entry 16-bit red/green channels, 32 bits total, signed normalized. */                  \
-	CF_ENUM(PIXEL_FORMAT_R16G16_SNORM,           24)                                           \
-	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total, signed normalized. */       \
-	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_SNORM,     25)                                           \
-	/* @entry 16-bit red channel, 16 bits total, float. */                                     \
-	CF_ENUM(PIXEL_FORMAT_R16_FLOAT,              26)                                           \
-	/* @entry 16-bit red/green channels, 32 bits total, float. */                              \
-	CF_ENUM(PIXEL_FORMAT_R16G16_FLOAT,           27)                                           \
-	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total, float. */                   \
-	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_FLOAT,     28)                                           \
-	/* @entry 32-bit red channel, 32 bits total, float. */                                     \
-	CF_ENUM(PIXEL_FORMAT_R32_FLOAT,              29)                                           \
-	/* @entry 32-bit red/green channels, 64 bits total, float. */                              \
-	CF_ENUM(PIXEL_FORMAT_R32G32_FLOAT,           30)                                           \
-	/* @entry 32-bit red/green/blue/alpha channels, 128 bits total, float. */                  \
-	CF_ENUM(PIXEL_FORMAT_R32G32B32A32_FLOAT,     31)                                           \
-	/* @entry 11-bit red/green channels, 10-bit blue channel, 32 bits total, unsigned float. */\
-	CF_ENUM(PIXEL_FORMAT_R11G11B10_UFLOAT,       32)                                           \
-	/* @entry 8-bit red channel, 8 bits total, unsigned integer. */                            \
-	CF_ENUM(PIXEL_FORMAT_R8_UINT,                33)                                           \
-	/* @entry 8-bit red/green channels, 16 bits total, unsigned integer. */                    \
-	CF_ENUM(PIXEL_FORMAT_R8G8_UINT,              34)                                           \
-	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, unsigned integer. */         \
-	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_UINT,          35)                                           \
-	/* @entry 16-bit red-only channel, unsigned integer. */                                    \
-	CF_ENUM(PIXEL_FORMAT_R16_UINT,               36)                                           \
-	/* @entry 16-bit red/green channels, 32 bits total, unsigned integer. */                   \
-	CF_ENUM(PIXEL_FORMAT_R16G16_UINT,            37)                                           \
-	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total, unsigned integer. */        \
-	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_UINT,      38)                                           \
-	/* @entry 8-bit red channel, 8 bits total, signed integer. */                              \
-	CF_ENUM(PIXEL_FORMAT_R8_INT,                 39)                                           \
-	/* @entry 8-bit red/green channels, 16 bits total, signed integer. */                      \
-	CF_ENUM(PIXEL_FORMAT_R8G8_INT,               40)                                           \
-	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, signed integer. */           \
-	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_INT,           41)                                           \
-	/* @entry 16-bit red channel, 16 bits total, signed integer. */                            \
-	CF_ENUM(PIXEL_FORMAT_R16_INT,                42)                                           \
-	/* @entry 16-bit red/green channels, 32 bits total, signed integer. */                     \
-	CF_ENUM(PIXEL_FORMAT_R16G16_INT,             43)                                           \
-	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total, signed integer. */          \
-	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_INT,       44)                                           \
-	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, unsigned normalized, sRGB. */\
-	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB,    45)                                           \
-	/* @entry 8-bit blue/green/red/alpha channels, 32 bits total, unsigned normalized, sRGB. */\
-	CF_ENUM(PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB,    46)                                           \
-	/* @entry BC1 compressed format, unsigned normalized, sRGB. */                             \
-	CF_ENUM(PIXEL_FORMAT_BC1_RGBA_UNORM_SRGB,    47)                                           \
-	/* @entry BC2 compressed format, unsigned normalized, sRGB. */                             \
-	CF_ENUM(PIXEL_FORMAT_BC2_RGBA_UNORM_SRGB,    48)                                           \
-	/* @entry BC3 compressed format, unsigned normalized, sRGB. */                             \
-	CF_ENUM(PIXEL_FORMAT_BC3_RGBA_UNORM_SRGB,    49)                                           \
-	/* @entry BC7 compressed format, unsigned normalized, sRGB. */                             \
-	CF_ENUM(PIXEL_FORMAT_BC7_RGBA_UNORM_SRGB,    50)                                           \
-	/* @entry 16-bit depth, 16 bits total, unsigned normalized. */                             \
-	CF_ENUM(PIXEL_FORMAT_D16_UNORM,              51)                                           \
-	/* @entry 24-bit depth, 24 bits total, unsigned normalized. */                             \
-	CF_ENUM(PIXEL_FORMAT_D24_UNORM,              52)                                           \
-	/* @entry 32-bit depth, 32 bits total, float. */                                           \
-	CF_ENUM(PIXEL_FORMAT_D32_FLOAT,              53)                                           \
-	/* @entry 24-bit depth, 8-bit stencil, 32 bits total, unsigned normalized depth, unsigned integer stencil. */\
-	CF_ENUM(PIXEL_FORMAT_D24_UNORM_S8_UINT,      54)                                           \
-	/* @entry 32-bit depth, 8-bit stencil, 40 bits total, float depth, unsigned integer stencil. */\
-	CF_ENUM(PIXEL_FORMAT_D32_FLOAT_S8_UINT,      55)
-	/* @end */
-
-typedef enum CF_PixelFormat
-{
-	#define CF_ENUM(K, V) CF_##K = V,
-	CF_PIXEL_FORMAT_DEFS
-	#undef CF_ENUM
-} CF_PixelFormat;
-
-/**
- * @function cf_pixel_format_to_string
- * @category graphics
- * @brief    Returns a `CF_PixelFormat` converted to a C string.
- * @related  CF_PixelFormat cf_pixel_format_to_string CF_PixelFormatOp
- */
-CF_INLINE const char* cf_pixel_format_to_string(CF_PixelFormat format) {
-	switch (format) {
-	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
-	CF_PIXEL_FORMAT_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
 
 /**
  * @enum     CF_PixelFormatOp
@@ -729,47 +585,6 @@ CF_API void CF_CALL cf_destroy_sampler(CF_Sampler sampler);
 
 
 /**
- * @enum     CF_TextureType
- * @category graphics
- * @brief    The shape of a texture: 2D, cube map, 3D, or 2D array.
- * @remarks  Matches the sampler type in the shader: `sampler2D`, `samplerCube`, `sampler3D`, or
- *           `sampler2DArray`. See `CF_TextureParams` and `cf_texture_update_layer`.
- * @related  CF_TextureType cf_texture_type_to_string CF_TextureParams cf_make_texture cf_texture_update_layer
- */
-#define CF_TEXTURE_TYPE_DEFS \
-	/* @entry An ordinary 2D texture (the default). */                                          \
-	CF_ENUM(TEXTURE_TYPE_2D,       0)                                                           \
-	/* @entry A cube map: six square 2D faces, sampled by direction with `samplerCube`. */      \
-	CF_ENUM(TEXTURE_TYPE_CUBE,     1)                                                           \
-	/* @entry A 3D (volume) texture, sampled with `sampler3D`. */                               \
-	CF_ENUM(TEXTURE_TYPE_3D,       2)                                                           \
-	/* @entry An array of 2D layers, sampled with `sampler2DArray`. */                          \
-	CF_ENUM(TEXTURE_TYPE_2D_ARRAY, 3)                                                           \
-	/* @end */
-
-typedef enum CF_TextureType
-{
-	#define CF_ENUM(K, V) CF_##K = V,
-	CF_TEXTURE_TYPE_DEFS
-	#undef CF_ENUM
-} CF_TextureType;
-
-/**
- * @function cf_texture_type_to_string
- * @category graphics
- * @brief    Returns a `CF_TextureType` value as a string.
- * @related  CF_TextureType
- */
-CF_INLINE const char* cf_texture_type_to_string(CF_TextureType type) {
-	switch (type) {
-	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
-	CF_TEXTURE_TYPE_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-/**
  * @struct   CF_TextureParams
  * @category graphics
  * @brief    A collection of parameters to create a `CF_Texture` with `cf_make_texture`.
@@ -981,7 +796,7 @@ CF_API void CF_CALL cf_gpu_sync(void);
  * @category graphics
  * @brief    Sends the GPU work recorded so far to the GPU now, without waiting for it to finish.
  * @remarks  This is `cf_gpu_sync` without the wait. On SDL_GPU it submits the current command buffer and continues
- *           recording in a new one; on GLES it is `glFlush`.
+ *           recording in a new one; on WebGPU it submits the command encoder; on GLES it is `glFlush`.
  *
  *           It ends the current render pass. The canvas stays applied, and the next draw resumes the pass, keeping
  *           everything drawn before the submit. Call it between draws, not between `cf_apply_shader` and its draw:
@@ -998,7 +813,8 @@ CF_API void CF_CALL cf_gpu_submit(void);
 /**
  * @function cf_texture_handle
  * @category graphics
- * @brief    Returns an SDL_GPUTexture* casted to a `uint64_t`.
+ * @brief    Returns the backend's native texture handle casted to a `uint64_t`: an SDL_GPUTexture* on SDL_GPU,
+ *           a WGPUTextureView on WebGPU.
  * @remarks  This is useful for e.g. rendering textures in an external system like Dear ImGui.
  * @related  CF_TextureParams CF_Texture cf_make_texture
  */
@@ -1007,7 +823,9 @@ CF_API uint64_t CF_CALL cf_texture_handle(CF_Texture texture);
 /**
  * @function cf_texture_binding_handle
  * @category graphics
- * @brief    Returns an SDL_GPUTextureSamplerBinding* casted to a `uint64_t`.
+ * @brief    Returns the backend's native texture binding handle casted to a `uint64_t`: an
+ *           SDL_GPUTextureSamplerBinding* on SDL_GPU; on WebGPU, a pointer to a `{ WGPUTextureView, WGPUSampler }`
+ *           pair.
  * @remarks  This is useful for e.g. rendering textures in an external system like Dear ImGui.
  * @related  CF_TextureParams CF_Texture cf_make_texture
  */
@@ -1229,7 +1047,7 @@ CF_API void CF_CALL cf_destroy_shader(CF_Shader shader);
 // Compute Shaders.
 //
 // Compute shaders run on the GPU outside the graphics pipeline. SDL_GPU backends (Vulkan, D3D12,
-// Metal) run them natively. GLES3/WebGL2 emulates them with draws, for a restricted class of
+// Metal) and WebGPU run them natively. GLES3/WebGL2 emulates them with draws, for a restricted class of
 // shaders; see `cf_make_compute_shader`.
 //
 // Uniforms and sampled textures are supplied via a CF_Material's compute stage (cs).
@@ -1589,6 +1407,9 @@ CF_INLINE const char* cf_samplecount_string(CF_SampleCount count) {
  *             device's real limit, so CF reports the guarantee.
  *           - GLES/WebGL2: the smaller of `GL_MAX_DRAW_BUFFERS` and `GL_MAX_COLOR_ATTACHMENTS`, capped at 8.
  *             GLES 3.0 and WebGL2 only guarantee four.
+ *           - WebGPU: the smaller of `maxColorAttachments` and `maxColorAttachmentBytesPerSample / 8` (an
+ *             RGBA8 target costs 8 bytes per sample), capped at 8. The spec guarantees four. Wider
+ *             formats cost more, so a canvas of 16- or 32-bit float targets may fit fewer.
  *
  *           Check this before making a canvas with more than four targets, and fall back to fewer
  *           targets (or more passes) when it comes up short. Requires a running app.
@@ -1858,8 +1679,9 @@ CF_API void CF_CALL cf_canvas_set_clear_depth_stencil(CF_Canvas canvas, float de
  * @category graphics
  * @brief    Initiates an async GPU-to-CPU copy of pixel data from a canvas.
  * @param    canvas  The canvas to read back pixel data from.
- * @return   Returns a `CF_Readback` handle. Returns a zero handle on failure or if unsupported (e.g. web/Emscripten).
- * @remarks  Ends any active render pass silently. Each readback uses its own command buffer and fence.
+ * @return   Returns a `CF_Readback` handle. Returns a zero handle on failure, such as a target format the
+ *           backend can't read back.
+ * @remarks  Works on every backend: SDL_GPU, WebGPU, and GLES3/WebGL2. Ends any active render pass silently. Each readback uses its own command buffer and fence.
  *           For screen readback, use `cf_canvas_readback(cf_app_get_canvas())`.
  * @related  CF_Readback cf_readback_ready cf_readback_data cf_readback_size cf_destroy_readback
  */
@@ -2551,7 +2373,7 @@ typedef struct CF_RenderState
 
 	/* @member How many entries of `blends` are meaningful. Zero or one means every color target
 	   shares `blends[0]` (exactly the old behavior, so zero-initialized state is unchanged).
-	   Per-target blend is SDL_GPU-only: the GLES backend has no indexed blend (ES 3.0) and
+	   Per-target blend works on SDL_GPU and WebGPU: the GLES backend has no indexed blend (ES 3.0) and
 	   applies `blends[0]` to every target. */
 	int blend_count;
 
@@ -2592,7 +2414,7 @@ typedef struct CF_RenderState
 	/* @member True to enable depth clip, false to enable depth clamp. Clipping discards fragments
 	   outside the near/far planes; clamping keeps them, pinned to the nearest plane, which is how
 	   shadow casters are usually kept from being clipped away. Only implemented on the SDL_GPU
-	   backend -- GLES has no equivalent of `GL_DEPTH_CLAMP` and silently ignores this. */
+	   backend, and on WebGPU when the device has depth-clip-control -- GLES has no equivalent of `GL_DEPTH_CLAMP` and silently ignores this. */
 	bool enable_depth_clip;
 } CF_RenderState;
 // @end
@@ -3036,7 +2858,7 @@ typedef struct CF_DrawIndexedIndirectArgs
  * @remarks  Call in place of `cf_draw_elements`, after `cf_apply_shader`. This closes the
  *           GPU-driven loop: a compute shader culls, compacts, and writes counts into the args
  *           buffer (`compute_writable` + `indirect_drawable`), and the draw consumes them with
- *           no CPU readback. SDL_GPU backends only; not available on GLES3/web.
+ *           no CPU readback. Not available on GLES3/WebGL2.
  * @related  cf_draw_elements CF_DrawIndirectArgs CF_DrawIndexedIndirectArgs cf_make_storage_buffer cf_dispatch_compute
  */
 CF_API void CF_CALL cf_draw_elements_indirect(CF_StorageBuffer args, int offset, int draw_count);
@@ -3047,7 +2869,9 @@ CF_API void CF_CALL cf_draw_elements_indirect(CF_StorageBuffer args, int offset,
  * @brief    Pushes a named region onto the GPU timeline, visible in RenderDoc/Nsight/PIX.
  * @param    name   The region's display name in the capture.
  * @remarks  Purely diagnostic -- no rendering effect. Pop with `cf_pop_gpu_label`. Regions
- *           nest. No-op on the GLES backend.
+ *           nest. No-op on the GLES backend. On WebGPU, a no-op unless the app was made with
+ *           `CF_APP_OPTIONS_GFX_DEBUG_BIT`: there each region costs calls into the browser, and the draw API
+ *           labels every batch.
  * @related  cf_pop_gpu_label
  */
 CF_API void CF_CALL cf_push_gpu_label(const char* name);

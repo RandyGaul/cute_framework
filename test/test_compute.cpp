@@ -524,6 +524,70 @@ void main() {
 	return true;
 }
 
+// Storage-texture support is reported per format, and a texture the device cannot use for
+// storage is refused at creation instead of coming back as a handle that fails validation.
+TEST_CASE(test_compute_storage_format_support)
+{
+	if (!test_make_app(64, 64)) return true;
+	AppDestroyGuard app_guard;
+	if (cf_query_backend() != CF_BACKEND_TYPE_WEBGPU) return true;
+	CF_TextureUsageBits usage = (CF_TextureUsageBits)(CF_TEXTURE_USAGE_SAMPLER_BIT | CF_TEXTURE_USAGE_COMPUTE_STORAGE_WRITE_BIT);
+	CF_PixelFormat formats[] = {
+		CF_PIXEL_FORMAT_R8G8B8A8_UNORM, CF_PIXEL_FORMAT_R32_FLOAT, CF_PIXEL_FORMAT_R32G32B32A32_FLOAT,
+		CF_PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB, CF_PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB, CF_PIXEL_FORMAT_D32_FLOAT,
+		CF_PIXEL_FORMAT_D24_UNORM_S8_UINT, CF_PIXEL_FORMAT_BC1_RGBA_UNORM,
+		CF_PIXEL_FORMAT_R16_FLOAT, CF_PIXEL_FORMAT_R16G16_FLOAT, CF_PIXEL_FORMAT_R8_UNORM,
+	};
+	for (int i = 0; i < (int)(sizeof(formats) / sizeof(formats[0])); ++i) {
+		bool supported = cf_texture_supports_format(formats[i], usage);
+		CF_TextureParams tp = cf_texture_defaults(4, 4);
+		tp.pixel_format = formats[i];
+		tp.usage = usage;
+		CF_Texture t = cf_make_texture(tp);
+		REQUIRE(supported == (t.id != 0));
+		if (t.id) cf_destroy_texture(t);
+		bool always = i < 3;
+		bool never = i >= 3 && i < 8;
+		if (always) REQUIRE(supported);
+		if (never) REQUIRE(!supported);
+	}
+
+	// What the query allows actually works: a written r16f/rg16f (Tier1 formats) reads back.
+	CF_PixelFormat tier1[] = { CF_PIXEL_FORMAT_R16_FLOAT, CF_PIXEL_FORMAT_R16G16_FLOAT };
+	const char* names[] = { "r16f", "rg16f" };
+	for (int i = 0; i < 2; ++i) {
+		if (!cf_texture_supports_format(tier1[i], usage)) continue;
+		char src[512];
+		snprintf(src, sizeof(src),
+			"layout (set = 1, binding = 0, %s) uniform writeonly image2D u_img;\n"
+			"layout (local_size_x = 4, local_size_y = 4, local_size_z = 1) in;\n"
+			"void main() { imageStore(u_img, ivec2(gl_GlobalInvocationID.xy), vec4(0.5, 0.25, 0, 0)); }\n", names[i]);
+		CF_ComputeShader cs = cf_make_compute_shader_from_source(src);
+		REQUIRE(cs.id);
+		CF_CanvasParams p = cf_canvas_defaults(4, 4);
+		p.target.pixel_format = tier1[i];
+		p.target.usage = CF_TEXTURE_USAGE_COLOR_TARGET_BIT | usage;
+		p.target.filter = CF_FILTER_NEAREST;
+		CF_Canvas c = cf_make_canvas(p);
+		REQUIRE(c.id);
+		CF_Material m = cf_make_material();
+		s_dispatch_image(cs, m, cf_canvas_get_target(c), 1, 1, 1, NULL, 0, NULL, 0);
+		cf_gpu_sync();
+		uint16_t halves[4 * 4 * 2] = { };
+		CF_Readback rb = cf_canvas_readback(c);
+		REQUIRE(rb.id);
+		while (!cf_readback_ready(rb)) {}
+		cf_readback_data(rb, halves, (int)sizeof(halves));
+		cf_destroy_readback(rb);
+		REQUIRE(halves[0] == 0x3800); // 0.5
+		if (i == 1) REQUIRE(halves[1] == 0x3400); // 0.25
+		cf_destroy_material(m);
+		cf_destroy_canvas(c);
+		cf_destroy_compute_shader(cs);
+	}
+	return true;
+}
+
 //--------------------------------------------------------------------------------------------------
 // The GLES runtime alone, against hand-written capture shaders that follow cute_spirv's capture
 // convention exactly: a regression here is the runtime's, never the transpiler's.
@@ -690,4 +754,5 @@ TEST_SUITE(test_compute)
 	RUN_TEST_CASE(test_compute_large_partial_grid);
 	RUN_TEST_CASE(test_compute_make_destroy_does_not_leak);
 	RUN_TEST_CASE(test_compute_gles_rejects);
+	RUN_TEST_CASE(test_compute_storage_format_support);
 }

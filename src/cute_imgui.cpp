@@ -25,6 +25,10 @@ void cf_imgui_init()
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		ImGui_ImplOpenGL3_Init("#version 300 es");
 		ImGui_ImplSDL3_InitForOpenGL(app->window, cf_gles_get_gl_context());
+#ifdef CF_WEBGPU
+	} else if (app->gfx_backend_type == CF_BACKEND_TYPE_WEBGPU) {
+		cf_webgpu_imgui_init();
+#endif
 	} else {
 #ifndef CF_EMSCRIPTEN
 		SDL_GPUDevice* device = cf_sdlgpu_get_device();
@@ -42,6 +46,10 @@ void cf_imgui_shutdown()
 {
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		ImGui_ImplOpenGL3_Shutdown();
+#ifdef CF_WEBGPU
+	} else if (app->gfx_backend_type == CF_BACKEND_TYPE_WEBGPU) {
+		cf_webgpu_imgui_shutdown();
+#endif
 	} else {
 		ImGui_ImplSDLGPU3_Shutdown();
 	}
@@ -53,6 +61,10 @@ void cf_imgui_draw()
 {
 	if (app->gfx_backend_type == CF_BACKEND_TYPE_GLES3) {
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+#ifdef CF_WEBGPU
+	} else if (app->gfx_backend_type == CF_BACKEND_TYPE_WEBGPU) {
+		cf_webgpu_imgui_draw();
+#endif
 	} else {
 #ifndef CF_EMSCRIPTEN
 		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);

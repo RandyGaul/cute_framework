@@ -169,6 +169,74 @@ TEST_CASE(test_canvas_clear_depth_is_honored)
 	return true;
 }
 
+struct MsaaRestoreGuard
+{
+	~MsaaRestoreGuard() { cf_app_set_msaa(1); }
+};
+
+// cf_app_set_msaa says yes only to sample counts the device really renders: a canvas made at an
+// accepted count shows partially covered pixels along a triangle edge, never just 0 or 255.
+TEST_CASE(test_msaa_query_is_honest)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	AppDestroyGuard app_guard;
+	MsaaRestoreGuard msaa_guard;
+
+	const char* vs =
+		"layout (location = 0) in vec2 in_pos;\n"
+		"void main() { gl_Position = vec4(in_pos, 0, 1); }\n";
+	const char* fs =
+		"layout(location = 0) out vec4 result;\n"
+		"void main() { result = vec4(1, 0, 0, 1); }\n";
+	struct Vertex { float x, y; };
+	Vertex verts[3] = { { -1, -1 }, { 1, -1 }, { 1, 0.7f } }; // A shallow edge crossing many pixels.
+	CF_VertexAttribute attrs[1] = { };
+	attrs[0].name = "in_pos";
+	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
+	attrs[0].offset = 0;
+	CF_Mesh mesh = cf_make_mesh(sizeof(verts), attrs, 1, sizeof(Vertex));
+	cf_mesh_update_vertex_data(mesh, verts, 3);
+	CF_Shader shader = cf_make_shader_from_source(vs, fs);
+	REQUIRE(shader.id);
+	CF_Material material = cf_make_material();
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	cf_clear_color(0, 0, 0, 1.0f);
+
+	int counts[3] = { 2, 4, 8 };
+	CF_SampleCount sample_counts[3] = { CF_SAMPLE_COUNT_2, CF_SAMPLE_COUNT_4, CF_SAMPLE_COUNT_8 };
+	for (int i = 0; i < 3; ++i) {
+		if (!cf_app_set_msaa(counts[i])) continue;
+		CF_CanvasParams params = cf_canvas_defaults(W, H);
+		params.sample_count = sample_counts[i];
+		params.depth_stencil_enable = true;
+		CF_Canvas canvas = cf_make_canvas(params);
+		REQUIRE(canvas.id);
+		cf_app_update(NULL);
+		cf_apply_canvas(canvas, true);
+		cf_apply_mesh(mesh);
+		cf_apply_shader(shader, material);
+		cf_draw_elements();
+		cf_app_draw_onto_screen(false);
+		CF_Readback rb = cf_canvas_readback(canvas);
+		REQUIRE(rb.id);
+		while (!cf_readback_ready(rb)) {}
+		cf_readback_data(rb, px, W * H * (int)sizeof(CF_Pixel));
+		cf_destroy_readback(rb);
+		int partial = 0;
+		for (int p = 0; p < W * H; ++p) {
+			if (px[p].colors.r > 30 && px[p].colors.r < 225) ++partial;
+		}
+		REQUIRE(partial > 0);
+		cf_destroy_canvas(canvas);
+	}
+
+	cf_free(px);
+	cf_destroy_material(material);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	return true;
+}
+
 // A quad rasterized at depth 0.9 whose shader writes gl_FragDepth = 0.3 must store 0.3. Two probe
 // quads bracket the stored value: the left half at 0.31 must be rejected, the right half at 0.29
 // must pass.
@@ -311,6 +379,7 @@ TEST_SUITE(test_canvas_clear)
 {
 	RUN_TEST_CASE(test_per_canvas_clear_color);
 	RUN_TEST_CASE(test_canvas_clear_depth_is_honored);
+	RUN_TEST_CASE(test_msaa_query_is_honest);
 	RUN_TEST_CASE(test_frag_depth_is_stored);
 	RUN_TEST_CASE(test_zero_size_window_keeps_app_canvas);
 }

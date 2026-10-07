@@ -1,7 +1,7 @@
 # Shader Compilation
 
 CF uses SDL_Gpu under the hood for rendering.
-CF ships its own shader compiler, `cute_spirv`, which compiles a well-defined subset of GLSL 450 (see [GLSL Support](glsl_support.md)) directly to SPIR-V with zero external dependencies -- nothing to fetch, nothing to install. The SPIR-V is then translated to whatever the active backend needs (DXBC for D3D12, MSL for Metal, GLSL ES 300 for GLES/WebGL2).
+CF ships its own shader compiler, `cute_spirv`, which compiles a well-defined subset of GLSL 450 (see [GLSL Support](glsl_support.md)) directly to SPIR-V with zero external dependencies -- nothing to fetch, nothing to install. The SPIR-V is then translated to whatever the active backend needs (DXBC for D3D12, MSL for Metal, GLSL ES 300 for GLES/WebGL2, WGSL for [WebGPU](webgpu.md)).
 
 ## Runtime Shader Compilation
 
@@ -31,6 +31,8 @@ Compile GLSL into SPIRV bytecode and/or generate a C header for embedding.
 -obytecode=<file>  (Optional) Where to write the raw SPIRV blob.
 -nogles            Omit the GLSL ES 300 output from generated headers. Smaller
                    headers; the bytecode then cannot be used on GLES3/WebGL2.
+-nowgsl            Omit the WGSL output from generated headers. Smaller
+                   headers; the bytecode then cannot be used on WebGPU.
 -verbose           Embed the preprocessed shader source as a comment in
                    generated headers (for debugging).
 

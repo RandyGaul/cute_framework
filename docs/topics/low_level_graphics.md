@@ -11,6 +11,7 @@ CF wraps [low level 3D rendering APIs](../api_reference.md#graphics). The backen
 - DirectX 12
 - Metal
 - OpenGL ES
+- WebGPU (optional, see [WebGPU](webgpu.md))
 
 The major primitives that make up the graphics layer of CF are:
 
@@ -121,7 +122,7 @@ void main()
 
 In CF shaders are written in GLSL (OpenGL Shading Language) version 450. This does not necessarily mean the backend powering the shaders is OpenGL, as the shaders are cross-compiled for all available backends.
 
-CF compiles shaders online making it very easy to write shaders once and have them _just work_ on all other platforms. Shader compilation is handled entirely by CF's own built-in compiler, [cute_spirv](glsl_support.md) — no external tools, no extra dependencies, and no meaningful impact on library size or startup time. The compiler emits SPIR-V for Vulkan, HLSL (compiled by the system's D3D compiler) for D3D12, Metal Shading Language for Metal, and GLSL ES 300 for the GLES backend.
+CF compiles shaders online making it very easy to write shaders once and have them _just work_ on all other platforms. Shader compilation is handled entirely by CF's own built-in compiler, [cute_spirv](glsl_support.md) — no external tools, no extra dependencies, and no meaningful impact on library size or startup time. The compiler emits SPIR-V for Vulkan, HLSL (compiled by the system's D3D compiler) for D3D12, Metal Shading Language for Metal, GLSL ES 300 for the GLES backend, and WGSL for the WebGPU backend.
 
 Let's focus on how to write your shaders and ship them with your game in a cross-platform way. You have a few options:
 
@@ -225,7 +226,7 @@ You can set textures on a material as well via [`cf_material_set_texture_vs`](..
 
 ## Compute Shaders
 
-Compute shaders run on the GPU outside the normal graphics pipeline. They are available on SDL_GPU backends (Vulkan, D3D12, Metal) but not on GLES3. For the GLSL resource set layout rules and barrier safety, see [Resource Set Layout](shader_compilation.md#resource-set-layout).
+Compute shaders run on the GPU outside the normal graphics pipeline. They are available on SDL_GPU backends (Vulkan, D3D12, Metal) and on WebGPU. GLES3 has no real compute shaders, so CF emulates them there with draws, which rules out shared memory, barriers, atomics, and writes inside loops (see [the GLES3 limits](emscripten.md#gles3-backend-capabilities)). For the GLSL resource set layout rules and barrier safety, see [Resource Set Layout](shader_compilation.md#resource-set-layout).
 
 ### Binding Resources from C
 
@@ -265,7 +266,7 @@ Buffer-block tails must be scalars or vectors -- store mat4s as four `vec4` colu
 
 Storage buffers also unlock **pull instancing**: `cf_draw_elements_instanced(count)` draws the applied mesh `count` times with no per-instance vertex buffer at all, and the shader pulls its per-instance data by `gl_InstanceIndex`. This composes with compute -- a culling shader compacts visible instances into a buffer (`compute_writable` + `graphics_readable`), and the draw pulls from it with no CPU round trip.
 
-On GLES3/web, read-only storage buffers are emulated through texture fetches transparently; `compute_writable` is unavailable there, matching compute shaders.
+On GLES3, storage buffers are emulated through textures transparently: shaders read them with texture fetches, and emulated compute shaders write them with draws, under the same limits as compute shaders there. WebGPU has real storage buffers.
 
 ## Range Draws and Geometry Arenas
 
@@ -273,7 +274,7 @@ On GLES3/web, read-only storage buffers are emulated through texture fetches tra
 
 ## Indirect Draws
 
-`cf_draw_elements_indirect(args, offset, draw_count)` reads its draw arguments (`CF_DrawIndirectArgs` / `CF_DrawIndexedIndirectArgs`) from a storage buffer created with `indirect_drawable`, instead of from the CPU. Combined with a compute shader that writes those arguments, this closes the GPU-driven loop: cull, compact, and draw without a readback. SDL_GPU backends only -- not available on GLES3/web.
+`cf_draw_elements_indirect(args, offset, draw_count)` reads its draw arguments (`CF_DrawIndirectArgs` / `CF_DrawIndexedIndirectArgs`) from a storage buffer created with `indirect_drawable`, instead of from the CPU. Combined with a compute shader that writes those arguments, this closes the GPU-driven loop: cull, compact, and draw without a readback. Available on SDL_GPU backends and WebGPU, but not on GLES3.
 
 ## Standalone Samplers
 
@@ -290,7 +291,7 @@ The plain `cf_material_set_texture_fs` keeps sampling through the texture's own 
 
 ## Multiple Render Targets
 
-A canvas can carry several color targets (`CF_CanvasParams::target_count`); the fragment shader writes `layout (location = N) out` per target -- the classic g-buffer setup. Each target can blend its own way: `CF_RenderState::blend` aliases `blends[0]`, and setting `blend_count` with `blends[1]`+ gives every target its own blend and write mask (accumulate HDR into target 0 while overwriting normals in target 1). Per-target blend is SDL_GPU-only -- the GLES backend applies `blends[0]` to every target. `cf_canvas_get_target2(canvas, index)` fetches each result.
+A canvas can carry several color targets (`CF_CanvasParams::target_count`); the fragment shader writes `layout (location = N) out` per target -- the classic g-buffer setup. Each target can blend its own way: `CF_RenderState::blend` aliases `blends[0]`, and setting `blend_count` with `blends[1]`+ gives every target its own blend and write mask (accumulate HDR into target 0 while overwriting normals in target 1). Per-target blend works on SDL_GPU and WebGPU -- the GLES backend applies `blends[0]` to every target. `cf_canvas_get_target2(canvas, index)` fetches each result.
 
 How many targets depends on the device. `CF_MAX_CANVAS_TARGETS` (8) is the most any backend allows; `cf_query_max_canvas_targets()` returns what the current one allows:
 
@@ -299,6 +300,7 @@ How many targets depends on the device. `CF_MAX_CANVAS_TARGETS` (8) is the most 
 | D3D12, Metal | 8 |
 | Vulkan | 4 -- the spec guarantee; SDL_GPU doesn't expose the device's real `maxColorAttachments` |
 | GLES / WebGL2 | min(`GL_MAX_DRAW_BUFFERS`, `GL_MAX_COLOR_ATTACHMENTS`, 8); the spec guarantees 4 |
+| WebGPU | min(`maxColorAttachments`, `maxColorAttachmentBytesPerSample` / 8, 8), since an RGBA8 target costs 8 bytes per sample; the spec guarantees 4. Wider formats cost more |
 
 Four targets work everywhere. Past four, check the query and fall back (fewer targets, or a second pass) when it comes up short. Asking `cf_make_canvas` for more than the query allows asserts and returns an invalid canvas, rather than quietly giving you fewer targets than your shader writes.
 

@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_spirv.h - v1.10
+	cute_spirv.h - v1.11
 
 	To create implementation (the function definitions)
 		#define CUTE_SPIRV_IMPLEMENTATION
@@ -124,6 +124,16 @@
 		                  through u_cs_storage_<rank>; imageLoad reads a same-named
 		                  sampler. Shared memory, barriers, atomics, writes in loops
 		                  or outside main, and vec3 writes are compile errors.
+		1.11 (10/05/2026) WGSL transpiler backend (CSPV_Options.emit_wgsl) for WebGPU, all
+		                  stages, with its own printer over the shared AST. CF set N is
+		                  @group(N); bindings inside a group follow CF's resource order
+		                  (sampled texture i at 2i with its sampler at 2i+1, then storage
+		                  textures, then storage buffers; uniform slot u at u), reported in
+		                  reflection.wgsl_bindings. Read+write storage images without
+		                  WebGPU read_write access split into a write-only storage texture
+		                  plus a texture_2d load side (reflection.wgsl_splits). Atomics,
+		                  shared memory, out/inout parameters, overloads, fall-through
+		                  switches and std140/std430 layouts are all carried across.
 */
 #ifndef CUTE_SPIRV_H
 #define CUTE_SPIRV_H
@@ -222,6 +232,69 @@ typedef struct CSPV_WriteSite
 	int image_format;    // Images: the SPIR-V ImageFormat of the layout qualifier. Buffers: 0.
 } CSPV_WriteSite;
 
+// WGSL output (emit_wgsl): one entry per emitted @group/@binding. CF set N is @group(N).
+// Inside a resource group, sampled texture i (binding order) is @binding(2i) and its sampler
+// @binding(2i+1); storage textures j follow at 2n+j, storage buffers k at 2n+m+k, then the
+// load sides of split storage images. Inside a uniform group, block slot u is @binding(u).
+typedef enum CSPV_WgslBindingKind
+{
+	CSPV_WGSL_SAMPLED_TEXTURE,    // texture_2d/cube/3d/2d_array<f32|u32>, or texture_depth_*.
+	CSPV_WGSL_SAMPLER,            // sampler, or sampler_comparison (`comparison`).
+	CSPV_WGSL_STORAGE_TEXTURE,    // texture_storage_2d<format, access>.
+	CSPV_WGSL_STORAGE_BUFFER,     // var<storage, read> or var<storage, read_write>.
+	CSPV_WGSL_UNIFORM_BUFFER,     // var<uniform>; std140-equivalent layout.
+	CSPV_WGSL_SPLIT_LOAD_TEXTURE, // texture_2d<f32|u32>: the load side of a split storage image.
+} CSPV_WgslBindingKind;
+
+typedef enum CSPV_WgslTextureDim
+{
+	CSPV_WGSL_DIM_2D,
+	CSPV_WGSL_DIM_CUBE,
+	CSPV_WGSL_DIM_3D,
+	CSPV_WGSL_DIM_2D_ARRAY,
+} CSPV_WgslTextureDim;
+
+typedef enum CSPV_WgslSampleType
+{
+	CSPV_WGSL_SAMPLE_FLOAT,
+	CSPV_WGSL_SAMPLE_UINT,
+	CSPV_WGSL_SAMPLE_DEPTH,
+} CSPV_WgslSampleType;
+
+typedef enum CSPV_WgslAccess
+{
+	CSPV_WGSL_ACCESS_READ,
+	CSPV_WGSL_ACCESS_WRITE,
+	CSPV_WGSL_ACCESS_READ_WRITE,
+} CSPV_WgslAccess;
+
+typedef struct CSPV_WgslBinding
+{
+	const char* name;                // Interned: the sampler, image, or block this binding serves.
+	int set;                         // CF set, equal to the WGSL @group.
+	int slot;                        // The resource's GLSL binding in its set.
+	int binding;                     // The WGSL @binding.
+	CSPV_WgslBindingKind kind;
+	CSPV_WgslTextureDim dim;         // Sampled textures.
+	CSPV_WgslSampleType sample_type; // Sampled and split-load textures.
+	bool comparison;                 // Samplers: sampler_comparison.
+	CSPV_WgslAccess access;          // Storage textures and storage buffers.
+	int image_format;                // Storage and split-load textures: SPIR-V ImageFormat (as CSPV_WriteSite).
+	const char* format;              // Storage and split-load textures: the WGSL texel format ("rgba16float").
+} CSPV_WgslBinding;
+
+// A storage image both loaded and stored whose format has no WebGPU read_write storage access
+// (anything but r32f/r32ui). Its stores go to a write-only storage texture at store_binding;
+// its loads read a texture_2d at load_binding, which the host binds to a copy of the image
+// taken before the dispatch (WebGPU forbids one texture as storage-write and sampled at once).
+typedef struct CSPV_WgslSplit
+{
+	const char* name; // Interned image name.
+	int set;
+	int store_binding;
+	int load_binding;
+} CSPV_WgslSplit;
+
 typedef struct CSPV_Reflection
 {
 	CK_DYNA CSPV_ReflectionResource* samplers;        // Combined image samplers.
@@ -234,6 +307,9 @@ typedef struct CSPV_Reflection
 	// Compute + emit_glsl300 only:
 	CK_DYNA CSPV_WriteSite* write_sites;              // Site k is selected by u_cspv_site == k.
 	CK_DYNA const char** loaded_images;               // Interned names of images read (imageLoad/imageSize): bind as samplers.
+	// emit_wgsl only:
+	CK_DYNA CSPV_WgslBinding* wgsl_bindings;          // Every @group/@binding the WGSL declares.
+	CK_DYNA CSPV_WgslSplit* wgsl_splits;              // Split read+write storage images.
 } CSPV_Reflection;
 
 typedef struct CSPV_Result
@@ -267,6 +343,11 @@ typedef struct CSPV_Result
 	// source to SDL_CreateGPUShader as SDL_GPU_SHADERFORMAT_MSL with entry
 	// point "main0" (MSL reserves `main`).
 	CK_SDYNA char* msl;
+
+	// On success, when CSPV_Options.emit_wgsl was set - the shader transpiled to WGSL
+	// (a ckit string) for WebGPU, entry point "main", bindings as described at
+	// CSPV_WgslBinding (reflection.wgsl_bindings / wgsl_splits).
+	CK_SDYNA char* wgsl;
 } CSPV_Result;
 
 typedef struct CSPV_Define
@@ -312,6 +393,10 @@ typedef struct CSPV_Options
 	// When set, CSPV_Result.msl carries the shader transpiled to MSL following
 	// SDL_GPU's Metal binding contract (all stages).
 	bool emit_msl;
+
+	// When set, CSPV_Result.wgsl carries the shader transpiled to WGSL for WebGPU (all
+	// stages), with reflection.wgsl_bindings / wgsl_splits describing its bind groups.
+	bool emit_wgsl;
 } CSPV_Options;
 
 CSPV_API CSPV_Result cspv_compile(const char* source, CSPV_Stage stage);
@@ -838,6 +923,7 @@ typedef struct cspv_decl
 	int set;
 	int binding;
 	bool readonly;
+	bool writeonly;            // CSPV_D_OPAQUE images.
 	bool is_buffer;
 	const char* instance_name; // NULL for anonymous blocks.
 	int num_members;
@@ -991,6 +1077,8 @@ typedef struct cspv_ctx
 	// Scratch shadow-name list for the ES validation walk -- on the context for the
 	// same longjmp-cannot-leak reason as tp_out.
 	CK_DYNA const char** es_shadows;
+	// WGSL printer state while cspv_emit_wgsl runs (its arrays are freed by cleanup too).
+	struct cspv_wg* wg;
 } cspv_ctx;
 
 //--------------------------------------------------------------------------------------------------
@@ -5721,6 +5809,7 @@ static void cspv_gen_uniform_opaque(cspv_ctx* ctx, cspv_layout* layout, cspv_typ
 	d->set = layout->set;
 	d->binding = layout->binding;
 	d->readonly = readonly;
+	d->writeonly = writeonly;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -9807,6 +9896,3327 @@ static void cspv_emit_msl(cspv_ctx* ctx)
 }
 
 //--------------------------------------------------------------------------------------------------
+// WGSL transpiler. A printer of its own over the same type-stamped AST: WGSL's declaration
+// syntax (`var x: T`, `fn f(p: T) -> R`), strict typing (no implicit conversions, no
+// scalar/vector mixing in bitwise ops or builtin calls), immutable parameters, pointer
+// out-params, select() for ?:, no overloading and no comma operator diverge too far from
+// the C-family printer to share it.
+//
+// Binding contract (the WebGPU backend relies on it exactly): CF set N is @group(N). In a
+// resource group (graphics sets 0/2, compute sets 0/1), sampled texture i in binding order
+// is @binding(2i) and its sampler @binding(2i+1); storage textures j follow at 2n+j and
+// storage buffers k at 2n+m+k. In a uniform group (graphics 1/3, compute 2), block slot u is
+// @binding(u). A storage image both loaded and stored whose format has no read_write
+// storage access in WebGPU (anything but r32f/r32ui) splits: the store side keeps its
+// binding as a write-only storage texture, and the load side becomes a texture_2d read with
+// textureLoad, bound after every other binding of its group in order of first load. Every
+// binding lands in CSPV_Reflection.wgsl_bindings, every split in wgsl_splits.
+//
+// Other conventions: mutable globals, stage IO and gl_* builtins are var<private>, bridged by
+// a generated `main` entry point (the user's main becomes cspv_main_). Atomically used
+// shared/storage integers become atomic<u32|i32> (vector elements flatten into scalar
+// atomics); their plain reads and writes become atomicLoad/atomicStore. out/inout parameters
+// are ptr<function, T>; an argument that is not a whole local variable goes through a
+// temporary copied back after the statement, its subscripts evaluated once before the call.
+// atomicCompSwap is a retry loop over atomicCompareExchangeWeak. Overloaded functions get
+// _cspv<k> suffixes.
+
+typedef struct cspv_wg_atom
+{
+	cspv_decl* decl;   // CSPV_D_SHARED, or a buffer CSPV_D_BLOCK.
+	int member;        // Buffer member index; -1 for shared variables.
+	int cols;          // Vector elements flatten into `cols` scalar atomics; 1 for scalars.
+	cspv_type* scalar; // t_uint or t_int.
+} cspv_wg_atom;
+
+typedef struct cspv_wg_image
+{
+	cspv_decl* decl;
+	bool loaded;
+	bool stored;
+	bool split;
+	int load_order;    // Order of first imageLoad across the module.
+	int binding;
+	int load_binding;
+	const char* access;
+} cspv_wg_image;
+
+typedef struct cspv_wg_hoist
+{
+	cspv_expr* arg;
+	int temp;
+} cspv_wg_hoist;
+
+typedef struct cspv_wg
+{
+	cspv_ctx* ctx;
+	int indent;
+	unsigned helpers;                 // CSPV_WGH_* bits: helper functions to append.
+	CK_MAP(int) reserved;             // Interned WGSL keywords, reserved words, and builtin names.
+	CK_MAP(int) used;                 // Interned names referenced anywhere in the module.
+	CK_DYNA const char** rename_from; // Interned; module-scope renames (anonymous block members).
+	CK_DYNA const char** rename_to;
+	CK_DYNA const char** shadows;     // Locals and parameters in scope.
+	CK_DYNA bool* shadow_ptr;         // Parallel to shadows: an out/inout parameter (a pointer).
+	CK_DYNA int* shadow_marks;
+	CK_DYNA cspv_wg_atom* atoms;
+	CK_DYNA cspv_wg_image* images;
+	CK_DYNA cspv_wg_hoist* hoists;    // Out-argument temporaries of the statement being printed.
+	CK_DYNA cspv_decl** written;      // Buffer blocks the module writes.
+	CK_MAP(const char*) lowered;      // Expression node -> interned text of the temporary computing it.
+	CK_MAP(int) func_effects;         // Function decl -> 1 visiting, 2 no outside writes, 3 writes outside its locals.
+	CK_SDYNA char* saved_out;         // tp_out while an expression prints into a scratch string.
+	int temp_counter;
+	int load_counter;
+} cspv_wg;
+
+enum
+{
+	CSPV_WGH_MOD = 1u << 0,     // + (n - 1): cspv_mod, cspv_mod2..4.
+	CSPV_WGH_INVERSE = 1u << 4, // + (n - 2): cspv_inverse2..4.
+	CSPV_WGH_DIAG = 1u << 7,    // + (n - 2): cspv_diag2..4.
+	CSPV_WGH_MATCVT = 1u << 10, // + (from - 2) * 3 + (to - 2): cspv_mat<to>_from<from>.
+};
+
+static void cspv_wg_free(cspv_ctx* ctx)
+{
+	cspv_wg* g = ctx->wg;
+	if (!g) return;
+	map_free(g->reserved);
+	map_free(g->used);
+	afree(g->rename_from);
+	afree(g->rename_to);
+	afree(g->shadows);
+	afree(g->shadow_ptr);
+	afree(g->shadow_marks);
+	afree(g->atoms);
+	afree(g->images);
+	afree(g->hoists);
+	afree(g->written);
+	map_free(g->lowered);
+	map_free(g->func_effects);
+	sfree(g->saved_out);
+	ctx->wg = NULL;
+}
+
+static void cspv_wg_init_reserved(cspv_wg* g)
+{
+	static const char* words[] = {
+		// Keywords.
+		"alias", "break", "case", "const", "const_assert", "continue", "continuing", "default", "diagnostic",
+		"discard", "else", "enable", "false", "fn", "for", "if", "let", "loop", "override", "requires",
+		"return", "struct", "switch", "true", "var", "while",
+		// Reserved words.
+		"NULL", "Self", "abstract", "active", "alignas", "alignof", "as", "asm", "asm_fragment", "async",
+		"attribute", "auto", "await", "become", "binding_array", "cast", "catch", "class", "co_await",
+		"co_return", "co_yield", "coherent", "column_major", "common", "compile", "compile_fragment",
+		"concept", "const_cast", "consteval", "constexpr", "constinit", "crate", "debugger", "decltype",
+		"delete", "demote", "demote_to_helper", "do", "dynamic_cast", "enum", "explicit", "export",
+		"extends", "extern", "external", "fallthrough", "filter", "final", "finally", "friend", "from",
+		"fxgroup", "get", "goto", "groupshared", "highp", "impl", "implements", "import", "inline",
+		"instanceof", "interface", "layout", "lowp", "macro", "macro_rules", "match", "mediump", "meta",
+		"mod", "module", "move", "mut", "mutable", "namespace", "new", "nil", "noexcept", "noinline",
+		"nointerpolation", "non_coherent", "noncoherent", "noperspective", "null", "nullptr", "of",
+		"operator", "package", "packoffset", "partition", "pass", "patch", "pixelfragment", "precise",
+		"precision", "premerge", "priv", "protected", "pub", "public", "readonly", "ref", "regardless",
+		"register", "reinterpret_cast", "require", "resource", "restrict", "self", "set", "shared",
+		"sizeof", "smooth", "snorm", "static", "static_assert", "static_cast", "std", "subroutine",
+		"super", "target", "template", "this", "thread_local", "throw", "trait", "try", "type", "typedef",
+		"typeid", "typename", "typeof", "union", "unless", "unorm", "unsafe", "unsized", "use", "using",
+		"varying", "virtual", "volatile", "wgsl", "where", "with", "writeonly", "yield",
+		// Predeclared types and the builtins this printer emits (user names must not shadow them).
+		"f32", "f16", "i32", "u32", "bool", "array", "atomic", "ptr", "sampler", "sampler_comparison",
+		"vec2", "vec3", "vec4", "mat2x2", "mat3x3", "mat4x4", "vec2f", "vec3f", "vec4f", "vec2i", "vec3i",
+		"vec4i", "vec2u", "vec3u", "vec4u", "mat2x2f", "mat3x3f", "mat4x4f",
+		"select", "bitcast", "atan2", "inverseSqrt", "dpdx", "dpdy", "fwidth", "saturate", "arrayLength",
+		"workgroupBarrier", "storageBarrier", "atomicLoad", "atomicStore", "atomicAdd", "atomicSub",
+		"atomicMin", "atomicMax", "atomicAnd", "atomicOr", "atomicXor", "atomicExchange",
+		"atomicCompareExchangeWeak", "textureSample", "textureSampleLevel", "textureSampleGrad",
+		"textureSampleCompare", "textureSampleCompareLevel", "textureLoad", "textureStore",
+		"textureDimensions", "textureNumLayers", "pack4x8unorm", "pack4x8snorm", "pack2x16unorm",
+		"pack2x16snorm", "pack2x16float", "unpack4x8unorm", "unpack4x8snorm", "unpack2x16unorm",
+		"unpack2x16snorm", "unpack2x16float", "transpose", "determinant", "all", "any",
+	};
+	for (int i = 0; i < (int)(sizeof(words) / sizeof(words[0])); i++) {
+		map_set(g->reserved, (uint64_t)(uintptr_t)sintern(words[i]), 1);
+	}
+}
+
+// A user identifier as WGSL spells it: reserved words and colliding builtin names gain a
+// trailing underscore. `name` must be interned.
+static const char* cspv_wg_id(cspv_wg* g, const char* name)
+{
+	if (!map_has(g->reserved, (uint64_t)(uintptr_t)name)) return name;
+	char buf[160];
+	snprintf(buf, sizeof(buf), "%s_", name);
+	return sintern(buf);
+}
+
+static void cspv_wg_indent(cspv_wg* g)
+{
+	for (int i = 0; i < g->indent; i++) spush(g->ctx->tp_out, '\t');
+}
+
+static const char* cspv_wg_texture_type(cspv_type* t)
+{
+	bool u = t->elem && t->elem->kind == CSPV_T_UINT;
+	switch (t->cols) {
+	case CSPV_SDIM_CUBE: return "texture_cube<f32>";
+	case CSPV_SDIM_3D: return "texture_3d<f32>";
+	case CSPV_SDIM_2D_ARRAY: return "texture_2d_array<f32>";
+	case CSPV_SDIM_2D_SHADOW: return "texture_depth_2d";
+	case CSPV_SDIM_CUBE_SHADOW: return "texture_depth_cube";
+	case CSPV_SDIM_2D_ARRAY_SHADOW: return "texture_depth_2d_array";
+	default: return u ? "texture_2d<u32>" : "texture_2d<f32>";
+	}
+}
+
+static bool cspv_wg_shadow_dim(int sdim)
+{
+	return sdim == CSPV_SDIM_2D_SHADOW || sdim == CSPV_SDIM_CUBE_SHADOW || sdim == CSPV_SDIM_2D_ARRAY_SHADOW;
+}
+
+// WGSL texel format behind an image2D's SPIR-V format enum (see cspv_parse_layout).
+static const char* cspv_wg_format(int format)
+{
+	switch (format) {
+	case 1: return "rgba32float";
+	case 2: return "rgba16float";
+	case 3: return "r32float";
+	case 4: return "rgba8unorm";
+	case 6: return "rg32float";
+	case 7: return "rg16float";
+	case 9: return "r16float";
+	case 32: return "rgba8uint";
+	case 33: return "r32uint";
+	default: return "rgba8unorm";
+	}
+}
+
+static bool cspv_wg_format_uint(int format)
+{
+	return format == 32 || format == 33;
+}
+
+static const char* cspv_wg_type(cspv_wg* g, cspv_type* t)
+{
+	char buf[192];
+	switch (t->kind) {
+	case CSPV_T_VOID: return "void";
+	case CSPV_T_BOOL: return "bool";
+	case CSPV_T_INT: return "i32";
+	case CSPV_T_UINT: return "u32";
+	case CSPV_T_FLOAT: return "f32";
+	case CSPV_T_VEC:
+		switch (t->elem->kind) {
+		case CSPV_T_FLOAT: snprintf(buf, sizeof(buf), "vec%df", t->cols); break;
+		case CSPV_T_INT: snprintf(buf, sizeof(buf), "vec%di", t->cols); break;
+		case CSPV_T_UINT: snprintf(buf, sizeof(buf), "vec%du", t->cols); break;
+		default: snprintf(buf, sizeof(buf), "vec%d<bool>", t->cols); break;
+		}
+		return sintern(buf);
+	case CSPV_T_MAT:
+		snprintf(buf, sizeof(buf), "mat%dx%df", t->cols, t->rows ? t->rows : t->cols);
+		return sintern(buf);
+	case CSPV_T_ARRAY:
+		if (t->cols < 0) snprintf(buf, sizeof(buf), "array<%s>", cspv_wg_type(g, t->elem));
+		else snprintf(buf, sizeof(buf), "array<%s, %d>", cspv_wg_type(g, t->elem), t->cols);
+		return sintern(buf);
+	case CSPV_T_STRUCT: return cspv_wg_id(g, t->name);
+	case CSPV_T_SAMPLER2D: return cspv_wg_texture_type(t);
+	default: return "?";
+	}
+}
+
+static cspv_type* cspv_wg_rtype(cspv_wg* g, cspv_expr* e)
+{
+	if (e->rtype) return e->rtype;
+	switch (e->kind) {
+	case CSPV_E_FLOAT_LIT: return g->ctx->t_float;
+	case CSPV_E_INT_LIT: return g->ctx->t_int;
+	case CSPV_E_UINT_LIT: return g->ctx->t_uint;
+	case CSPV_E_BOOL_LIT: return g->ctx->t_bool;
+	case CSPV_E_UNARY:
+		if (e->u.un.op == '-' || e->u.un.op == '+') return cspv_wg_rtype(g, e->u.un.e);
+		return NULL;
+	default: return NULL;
+	}
+}
+
+// The type an expression has after the conversion codegen recorded on it.
+static cspv_type* cspv_wg_etype(cspv_wg* g, cspv_expr* e)
+{
+	return e->want ? e->want : cspv_wg_rtype(g, e);
+}
+
+//--------------------------------------------------------------------------------------------------
+// WGSL: layouts. Host-shareable structs print with @size attributes wherever WGSL's natural
+// layout would place the next member earlier than std140 (uniform) / std430 (storage) does,
+// so the bytes CF packs for SDL_GPU stay valid unchanged.
+
+static void cspv_wg_natural_layout(cspv_wg* g, cspv_type* t, bool uniform, int line, int* align, int* size)
+{
+	switch (t->kind) {
+	case CSPV_T_FLOAT: case CSPV_T_INT: case CSPV_T_UINT:
+		*align = 4; *size = 4;
+		return;
+	case CSPV_T_VEC:
+		if (t->cols == 2) { *align = 8; *size = 8; }
+		else if (t->cols == 3) { *align = 16; *size = 12; }
+		else { *align = 16; *size = 16; }
+		return;
+	case CSPV_T_MAT: {
+		int rows = t->rows ? t->rows : t->cols;
+		*align = rows == 2 ? 8 : 16;
+		*size = t->cols * (rows == 2 ? 8 : 16);
+		return;
+	}
+	case CSPV_T_ARRAY: {
+		int ea = 0, es = 0;
+		cspv_wg_natural_layout(g, t->elem, uniform, line, &ea, &es);
+		int stride = (es + ea - 1) / ea * ea;
+		*align = uniform && ea < 16 ? 16 : ea;
+		*size = stride * (t->cols < 0 ? 1 : t->cols);
+		return;
+	}
+	case CSPV_T_STRUCT:
+		// Printed with std430 @size padding (see cspv_wg_struct_body): the natural layout is
+		// the std430 layout by construction.
+		cspv_std430_layout(g->ctx, t, line, align, size);
+		if (uniform && *align < 16) *align = 16;
+		return;
+	default:
+		cspv_errorf(g->ctx, line, "type '%s' cannot be shared with the host in WGSL output", cspv_type_name(t));
+	}
+}
+
+// Member list of a host-shareable struct, each member landing on its std140/std430 offset.
+// atom_of (optional, parallel to the members) marks atomically used members.
+static void cspv_wg_struct_body(cspv_wg* g, int n, cspv_type** types, const char** names, bool uniform,
+	cspv_wg_atom** atom_of, int line)
+{
+	cspv_ctx* ctx = g->ctx;
+	int* offsets = (int*)cspv_arena_alloc(&ctx->arena, sizeof(int) * (n + 1));
+	int* nat_sizes = (int*)cspv_arena_alloc(&ctx->arena, sizeof(int) * (n + 1));
+	int offset = 0;
+	int max_align = 4;
+	for (int i = 0; i < n; i++) {
+		cspv_type* mt = types[i];
+		if (mt->kind == CSPV_T_MAT && uniform && (mt->rows ? mt->rows : mt->cols) == 2) {
+			cspv_errorf(ctx, line, "mat2 in a uniform block is not supported in WGSL output (std140 pads its columns)");
+		}
+		if (mt->kind == CSPV_T_BOOL || (mt->kind == CSPV_T_VEC && mt->elem->kind == CSPV_T_BOOL)) {
+			cspv_errorf(ctx, line, "bool members of uniform/buffer blocks are not supported in WGSL output ('%s')", names[i]);
+		}
+		int align = 0, size = 0;
+		if (mt->kind == CSPV_T_ARRAY && mt->cols < 0) {
+			cspv_std430_layout(ctx, mt->elem, line, &align, &size);
+			size = 0;
+		} else if (uniform) {
+			cspv_std140_layout(ctx, mt, line, &align, &size);
+		} else {
+			cspv_std430_layout(ctx, mt, line, &align, &size);
+		}
+		offset = (offset + align - 1) / align * align;
+		offsets[i] = offset;
+		offset += size;
+		if (align > max_align) max_align = align;
+		int na = 0, ns = 0;
+		if (mt->kind == CSPV_T_ARRAY && mt->cols < 0) ns = 0;
+		else cspv_wg_natural_layout(g, mt, uniform, line, &na, &ns);
+		nat_sizes[i] = ns;
+	}
+	int total = (offset + max_align - 1) / max_align * max_align;
+	for (int i = 0; i < n; i++) {
+		cspv_type* mt = types[i];
+		bool runtime = mt->kind == CSPV_T_ARRAY && mt->cols < 0;
+		int next = i + 1 < n ? offsets[i + 1] : total;
+		int span = next - offsets[i];
+		sappend(ctx->tp_out, "\t");
+		if (!runtime && span > nat_sizes[i] && !(uniform && i + 1 == n)) sfmt_append(ctx->tp_out, "@size(%d) ", span);
+		sfmt_append(ctx->tp_out, "%s: ", cspv_wg_id(g, names[i]));
+		cspv_wg_atom* a = atom_of ? atom_of[i] : NULL;
+		if (a) {
+			const char* at = a->scalar->kind == CSPV_T_INT ? "atomic<i32>" : "atomic<u32>";
+			if (mt->kind == CSPV_T_ARRAY) {
+				if (mt->cols < 0) sfmt_append(ctx->tp_out, "array<%s>", at);
+				else sfmt_append(ctx->tp_out, "array<%s, %d>", at, mt->cols * a->cols);
+			} else if (a->cols > 1) {
+				sfmt_append(ctx->tp_out, "array<%s, %d>", at, a->cols);
+			} else {
+				sappend(ctx->tp_out, at);
+			}
+		} else {
+			sappend(ctx->tp_out, cspv_wg_type(g, mt));
+		}
+		sappend(ctx->tp_out, ",\n");
+	}
+}
+
+//--------------------------------------------------------------------------------------------------
+// WGSL: module analysis (atomics, image access, referenced names, written parameters).
+
+typedef void (*cspv_wg_visit)(cspv_wg* g, cspv_expr* e, void* user);
+
+static void cspv_wg_walk_expr(cspv_wg* g, cspv_expr* e, cspv_wg_visit fn, void* user)
+{
+	if (!e) return;
+	fn(g, e, user);
+	switch (e->kind) {
+	case CSPV_E_BINARY: cspv_wg_walk_expr(g, e->u.bin.l, fn, user); cspv_wg_walk_expr(g, e->u.bin.r, fn, user); break;
+	case CSPV_E_UNARY: cspv_wg_walk_expr(g, e->u.un.e, fn, user); break;
+	case CSPV_E_COND:
+		cspv_wg_walk_expr(g, e->u.cond.c, fn, user);
+		cspv_wg_walk_expr(g, e->u.cond.a, fn, user);
+		cspv_wg_walk_expr(g, e->u.cond.b, fn, user);
+		break;
+	case CSPV_E_CALL:
+		for (int i = 0; i < (int)asize(e->u.call.args); i++) cspv_wg_walk_expr(g, e->u.call.args[i], fn, user);
+		break;
+	case CSPV_E_MEMBER: case CSPV_E_LENGTH: cspv_wg_walk_expr(g, e->u.member.base, fn, user); break;
+	case CSPV_E_INDEX: cspv_wg_walk_expr(g, e->u.index.base, fn, user); cspv_wg_walk_expr(g, e->u.index.index, fn, user); break;
+	default: break;
+	}
+}
+
+static void cspv_wg_walk_stmt(cspv_wg* g, cspv_stmt* s, cspv_wg_visit fn, void* user)
+{
+	if (!s) return;
+	switch (s->kind) {
+	case CSPV_S_BLOCK: for (int i = 0; i < (int)asize(s->u.block); i++) cspv_wg_walk_stmt(g, s->u.block[i], fn, user); break;
+	case CSPV_S_DECL: for (cspv_stmt* n = s; n; n = n->u.decl.next_decl) cspv_wg_walk_expr(g, n->u.decl.init, fn, user); break;
+	case CSPV_S_EXPR: cspv_wg_walk_expr(g, s->u.expr, fn, user); break;
+	case CSPV_S_IF:
+		cspv_wg_walk_expr(g, s->u.if_s.cond, fn, user);
+		cspv_wg_walk_stmt(g, s->u.if_s.then_s, fn, user);
+		cspv_wg_walk_stmt(g, s->u.if_s.else_s, fn, user);
+		break;
+	case CSPV_S_FOR:
+		cspv_wg_walk_stmt(g, s->u.for_s.init, fn, user);
+		cspv_wg_walk_expr(g, s->u.for_s.cond, fn, user);
+		cspv_wg_walk_expr(g, s->u.for_s.iter, fn, user);
+		cspv_wg_walk_stmt(g, s->u.for_s.body, fn, user);
+		break;
+	case CSPV_S_WHILE: case CSPV_S_DO:
+		cspv_wg_walk_expr(g, s->u.while_s.cond, fn, user);
+		cspv_wg_walk_stmt(g, s->u.while_s.body, fn, user);
+		break;
+	case CSPV_S_SWITCH: {
+		cspv_wg_walk_expr(g, s->u.switch_s.sel, fn, user);
+		cspv_switch_group* groups = s->u.switch_s.groups;
+		for (int i = 0; i < (int)asize(groups); i++) {
+			for (int j = 0; j < (int)asize(groups[i].stmts); j++) cspv_wg_walk_stmt(g, groups[i].stmts[j], fn, user);
+		}
+		break;
+	}
+	case CSPV_S_RETURN: cspv_wg_walk_expr(g, s->u.ret, fn, user); break;
+	default: break;
+	}
+}
+
+static bool cspv_wg_is_atomic_call(const char* name)
+{
+	return !strcmp(name, "atomicAdd") || !strcmp(name, "atomicMin") || !strcmp(name, "atomicMax") ||
+		!strcmp(name, "atomicAnd") || !strcmp(name, "atomicOr") || !strcmp(name, "atomicXor") ||
+		!strcmp(name, "atomicExchange") || !strcmp(name, "atomicCompSwap");
+}
+
+static bool cspv_wg_is_cas(cspv_expr* e)
+{
+	return e->kind == CSPV_E_CALL && e->u.call.array_size == -1 && !strcmp(e->u.call.name, "atomicCompSwap");
+}
+
+// The user function a call resolves to (overloads matched on argument types), or NULL for
+// intrinsics and constructors.
+static cspv_decl* cspv_wg_resolve(cspv_wg* g, cspv_expr* e)
+{
+	if (e->kind != CSPV_E_CALL || e->u.call.array_size != -1) return NULL;
+	cspv_ctx* ctx = g->ctx;
+	int argc = (int)asize(e->u.call.args);
+	cspv_decl* first = NULL;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind != CSPV_D_FUNC || d->name != e->u.call.name || d->num_params != argc) continue;
+		if (!first) first = d;
+		bool match = true;
+		for (int p = 0; p < argc && match; p++) {
+			cspv_type* at = d->params[p].qual ? cspv_wg_rtype(g, e->u.call.args[p]) : cspv_wg_etype(g, e->u.call.args[p]);
+			if (at != d->params[p].type) match = false;
+		}
+		if (match) return d;
+	}
+	return first;
+}
+
+// Name of a user function in WGSL: main moves aside for the entry point; overloads gain a
+// _cspv<k> suffix by declaration order.
+static const char* cspv_wg_func_name(cspv_wg* g, cspv_decl* f)
+{
+	if (f->name == g_cspv_kw.kw_main) return "cspv_main_";
+	cspv_ctx* ctx = g->ctx;
+	int count = 0, index = 0;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind != CSPV_D_FUNC || d->name != f->name) continue;
+		if (d == f) index = count;
+		count++;
+	}
+	if (count == 1) return cspv_wg_id(g, f->name);
+	char buf[160];
+	snprintf(buf, sizeof(buf), "%s_cspv%d", f->name, index);
+	return sintern(buf);
+}
+
+static bool cspv_wg_shadowed(cspv_wg* g, const char* name)
+{
+	for (int i = (int)asize(g->shadows) - 1; i >= 0; i--) {
+		if (g->shadows[i] == name) return true;
+	}
+	return false;
+}
+
+// Declaration behind a storage root: a shared variable (member -1), or a buffer block member
+// (anonymous: the member name; named instance: instance.member).
+static cspv_decl* cspv_wg_storage_root(cspv_wg* g, cspv_expr* e, int* member)
+{
+	cspv_ctx* ctx = g->ctx;
+	const char* inst = NULL;
+	const char* name = NULL;
+	if (e->kind == CSPV_E_REF) {
+		name = e->u.name;
+		if (cspv_wg_shadowed(g, name)) return NULL;
+	} else if (e->kind == CSPV_E_MEMBER && e->u.member.base->kind == CSPV_E_REF) {
+		inst = e->u.member.base->u.name;
+		name = e->u.member.member;
+		if (cspv_wg_shadowed(g, inst)) return NULL;
+	} else {
+		return NULL;
+	}
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (!inst && d->kind == CSPV_D_SHARED && d->name == name) { *member = -1; return d; }
+		if (d->kind == CSPV_D_BLOCK && d->is_buffer && d->instance_name == inst) {
+			for (int j = 0; j < d->num_members; j++) {
+				if (d->member_names[j] == name) { *member = j; return d; }
+			}
+		}
+	}
+	return NULL;
+}
+
+static cspv_wg_atom* cspv_wg_find_atom(cspv_wg* g, cspv_decl* d, int member)
+{
+	for (int i = 0; i < (int)asize(g->atoms); i++) {
+		if (g->atoms[i].decl == d && g->atoms[i].member == member) return g->atoms + i;
+	}
+	return NULL;
+}
+
+static int cspv_wg_swizzle_comp(char c)
+{
+	switch (c) {
+	case 'x': case 'r': case 's': return 0;
+	case 'y': case 'g': case 't': return 1;
+	case 'z': case 'b': case 'p': return 2;
+	case 'w': case 'a': case 'q': return 3;
+	default: return -1;
+	}
+}
+
+// A path into an atomic variable: root[index] with optional vector components.
+typedef struct cspv_wg_apath
+{
+	cspv_wg_atom* atom;
+	cspv_expr* index; // NULL for a non-array variable.
+	int comps[4];
+	int ncomps;       // 0: the whole element.
+} cspv_wg_apath;
+
+static bool cspv_wg_atom_path(cspv_wg* g, cspv_expr* e, cspv_wg_apath* p)
+{
+	if (!asize(g->atoms)) return false;
+	memset(p, 0, sizeof(*p));
+	cspv_expr* x = e;
+	if (x->kind == CSPV_E_MEMBER) {
+		cspv_type* bt = cspv_wg_rtype(g, x->u.member.base);
+		if (bt && bt->kind == CSPV_T_VEC) {
+			const char* m = x->u.member.member;
+			for (int i = 0; m[i] && i < 4; i++) p->comps[p->ncomps++] = cspv_wg_swizzle_comp(m[i]);
+			x = x->u.member.base;
+		}
+	}
+	int member = 0;
+	cspv_decl* d = NULL;
+	if (x->kind == CSPV_E_INDEX) {
+		d = cspv_wg_storage_root(g, x->u.index.base, &member);
+		if (!d) return false;
+		p->index = x->u.index.index;
+	} else {
+		d = cspv_wg_storage_root(g, x, &member);
+		if (!d) return false;
+	}
+	p->atom = cspv_wg_find_atom(g, d, member);
+	return p->atom != NULL;
+}
+
+static void cspv_wg_note_atomic(cspv_wg* g, cspv_expr* dest, int line)
+{
+	cspv_ctx* ctx = g->ctx;
+	cspv_expr* x = dest;
+	if (x->kind == CSPV_E_MEMBER) {
+		cspv_type* bt = cspv_wg_rtype(g, x->u.member.base);
+		if (bt && bt->kind == CSPV_T_VEC) x = x->u.member.base;
+	}
+	if (x->kind == CSPV_E_INDEX) x = x->u.index.base;
+	int member = 0;
+	cspv_decl* d = cspv_wg_storage_root(g, x, &member);
+	if (!d) cspv_errorf(ctx, line, "atomic destinations in WGSL output must be shared variables or storage buffer members");
+	if (cspv_wg_find_atom(g, d, member)) return;
+	cspv_type* t = member < 0 ? d->type : d->member_types[member];
+	if (t->kind == CSPV_T_ARRAY) t = t->elem;
+	int cols = 1;
+	if (t->kind == CSPV_T_VEC) {
+		cols = t->cols;
+		if (cols == 3 && member >= 0) cspv_errorf(ctx, line, "atomics on vec3 storage buffer elements are not supported in WGSL output");
+		t = t->elem;
+	}
+	if (t->kind != CSPV_T_INT && t->kind != CSPV_T_UINT) {
+		cspv_errorf(ctx, line, "atomic destinations must be int or uint (scalars, vectors, or arrays of them) in WGSL output");
+	}
+	cspv_wg_atom a;
+	a.decl = d;
+	a.member = member;
+	a.cols = cols;
+	a.scalar = t;
+	apush(g->atoms, a);
+}
+
+static cspv_wg_image* cspv_wg_find_image(cspv_wg* g, const char* name)
+{
+	for (int i = 0; i < (int)asize(g->images); i++) {
+		if (g->images[i].decl->name == name) return g->images + i;
+	}
+	return NULL;
+}
+
+static cspv_decl* cspv_wg_resolve(cspv_wg* g, cspv_expr* e);
+
+// The buffer block (or shared variable) an lvalue writes into, or NULL.
+static cspv_decl* cspv_wg_lvalue_storage(cspv_wg* g, cspv_expr* e)
+{
+	int member = 0;
+	for (;;) {
+		cspv_decl* d = cspv_wg_storage_root(g, e, &member);
+		if (d) return d;
+		if (e->kind == CSPV_E_MEMBER) e = e->u.member.base;
+		else if (e->kind == CSPV_E_INDEX) e = e->u.index.base;
+		else return NULL;
+	}
+}
+
+static void cspv_wg_note_write(cspv_wg* g, cspv_expr* lvalue)
+{
+	cspv_decl* d = cspv_wg_lvalue_storage(g, lvalue);
+	if (!d || d->kind != CSPV_D_BLOCK) return;
+	for (int i = 0; i < (int)asize(g->written); i++) {
+		if (g->written[i] == d) return;
+	}
+	apush(g->written, d);
+}
+
+static bool cspv_wg_is_written(cspv_wg* g, cspv_decl* d)
+{
+	for (int i = 0; i < (int)asize(g->written); i++) {
+		if (g->written[i] == d) return true;
+	}
+	return false;
+}
+
+static void cspv_wg_analyze_visit(cspv_wg* g, cspv_expr* e, void* user)
+{
+	(void)user;
+	if (e->kind == CSPV_E_REF) {
+		map_set(g->used, (uint64_t)(uintptr_t)e->u.name, 1);
+		return;
+	}
+	if (e->kind == CSPV_E_BINARY && cspv_tp_is_assign_op(e->u.bin.op)) {
+		cspv_wg_note_write(g, e->u.bin.l);
+		return;
+	}
+	if (e->kind == CSPV_E_UNARY && (e->u.un.op == CSPV_P_INC || e->u.un.op == CSPV_P_DEC)) {
+		cspv_wg_note_write(g, e->u.un.e);
+		return;
+	}
+	if (e->kind != CSPV_E_CALL) return;
+	const char* name = e->u.call.name;
+	if (cspv_wg_is_atomic_call(name) && asize(e->u.call.args)) {
+		cspv_wg_note_atomic(g, e->u.call.args[0], e->line);
+		cspv_wg_note_write(g, e->u.call.args[0]);
+	}
+	cspv_decl* f = cspv_wg_resolve(g, e);
+	for (int i = 0; f && i < f->num_params; i++) {
+		if (f->params[i].qual) cspv_wg_note_write(g, e->u.call.args[i]);
+	}
+	bool load = !strcmp(name, "imageLoad");
+	if ((load || !strcmp(name, "imageStore")) && asize(e->u.call.args) && e->u.call.args[0]->kind == CSPV_E_REF) {
+		cspv_wg_image* im = cspv_wg_find_image(g, e->u.call.args[0]->u.name);
+		if (im) {
+			if (load) {
+				if (!im->loaded) im->load_order = g->load_counter++;
+				im->loaded = true;
+			} else {
+				im->stored = true;
+			}
+		}
+	}
+}
+
+// Root variable name of an lvalue path (strips members and subscripts).
+static const char* cspv_wg_lvalue_root(cspv_expr* e)
+{
+	while (e->kind == CSPV_E_MEMBER || e->kind == CSPV_E_INDEX) {
+		e = e->kind == CSPV_E_MEMBER ? e->u.member.base : e->u.index.base;
+	}
+	return e->kind == CSPV_E_REF ? e->u.name : NULL;
+}
+
+typedef struct cspv_wg_written
+{
+	const char* name;
+	bool written;
+} cspv_wg_written;
+
+static void cspv_wg_written_visit(cspv_wg* g, cspv_expr* e, void* user)
+{
+	cspv_wg_written* w = (cspv_wg_written*)user;
+	if (e->kind == CSPV_E_BINARY && cspv_tp_is_assign_op(e->u.bin.op)) {
+		if (cspv_wg_lvalue_root(e->u.bin.l) == w->name) w->written = true;
+	} else if (e->kind == CSPV_E_UNARY && (e->u.un.op == CSPV_P_INC || e->u.un.op == CSPV_P_DEC)) {
+		if (cspv_wg_lvalue_root(e->u.un.e) == w->name) w->written = true;
+	} else if (e->kind == CSPV_E_CALL) {
+		cspv_decl* f = cspv_wg_resolve(g, e);
+		if (f) {
+			for (int i = 0; i < f->num_params; i++) {
+				if (f->params[i].qual && cspv_wg_lvalue_root(e->u.call.args[i]) == w->name) w->written = true;
+			}
+		}
+	}
+}
+
+// WGSL parameters are immutable: an `in` parameter the body writes is copied into a var.
+static bool cspv_wg_param_written(cspv_wg* g, cspv_decl* f, const char* name)
+{
+	cspv_wg_written w;
+	w.name = name;
+	w.written = false;
+	cspv_wg_walk_stmt(g, f->body, cspv_wg_written_visit, &w);
+	return w.written;
+}
+
+//--------------------------------------------------------------------------------------------------
+// WGSL: expressions. `wrap` is what the context needs from the printed form: 0 anything,
+// 1 a binary expression must be parenthesized (WGSL forbids mixing many operator classes
+// without parentheses), 2 also a unary one (postfix bases, unary operands).
+
+static void cspv_wg_expr(cspv_wg* g, cspv_expr* e, int wrap);
+static void cspv_wg_expr_to(cspv_wg* g, cspv_expr* e, cspv_type* want, int wrap);
+static void cspv_wg_node(cspv_wg* g, cspv_expr* e, int wrap);
+
+static void cspv_wg_float_lit(cspv_wg* g, double v)
+{
+	char buf[64];
+	snprintf(buf, sizeof(buf), "%.9g", v);
+	bool has_mark = false;
+	for (const char* p = buf; *p; p++) {
+		if (*p == '.' || *p == 'e' || *p == 'E') { has_mark = true; break; }
+	}
+	sfmt_append(g->ctx->tp_out, has_mark ? "%s" : "%s.0", buf);
+}
+
+static void cspv_wg_int_lit(cspv_wg* g, int32_t v)
+{
+	if (v < 0) sfmt_append(g->ctx->tp_out, "(%d)", v);
+	else sfmt_append(g->ctx->tp_out, "%d", v);
+}
+
+static bool cspv_wg_is_numeric(cspv_type* t)
+{
+	if (!t) return false;
+	if (t->kind != CSPV_T_VEC && t->kind != CSPV_T_INT && t->kind != CSPV_T_UINT && t->kind != CSPV_T_FLOAT) return false;
+	cspv_type_kind k = cspv_elem_type(t)->kind;
+	return k == CSPV_T_INT || k == CSPV_T_UINT || k == CSPV_T_FLOAT;
+}
+
+static bool cspv_wg_is_scalar_or_vec(cspv_type* t)
+{
+	return t && (t->kind == CSPV_T_VEC || t->kind == CSPV_T_BOOL || t->kind == CSPV_T_INT ||
+		t->kind == CSPV_T_UINT || t->kind == CSPV_T_FLOAT);
+}
+
+// Print `e` converted to `want`'s element kind (keeping its own component count), the way
+// codegen converted it implicitly. Integer literals convert in place.
+static void cspv_wg_expr_to(cspv_wg* g, cspv_expr* e, cspv_type* want, int wrap)
+{
+	cspv_type* have = cspv_wg_rtype(g, e);
+	if (want && have && cspv_wg_is_scalar_or_vec(want) && cspv_wg_is_scalar_or_vec(have)) {
+		cspv_type* we = cspv_elem_type(want);
+		cspv_type* he = cspv_elem_type(have);
+		if (we->kind != he->kind) {
+			if (e->kind == CSPV_E_INT_LIT || e->kind == CSPV_E_UINT_LIT) {
+				if (we->kind == CSPV_T_FLOAT) { cspv_wg_float_lit(g, e->kind == CSPV_E_INT_LIT ? (double)(int32_t)e->u.ival : (double)(uint32_t)e->u.ival); return; }
+				if (we->kind == CSPV_T_UINT) { sfmt_append(g->ctx->tp_out, "%uu", (uint32_t)e->u.ival); return; }
+				if (we->kind == CSPV_T_INT) { cspv_wg_int_lit(g, (int32_t)e->u.ival); return; }
+			}
+			if (e->kind == CSPV_E_FLOAT_LIT && (we->kind == CSPV_T_INT || we->kind == CSPV_T_UINT)) {
+				sfmt_append(g->ctx->tp_out, we->kind == CSPV_T_UINT ? "%uu" : "%d", we->kind == CSPV_T_UINT ? (uint32_t)e->u.fval : (uint32_t)(int32_t)e->u.fval);
+				return;
+			}
+			if (e->kind == CSPV_E_UNARY && e->u.un.op == '-' && we->kind == CSPV_T_FLOAT &&
+			    (e->u.un.e->kind == CSPV_E_INT_LIT || e->u.un.e->kind == CSPV_E_UINT_LIT)) {
+				if (wrap >= 2) spush(g->ctx->tp_out, '(');
+				spush(g->ctx->tp_out, '-');
+				cspv_wg_float_lit(g, (double)e->u.un.e->u.ival);
+				if (wrap >= 2) spush(g->ctx->tp_out, ')');
+				return;
+			}
+			cspv_type* target = cspv_vec_type(g->ctx, we, cspv_num_components(have));
+			sfmt_append(g->ctx->tp_out, "%s(", cspv_wg_type(g, target));
+			cspv_wg_node(g, e, 0);
+			spush(g->ctx->tp_out, ')');
+			return;
+		}
+	}
+	cspv_wg_node(g, e, wrap);
+}
+
+static void cspv_wg_expr(cspv_wg* g, cspv_expr* e, int wrap)
+{
+	cspv_wg_expr_to(g, e, e->want, wrap);
+}
+
+// `e` converted to `elem` and splatted to `n` components (n == 1: just converted).
+static void cspv_wg_splat(cspv_wg* g, cspv_expr* e, cspv_type* elem, int n)
+{
+	cspv_type* t = cspv_wg_rtype(g, e);
+	if (n > 1 && t && t->kind != CSPV_T_VEC) {
+		sfmt_append(g->ctx->tp_out, "%s(", cspv_wg_type(g, cspv_vec_type(g->ctx, elem, n)));
+		cspv_wg_expr_to(g, e, elem, 0);
+		spush(g->ctx->tp_out, ')');
+		return;
+	}
+	cspv_wg_expr_to(g, e, t ? cspv_vec_type(g->ctx, elem, cspv_num_components(t)) : elem, 0);
+}
+
+static void cspv_wg_ref(cspv_wg* g, const char* name)
+{
+	for (int i = (int)asize(g->shadows) - 1; i >= 0; i--) {
+		if (g->shadows[i] == name) {
+			if (g->shadow_ptr[i]) sfmt_append(g->ctx->tp_out, "(*%s)", cspv_wg_id(g, name));
+			else sappend(g->ctx->tp_out, cspv_wg_id(g, name));
+			return;
+		}
+	}
+	for (int i = 0; i < (int)asize(g->rename_from); i++) {
+		if (g->rename_from[i] == name) {
+			sappend(g->ctx->tp_out, g->rename_to[i]);
+			return;
+		}
+	}
+	sappend(g->ctx->tp_out, cspv_wg_id(g, name));
+}
+
+// Module-scope variable holding a buffer block (or a shared variable for member -1).
+static void cspv_wg_storage_var(cspv_wg* g, cspv_decl* d, int member)
+{
+	if (member < 0) {
+		sappend(g->ctx->tp_out, cspv_wg_id(g, d->name));
+	} else if (d->instance_name) {
+		sfmt_append(g->ctx->tp_out, "%s.%s", cspv_wg_id(g, d->instance_name), cspv_wg_id(g, d->member_names[member]));
+	} else {
+		sfmt_append(g->ctx->tp_out, "cspv_sb_%s.%s", d->name, cspv_wg_id(g, d->member_names[member]));
+	}
+}
+
+static cspv_type* cspv_wg_atom_var_type(cspv_wg_atom* a)
+{
+	return a->member < 0 ? a->decl->type : a->decl->member_types[a->member];
+}
+
+// The scalar atomic a path addresses (component `comp` of a flattened vector element).
+static void cspv_wg_atom_lv(cspv_wg* g, cspv_wg_apath* p, int comp)
+{
+	cspv_wg_storage_var(g, p->atom->decl, p->atom->member);
+	int cols = p->atom->cols;
+	if (!p->index && cols == 1) return;
+	spush(g->ctx->tp_out, '[');
+	if (cols > 1) {
+		if (p->index) {
+			sappend(g->ctx->tp_out, "u32(");
+			cspv_wg_expr(g, p->index, 0);
+			sfmt_append(g->ctx->tp_out, ") * %du + %du", cols, comp);
+		} else {
+			sfmt_append(g->ctx->tp_out, "%d", comp);
+		}
+	} else {
+		cspv_wg_expr(g, p->index, 0);
+	}
+	spush(g->ctx->tp_out, ']');
+}
+
+static void cspv_wg_atom_check_element(cspv_wg* g, cspv_wg_apath* p, int line)
+{
+	if (!p->index && cspv_wg_atom_var_type(p->atom)->kind == CSPV_T_ARRAY) {
+		cspv_errorf(g->ctx, line, "an atomically used array can only be accessed by element in WGSL output");
+	}
+}
+
+static void cspv_wg_atom_read(cspv_wg* g, cspv_wg_apath* p, int line)
+{
+	cspv_wg_atom_check_element(g, p, line);
+	int n = p->ncomps ? p->ncomps : p->atom->cols;
+	if (n == 1) {
+		sappend(g->ctx->tp_out, "atomicLoad(&");
+		cspv_wg_atom_lv(g, p, p->ncomps ? p->comps[0] : 0);
+		spush(g->ctx->tp_out, ')');
+		return;
+	}
+	sfmt_append(g->ctx->tp_out, "%s(", cspv_wg_type(g, cspv_vec_type(g->ctx, p->atom->scalar, n)));
+	for (int i = 0; i < n; i++) {
+		if (i) sappend(g->ctx->tp_out, ", ");
+		sappend(g->ctx->tp_out, "atomicLoad(&");
+		cspv_wg_atom_lv(g, p, p->ncomps ? p->comps[i] : i);
+		spush(g->ctx->tp_out, ')');
+	}
+	spush(g->ctx->tp_out, ')');
+}
+
+static int cspv_wg_op_class(int op)
+{
+	switch (op) {
+	case '*': case '/': case '%': return 1;
+	case '+': case '-': return 2;
+	case CSPV_P_SHL: case CSPV_P_SHR: return 3;
+	case '<': case '>': case CSPV_P_LE: case CSPV_P_GE: case CSPV_P_EQ: case CSPV_P_NE: return 4;
+	case '&': return 5;
+	case '|': return 6;
+	case '^': return 7;
+	case CSPV_P_AND: return 8;
+	case CSPV_P_OR: return 9;
+	default: return 0;
+	}
+}
+
+// Whether a binary child of a binary `pop` needs parentheses under WGSL's grammar.
+static int cspv_wg_child_wrap(int pop, cspv_expr* c, bool right)
+{
+	if (c->kind != CSPV_E_BINARY) return 1;
+	int pc = cspv_wg_op_class(pop);
+	int cc = cspv_wg_op_class(c->u.bin.op);
+	if (cc == 0) return 1;
+	if (pc <= 2 && cc <= 2) {
+		if (cc < pc) return 0;
+		if (cc == pc && !right) return 0;
+		return 1;
+	}
+	if (pc == 4 && cc <= 3) return 0;
+	if ((pc == 8 || pc == 9) && cc <= 4) return 0;
+	if (pc == cc && pc >= 5 && !right) return 0;
+	return 1;
+}
+
+// A shift amount: WGSL wants u32 (vecN<u32> for vector shifts).
+static void cspv_wg_shift_amount(cspv_wg* g, cspv_expr* r, int n)
+{
+	cspv_type* rt = cspv_wg_rtype(g, r);
+	int rn = rt ? cspv_num_components(rt) : 1;
+	if (r->kind == CSPV_E_INT_LIT || r->kind == CSPV_E_UINT_LIT) {
+		if (n > 1) sfmt_append(g->ctx->tp_out, "vec%du(%uu)", n, (uint32_t)r->u.ival);
+		else sfmt_append(g->ctx->tp_out, "%uu", (uint32_t)r->u.ival);
+		return;
+	}
+	bool ru = rt && cspv_elem_type(rt)->kind == CSPV_T_UINT;
+	if (ru && rn == n) { cspv_wg_expr(g, r, 1); return; }
+	if (n > 1 && rn == 1) {
+		sfmt_append(g->ctx->tp_out, "vec%du(", n);
+		if (!ru) sappend(g->ctx->tp_out, "u32(");
+		cspv_wg_expr(g, r, 0);
+		if (!ru) spush(g->ctx->tp_out, ')');
+		spush(g->ctx->tp_out, ')');
+		return;
+	}
+	if (n > 1) sfmt_append(g->ctx->tp_out, "vec%du(", n);
+	else sappend(g->ctx->tp_out, "u32(");
+	cspv_wg_expr(g, r, 0);
+	spush(g->ctx->tp_out, ')');
+}
+
+static void cspv_wg_call(cspv_wg* g, cspv_expr* e);
+
+static void cspv_wg_binary(cspv_wg* g, cspv_expr* e, int wrap)
+{
+	cspv_ctx* ctx = g->ctx;
+	int op = e->u.bin.op;
+	cspv_expr* l = e->u.bin.l;
+	cspv_expr* r = e->u.bin.r;
+	if (cspv_tp_is_assign_op(op)) cspv_errorf(ctx, e->line, "assignments inside expressions are not supported in WGSL output");
+	if (op == ',') cspv_errorf(ctx, e->line, "the comma operator is not supported in WGSL output outside for-loop updates");
+	cspv_type* lt = cspv_wg_rtype(g, l);
+	cspv_type* rt = cspv_wg_rtype(g, r);
+	// `a < b, c > d` in an argument list would parse as a template list: ordered comparisons
+	// always carry their own parentheses.
+	bool ordered = op == '<' || op == '>' || op == CSPV_P_LE || op == CSPV_P_GE;
+	bool paren = wrap >= 1 || ordered;
+	if (paren) spush(ctx->tp_out, '(');
+
+	if (op == CSPV_P_AND || op == CSPV_P_OR) {
+		cspv_wg_expr(g, l, cspv_wg_child_wrap(op, l, false));
+		sappend(ctx->tp_out, op == CSPV_P_AND ? " && " : " || ");
+		cspv_wg_expr(g, r, cspv_wg_child_wrap(op, r, true));
+	} else if (op == CSPV_P_SHL || op == CSPV_P_SHR) {
+		cspv_wg_expr(g, l, 1);
+		sappend(ctx->tp_out, op == CSPV_P_SHL ? " << " : " >> ");
+		cspv_wg_shift_amount(g, r, lt ? cspv_num_components(lt) : 1);
+	} else {
+		bool equality = op == CSPV_P_EQ || op == CSPV_P_NE;
+		if (equality && ((lt && (lt->kind == CSPV_T_STRUCT || lt->kind == CSPV_T_ARRAY || lt->kind == CSPV_T_MAT)) ||
+		                 (rt && (rt->kind == CSPV_T_STRUCT || rt->kind == CSPV_T_ARRAY || rt->kind == CSPV_T_MAT)))) {
+			cspv_errorf(ctx, e->line, "==/!= on structs, arrays, or matrices is not supported in WGSL output");
+		}
+		bool vec_eq = equality && ((lt && lt->kind == CSPV_T_VEC) || (rt && rt->kind == CSPV_T_VEC));
+		// Re-balance mixed element kinds the way codegen did (int -> uint -> float).
+		cspv_type* elem = NULL;
+		if (cspv_wg_is_numeric(lt) && cspv_wg_is_numeric(rt)) {
+			cspv_type_kind lk = cspv_elem_type(lt)->kind;
+			cspv_type_kind rk = cspv_elem_type(rt)->kind;
+			elem = cspv_promo_rank(lk) >= cspv_promo_rank(rk) ? cspv_elem_type(lt) : cspv_elem_type(rt);
+		}
+		int ln = lt && lt->kind != CSPV_T_MAT ? cspv_num_components(lt) : 0;
+		int rn = rt && rt->kind != CSPV_T_MAT ? cspv_num_components(rt) : 0;
+		// Bitwise ops and vector equality take no scalar/vector mixing: splat the scalar side.
+		bool splat = (op == '&' || op == '|' || op == '^' || vec_eq) && ln && rn && ln != rn;
+		bool mat_div = op == '/' && lt && lt->kind == CSPV_T_MAT;
+		if (vec_eq) sappend(ctx->tp_out, op == CSPV_P_EQ ? "all(" : "any(");
+		int lw = vec_eq ? 1 : cspv_wg_child_wrap(op, l, false);
+		int rw = vec_eq ? 1 : cspv_wg_child_wrap(op, r, true);
+		if (elem && splat && ln == 1) cspv_wg_splat(g, l, elem, rn);
+		else if (elem) cspv_wg_expr_to(g, l, cspv_vec_type(ctx, elem, ln), lw);
+		else cspv_wg_expr(g, l, lw);
+		if (mat_div) {
+			sappend(ctx->tp_out, " * (1.0 / ");
+			cspv_wg_expr_to(g, r, ctx->t_float, 1);
+			spush(ctx->tp_out, ')');
+		} else {
+			sfmt_append(ctx->tp_out, " %s ", cspv_tp_op_str(op));
+			if (elem && splat && rn == 1) cspv_wg_splat(g, r, elem, ln);
+			else if (elem) cspv_wg_expr_to(g, r, cspv_vec_type(ctx, elem, rn), rw);
+			else cspv_wg_expr(g, r, rw);
+		}
+		if (vec_eq) spush(ctx->tp_out, ')');
+	}
+	if (paren) spush(ctx->tp_out, ')');
+}
+
+static void cspv_wg_node(cspv_wg* g, cspv_expr* e, int wrap)
+{
+	cspv_ctx* ctx = g->ctx;
+	const char* lowered = map_get(g->lowered, (uint64_t)(uintptr_t)e);
+	if (lowered) {
+		sappend(ctx->tp_out, lowered);
+		return;
+	}
+	if ((e->kind == CSPV_E_REF || e->kind == CSPV_E_MEMBER || e->kind == CSPV_E_INDEX) && asize(g->atoms)) {
+		cspv_wg_apath p;
+		if (cspv_wg_atom_path(g, e, &p)) {
+			cspv_wg_atom_read(g, &p, e->line);
+			return;
+		}
+	}
+	switch (e->kind) {
+	case CSPV_E_FLOAT_LIT: cspv_wg_float_lit(g, e->u.fval); break;
+	case CSPV_E_INT_LIT: cspv_wg_int_lit(g, (int32_t)e->u.ival); break;
+	case CSPV_E_UINT_LIT: sfmt_append(ctx->tp_out, "%uu", (uint32_t)e->u.ival); break;
+	case CSPV_E_BOOL_LIT: sappend(ctx->tp_out, e->u.bval ? "true" : "false"); break;
+	case CSPV_E_REF: cspv_wg_ref(g, e->u.name); break;
+
+	case CSPV_E_MEMBER: {
+		cspv_type* bt = cspv_wg_rtype(g, e->u.member.base);
+		const char* m = e->u.member.member;
+		if (bt && bt->kind == CSPV_T_VEC) {
+			cspv_wg_expr(g, e->u.member.base, 2);
+			spush(ctx->tp_out, '.');
+			static const char xyzw[] = "xyzw";
+			for (int i = 0; m[i]; i++) {
+				int c = cspv_wg_swizzle_comp(m[i]);
+				spush(ctx->tp_out, (m[i] == 's' || m[i] == 't' || m[i] == 'p' || m[i] == 'q') ? xyzw[c] : m[i]);
+			}
+		} else if (bt && bt->kind != CSPV_T_STRUCT) {
+			// Scalar swizzle: .x is the scalar itself, wider ones splat.
+			int n = (int)strlen(m);
+			if (n == 1) {
+				cspv_wg_expr(g, e->u.member.base, wrap);
+			} else {
+				sfmt_append(ctx->tp_out, "%s(", cspv_wg_type(g, cspv_vec_type(ctx, bt, n)));
+				cspv_wg_expr(g, e->u.member.base, 0);
+				spush(ctx->tp_out, ')');
+			}
+		} else {
+			cspv_wg_expr(g, e->u.member.base, 2);
+			sfmt_append(ctx->tp_out, ".%s", cspv_wg_id(g, m));
+		}
+		break;
+	}
+
+	case CSPV_E_INDEX:
+		cspv_wg_expr(g, e->u.index.base, 2);
+		spush(ctx->tp_out, '[');
+		cspv_wg_expr(g, e->u.index.index, 0);
+		spush(ctx->tp_out, ']');
+		break;
+
+	case CSPV_E_LENGTH: {
+		cspv_expr* b = e->u.member.base;
+		cspv_type* bt = cspv_wg_rtype(g, b);
+		if (bt && bt->kind == CSPV_T_ARRAY && bt->cols >= 0) {
+			sfmt_append(ctx->tp_out, "%d", bt->cols);
+		} else {
+			cspv_wg_apath p;
+			if (cspv_wg_atom_path(g, b, &p)) cspv_errorf(ctx, e->line, ".length() of an atomically used array is not supported in WGSL output");
+			sappend(ctx->tp_out, "i32(arrayLength(&");
+			cspv_wg_expr(g, b, 2);
+			sappend(ctx->tp_out, "))");
+		}
+		break;
+	}
+
+	case CSPV_E_CALL:
+		cspv_wg_call(g, e);
+		break;
+
+	case CSPV_E_UNARY: {
+		int op = e->u.un.op;
+		if (op == CSPV_P_INC || op == CSPV_P_DEC) {
+			cspv_errorf(ctx, e->line, "++/-- inside expressions is not supported in WGSL output");
+		}
+		if (op == '+') {
+			cspv_wg_expr(g, e->u.un.e, wrap);
+			break;
+		}
+		cspv_type* t = cspv_wg_rtype(g, e->u.un.e);
+		if (op == '-' && t && cspv_wg_is_numeric(t) && cspv_elem_type(t)->kind == CSPV_T_UINT) {
+			// WGSL has no unary minus on unsigned values; GLSL's wraps.
+			sfmt_append(ctx->tp_out, "(%s(0u) - ", cspv_wg_type(g, t));
+			cspv_wg_expr(g, e->u.un.e, 1);
+			spush(ctx->tp_out, ')');
+			break;
+		}
+		if (op == '-' && t && t->kind == CSPV_T_MAT) {
+			// No unary minus on matrices.
+			spush(ctx->tp_out, '(');
+			cspv_wg_expr(g, e->u.un.e, 1);
+			sappend(ctx->tp_out, " * -1.0)");
+			break;
+		}
+		if (wrap >= 2) spush(ctx->tp_out, '(');
+		spush(ctx->tp_out, (char)op);
+		cspv_wg_expr(g, e->u.un.e, 2);
+		if (wrap >= 2) spush(ctx->tp_out, ')');
+		break;
+	}
+
+	case CSPV_E_BINARY:
+		cspv_wg_binary(g, e, wrap);
+		break;
+
+	case CSPV_E_COND: {
+		cspv_type* t = cspv_wg_etype(g, e->u.cond.a);
+		if (!t) t = cspv_wg_etype(g, e->u.cond.b);
+		if (t && !cspv_wg_is_scalar_or_vec(t)) {
+			cspv_errorf(ctx, e->line, "?: on struct, array, or matrix values is not supported in WGSL output");
+		}
+		sappend(ctx->tp_out, "select(");
+		cspv_wg_expr(g, e->u.cond.b, 0);
+		sappend(ctx->tp_out, ", ");
+		cspv_wg_expr(g, e->u.cond.a, 0);
+		sappend(ctx->tp_out, ", ");
+		cspv_wg_expr(g, e->u.cond.c, 0);
+		spush(ctx->tp_out, ')');
+		break;
+	}
+	}
+}
+
+//--------------------------------------------------------------------------------------------------
+// WGSL: calls.
+
+// Constructors. WGSL constructors take exactly-typed components: every argument converts to
+// the element type explicitly; diagonal and resizing matrix constructors go through helpers.
+static void cspv_wg_ctor(cspv_wg* g, cspv_expr* e, cspv_type* t)
+{
+	cspv_ctx* ctx = g->ctx;
+	CK_DYNA cspv_expr** args = e->u.call.args;
+	int argc = (int)asize(args);
+	if (t->kind == CSPV_T_STRUCT) {
+		sfmt_append(ctx->tp_out, "%s(", cspv_wg_type(g, t));
+		for (int i = 0; i < argc; i++) {
+			if (i) sappend(ctx->tp_out, ", ");
+			cspv_wg_expr_to(g, args[i], i < (int)asize(t->field_types) ? t->field_types[i] : NULL, 0);
+		}
+		spush(ctx->tp_out, ')');
+		return;
+	}
+	if (t->kind == CSPV_T_MAT) {
+		int cols = t->cols;
+		int rows = t->rows ? t->rows : t->cols;
+		if (argc == 1) {
+			cspv_type* a = cspv_wg_rtype(g, args[0]);
+			if (a && a->kind == CSPV_T_MAT) {
+				if (a->cols == cols) {
+					sfmt_append(ctx->tp_out, "%s(", cspv_wg_type(g, t));
+					cspv_wg_expr(g, args[0], 0);
+				} else {
+					g->helpers |= CSPV_WGH_MATCVT << ((a->cols - 2) * 3 + (cols - 2));
+					sfmt_append(ctx->tp_out, "cspv_mat%d_from%d(", cols, a->cols);
+					cspv_wg_expr(g, args[0], 0);
+				}
+			} else {
+				g->helpers |= CSPV_WGH_DIAG << (cols - 2);
+				sfmt_append(ctx->tp_out, "cspv_diag%d(", cols);
+				cspv_wg_expr_to(g, args[0], ctx->t_float, 0);
+			}
+			spush(ctx->tp_out, ')');
+			return;
+		}
+		bool all_scalar = argc == cols * rows;
+		bool all_cols = argc == cols;
+		for (int i = 0; i < argc; i++) {
+			cspv_type* a = cspv_wg_rtype(g, args[i]);
+			if (!a || a->kind == CSPV_T_VEC) all_scalar = false;
+			if (!a || a->kind != CSPV_T_VEC || a->cols != rows) all_cols = false;
+		}
+		if (!all_scalar && !all_cols) {
+			cspv_errorf(ctx, e->line, "matrix constructors mixing vectors and scalars are not supported in WGSL output");
+		}
+		sfmt_append(ctx->tp_out, "%s(", cspv_wg_type(g, t));
+		for (int i = 0; i < argc; i++) {
+			if (i) sappend(ctx->tp_out, ", ");
+			cspv_type* a = cspv_wg_rtype(g, args[i]);
+			cspv_wg_expr_to(g, args[i], cspv_vec_type(ctx, ctx->t_float, cspv_num_components(a)), 0);
+		}
+		spush(ctx->tp_out, ')');
+		return;
+	}
+	if (t->kind == CSPV_T_VEC) {
+		int n = t->cols;
+		cspv_type* elem = t->elem;
+		if (argc == 1) {
+			cspv_type* a = cspv_wg_rtype(g, args[0]);
+			if (a && a->kind == CSPV_T_VEC && a->cols > n) {
+				static const char* swz[3] = { "xy", "xyz", "xyzw" };
+				if (a->elem == elem) {
+					cspv_wg_expr(g, args[0], 2);
+					sfmt_append(ctx->tp_out, ".%s", swz[n - 2]);
+				} else {
+					sfmt_append(ctx->tp_out, "%s(", cspv_wg_type(g, t));
+					cspv_wg_expr(g, args[0], 2);
+					sfmt_append(ctx->tp_out, ".%s)", swz[n - 2]);
+				}
+				return;
+			}
+			sfmt_append(ctx->tp_out, "%s(", cspv_wg_type(g, t));
+			if (a && a->kind == CSPV_T_VEC) cspv_wg_expr(g, args[0], 0); // Conversion constructor.
+			else if (a && a->kind == CSPV_T_BOOL && elem->kind != CSPV_T_BOOL) {
+				sfmt_append(ctx->tp_out, "%s(", cspv_wg_type(g, elem));
+				cspv_wg_expr(g, args[0], 0);
+				spush(ctx->tp_out, ')');
+			} else if (a && elem->kind == CSPV_T_BOOL && a->kind != CSPV_T_BOOL) {
+				sappend(ctx->tp_out, "bool(");
+				cspv_wg_expr(g, args[0], 0);
+				spush(ctx->tp_out, ')');
+			} else cspv_wg_expr_to(g, args[0], elem, 0);
+			spush(ctx->tp_out, ')');
+			return;
+		}
+		sfmt_append(ctx->tp_out, "%s(", cspv_wg_type(g, t));
+		int remaining = n;
+		for (int i = 0; i < argc && remaining > 0; i++) {
+			if (i) sappend(ctx->tp_out, ", ");
+			cspv_type* a = cspv_wg_rtype(g, args[i]);
+			if (a && a->kind == CSPV_T_MAT) cspv_errorf(ctx, e->line, "vector constructors from matrices are not supported in WGSL output");
+			int k = a ? cspv_num_components(a) : 1;
+			bool same = a && cspv_elem_type(a)->kind == elem->kind;
+			bool boolish = a && (cspv_elem_type(a)->kind == CSPV_T_BOOL) != (elem->kind == CSPV_T_BOOL);
+			if (k > remaining) {
+				// Partially consumed trailing vector.
+				static const char* swz[4] = { "x", "xy", "xyz", "xyzw" };
+				cspv_type* part = cspv_vec_type(ctx, elem, remaining);
+				if (!same) sfmt_append(ctx->tp_out, "%s(", cspv_wg_type(g, part));
+				cspv_wg_expr(g, args[i], 2);
+				sfmt_append(ctx->tp_out, ".%s", swz[remaining - 1]);
+				if (!same) spush(ctx->tp_out, ')');
+				remaining = 0;
+				break;
+			}
+			if (boolish) {
+				sfmt_append(ctx->tp_out, "%s(", cspv_wg_type(g, cspv_vec_type(ctx, elem, k)));
+				cspv_wg_expr(g, args[i], 0);
+				spush(ctx->tp_out, ')');
+			} else {
+				cspv_wg_expr_to(g, args[i], cspv_vec_type(ctx, elem, k), 0);
+			}
+			remaining -= k;
+		}
+		spush(ctx->tp_out, ')');
+		return;
+	}
+	// Scalar conversions (from a vector: its first component).
+	sfmt_append(ctx->tp_out, "%s(", cspv_wg_type(g, t));
+	if (argc == 1) {
+		cspv_type* a = cspv_wg_rtype(g, args[0]);
+		cspv_wg_expr(g, args[0], a && a->kind == CSPV_T_VEC ? 2 : 0);
+		if (a && a->kind == CSPV_T_VEC) sappend(ctx->tp_out, ".x");
+	}
+	spush(ctx->tp_out, ')');
+}
+
+static const char* cspv_wg_sampler_name(const char* name)
+{
+	char buf[160];
+	snprintf(buf, sizeof(buf), "cspv_smp_%s", name);
+	return sintern(buf);
+}
+
+// Array-layer coordinate: GLSL selects round-to-nearest of the float layer.
+static void cspv_wg_layer(cspv_wg* g, cspv_expr* p, const char* comp)
+{
+	sappend(g->ctx->tp_out, "i32(floor(");
+	cspv_wg_expr(g, p, 2);
+	sfmt_append(g->ctx->tp_out, ".%s + 0.5))", comp);
+}
+
+static void cspv_wg_texture(cspv_wg* g, cspv_expr* e)
+{
+	cspv_ctx* ctx = g->ctx;
+	CK_SDYNA char** out = &ctx->tp_out;
+	const char* name = e->u.call.name;
+	CK_DYNA cspv_expr** args = e->u.call.args;
+	const char* s = args[0]->u.name;
+	const char* tex = cspv_wg_id(g, s);
+	const char* smp = cspv_wg_sampler_name(s);
+	int sdim = args[0]->rtype->cols;
+	bool frag = ctx->stage == CSPV_STAGE_FRAGMENT;
+	bool shadow = cspv_wg_shadow_dim(sdim);
+	bool arrayed = sdim == CSPV_SDIM_2D_ARRAY;
+	bool sample = !strcmp(name, "texture") || !strcmp(name, "textureLod") || !strcmp(name, "textureGrad") || !strcmp(name, "textureOffset");
+	if (sample && args[0]->rtype->elem && args[0]->rtype->elem->kind == CSPV_T_UINT) {
+		cspv_errorf(ctx, e->line, "'%s' on a usampler2D is not supported in WGSL output (integer textures cannot be filtered; use texelFetch)", name);
+	}
+	if (shadow && sample) {
+		// Comparison fetches are level zero, as on every other backend (single-mip shadow
+		// maps); textureLod's lod and textureGrad's gradients drop accordingly.
+		sfmt_append(*out, "textureSampleCompareLevel(%s, %s, ", tex, smp);
+		if (sdim == CSPV_SDIM_2D_ARRAY_SHADOW) {
+			cspv_wg_expr(g, args[1], 2);
+			sappend(*out, ".xy, ");
+			cspv_wg_layer(g, args[1], "z");
+			sappend(*out, ", ");
+			cspv_wg_expr(g, args[1], 2);
+			sappend(*out, ".w)");
+		} else if (sdim == CSPV_SDIM_CUBE_SHADOW) {
+			cspv_wg_expr(g, args[1], 2);
+			sappend(*out, ".xyz, ");
+			cspv_wg_expr(g, args[1], 2);
+			sappend(*out, ".w)");
+		} else {
+			cspv_wg_expr(g, args[1], 2);
+			sappend(*out, ".xy, ");
+			cspv_wg_expr(g, args[1], 2);
+			sappend(*out, ".z)");
+		}
+		return;
+	}
+	if (sample) {
+		bool lod = !strcmp(name, "textureLod");
+		bool grad = !strcmp(name, "textureGrad");
+		bool offset = !strcmp(name, "textureOffset");
+		bool level0 = !frag && !lod && !grad; // No derivatives outside fragment shaders.
+		sfmt_append(*out, "%s(%s, %s, ", grad ? "textureSampleGrad" : (lod || level0) ? "textureSampleLevel" : "textureSample", tex, smp);
+		if (arrayed) {
+			cspv_wg_expr(g, args[1], 2);
+			sappend(*out, ".xy, ");
+			cspv_wg_layer(g, args[1], "z");
+		} else {
+			cspv_wg_expr(g, args[1], 0);
+		}
+		if (lod) {
+			sappend(*out, ", ");
+			cspv_wg_expr_to(g, args[2], ctx->t_float, 0);
+		} else if (grad) {
+			sappend(*out, ", ");
+			cspv_wg_expr(g, args[2], 0);
+			sappend(*out, ", ");
+			cspv_wg_expr(g, args[3], 0);
+		} else if (level0) {
+			sappend(*out, ", 0.0");
+		}
+		if (offset) {
+			sappend(*out, ", ");
+			cspv_wg_expr(g, args[2], 0);
+		}
+		spush(*out, ')');
+		return;
+	}
+	if (!strcmp(name, "texelFetch")) {
+		sfmt_append(*out, "textureLoad(%s, ", tex);
+		if (arrayed) {
+			cspv_wg_expr(g, args[1], 2);
+			sappend(*out, ".xy, ");
+			cspv_wg_expr(g, args[1], 2);
+			sappend(*out, ".z");
+		} else {
+			cspv_wg_expr(g, args[1], 0);
+		}
+		sappend(*out, ", ");
+		cspv_wg_expr(g, args[2], 0);
+		spush(*out, ')');
+		return;
+	}
+	// textureSize.
+	if (arrayed || sdim == CSPV_SDIM_2D_ARRAY_SHADOW) {
+		sfmt_append(*out, "vec3i(vec3u(textureDimensions(%s, ", tex);
+		cspv_wg_expr(g, args[1], 0);
+		sfmt_append(*out, "), textureNumLayers(%s)))", tex);
+	} else {
+		sfmt_append(*out, sdim == CSPV_SDIM_3D ? "vec3i(textureDimensions(%s, " : "vec2i(textureDimensions(%s, ", tex);
+		cspv_wg_expr(g, args[1], 0);
+		sappend(*out, "))");
+	}
+}
+
+static int cspv_wg_hoist_temp(cspv_wg* g, cspv_expr* arg)
+{
+	for (int i = 0; i < (int)asize(g->hoists); i++) {
+		if (g->hoists[i].arg == arg) return g->hoists[i].temp;
+	}
+	return -1;
+}
+
+// An out/inout argument that can pass straight through: a whole local variable (as &x) or an
+// out/inout parameter of the current function (already a pointer).
+static bool cspv_wg_out_arg_direct(cspv_wg* g, cspv_expr* a, bool* is_ptr)
+{
+	if (a->kind != CSPV_E_REF) return false;
+	for (int i = (int)asize(g->shadows) - 1; i >= 0; i--) {
+		if (g->shadows[i] == a->u.name) {
+			*is_ptr = g->shadow_ptr[i];
+			return true;
+		}
+	}
+	return false;
+}
+
+static void cspv_wg_user_call(cspv_wg* g, cspv_expr* e, cspv_decl* f)
+{
+	cspv_ctx* ctx = g->ctx;
+	CK_DYNA cspv_expr** args = e->u.call.args;
+	sfmt_append(ctx->tp_out, "%s(", cspv_wg_func_name(g, f));
+	for (int i = 0; i < f->num_params; i++) {
+		if (i) sappend(ctx->tp_out, ", ");
+		cspv_param* p = f->params + i;
+		cspv_expr* a = args[i];
+		if (p->type->kind == CSPV_T_SAMPLER2D) {
+			if (a->kind != CSPV_E_REF) cspv_errorf(ctx, e->line, "sampler arguments must name a sampler in WGSL output");
+			sfmt_append(ctx->tp_out, "%s, %s", cspv_wg_id(g, a->u.name), cspv_wg_sampler_name(a->u.name));
+		} else if (p->type->kind == CSPV_T_IMAGE2D) {
+			cspv_errorf(ctx, e->line, "image2D function parameters are not supported in WGSL output");
+		} else if (p->qual) {
+			int t = cspv_wg_hoist_temp(g, a);
+			bool is_ptr = false;
+			if (t >= 0) sfmt_append(ctx->tp_out, "&cspv_o%d", t);
+			else if (cspv_wg_out_arg_direct(g, a, &is_ptr)) sfmt_append(ctx->tp_out, is_ptr ? "%s" : "&%s", cspv_wg_id(g, a->u.name));
+			else cspv_errorf(ctx, e->line, "out/inout argument %d of '%s' must be a local variable here in WGSL output", i + 1, f->name);
+		} else {
+			cspv_wg_expr_to(g, a, p->type, 0);
+		}
+	}
+	spush(ctx->tp_out, ')');
+}
+
+static const char* cspv_wg_rename_intrinsic(const char* name, int argc)
+{
+	if (!strcmp(name, "inversesqrt")) return "inverseSqrt";
+	if (!strcmp(name, "dFdx")) return "dpdx";
+	if (!strcmp(name, "dFdy")) return "dpdy";
+	if (!strcmp(name, "atan") && argc == 2) return "atan2";
+	if (!strcmp(name, "packUnorm4x8")) return "pack4x8unorm";
+	if (!strcmp(name, "packSnorm4x8")) return "pack4x8snorm";
+	if (!strcmp(name, "packUnorm2x16")) return "pack2x16unorm";
+	if (!strcmp(name, "packSnorm2x16")) return "pack2x16snorm";
+	if (!strcmp(name, "packHalf2x16")) return "pack2x16float";
+	if (!strcmp(name, "unpackUnorm4x8")) return "unpack4x8unorm";
+	if (!strcmp(name, "unpackSnorm4x8")) return "unpack4x8snorm";
+	if (!strcmp(name, "unpackUnorm2x16")) return "unpack2x16unorm";
+	if (!strcmp(name, "unpackSnorm2x16")) return "unpack2x16snorm";
+	if (!strcmp(name, "unpackHalf2x16")) return "unpack2x16float";
+	return name;
+}
+
+// GLSL genType intrinsics whose scalar arguments splat against vector ones.
+static bool cspv_wg_splats(const char* name)
+{
+	return !strcmp(name, "min") || !strcmp(name, "max") || !strcmp(name, "clamp") || !strcmp(name, "mix") ||
+		!strcmp(name, "step") || !strcmp(name, "smoothstep") || !strcmp(name, "pow") || !strcmp(name, "mod") ||
+		!strcmp(name, "atan");
+}
+
+static void cspv_wg_call(cspv_wg* g, cspv_expr* e)
+{
+	cspv_ctx* ctx = g->ctx;
+	CK_SDYNA char** out = &ctx->tp_out;
+	const char* name = e->u.call.name;
+	CK_DYNA cspv_expr** args = e->u.call.args;
+	int argc = (int)asize(args);
+
+	if (e->u.call.array_size != -1) {
+		cspv_type* elem = cspv_lookup_type(ctx, name);
+		int len = e->u.call.array_size ? e->u.call.array_size : argc;
+		sfmt_append(*out, "array<%s, %d>(", cspv_wg_type(g, elem), len);
+		for (int i = 0; i < argc; i++) {
+			if (i) sappend(*out, ", ");
+			cspv_wg_expr_to(g, args[i], elem, 0);
+		}
+		spush(*out, ')');
+		return;
+	}
+	cspv_type* ctor = cspv_lookup_type(ctx, name);
+	if (ctor) {
+		cspv_wg_ctor(g, e, ctor);
+		return;
+	}
+	cspv_decl* f = cspv_wg_resolve(g, e);
+	if (f) {
+		cspv_wg_user_call(g, e, f);
+		return;
+	}
+	if (argc >= 1 && args[0]->kind == CSPV_E_REF && args[0]->rtype && args[0]->rtype->kind == CSPV_T_SAMPLER2D) {
+		cspv_wg_texture(g, e);
+		return;
+	}
+
+	// Storage images.
+	if (!strcmp(name, "imageLoad") || !strcmp(name, "imageStore") || !strcmp(name, "imageSize")) {
+		if (args[0]->kind != CSPV_E_REF) cspv_errorf(ctx, e->line, "'%s' needs an image variable in WGSL output", name);
+		const char* img = cspv_wg_id(g, args[0]->u.name);
+		cspv_wg_image* im = cspv_wg_find_image(g, args[0]->u.name);
+		if (!strcmp(name, "imageLoad")) {
+			if (im && im->split) sfmt_append(*out, "textureLoad(cspv_ld_%s, ", args[0]->u.name);
+			else sfmt_append(*out, "textureLoad(%s, ", img);
+			cspv_wg_expr(g, args[1], 0);
+			sappend(*out, im && im->split ? ", 0)" : ")");
+		} else if (!strcmp(name, "imageStore")) {
+			sfmt_append(*out, "textureStore(%s, ", img);
+			cspv_wg_expr(g, args[1], 0);
+			sappend(*out, ", ");
+			cspv_wg_expr(g, args[2], 0);
+			spush(*out, ')');
+		} else {
+			sfmt_append(*out, "vec2i(textureDimensions(%s))", img);
+		}
+		return;
+	}
+
+	// Relational vector intrinsics: WGSL comparisons are already component-wise.
+	const char* rel = cspv_hlsl_relational_op(name);
+	if (rel) {
+		cspv_type* at = cspv_wg_rtype(g, args[0]);
+		cspv_type* bt = cspv_wg_rtype(g, args[1]);
+		cspv_type* elem = NULL;
+		if (cspv_wg_is_numeric(at) && cspv_wg_is_numeric(bt)) {
+			cspv_type_kind ak = cspv_elem_type(at)->kind;
+			cspv_type_kind bk = cspv_elem_type(bt)->kind;
+			elem = cspv_promo_rank(ak) >= cspv_promo_rank(bk) ? cspv_elem_type(at) : cspv_elem_type(bt);
+		}
+		spush(*out, '(');
+		if (elem) cspv_wg_expr_to(g, args[0], cspv_vec_type(ctx, elem, cspv_num_components(at)), 1);
+		else cspv_wg_expr(g, args[0], 1);
+		sfmt_append(*out, " %s ", rel);
+		if (elem) cspv_wg_expr_to(g, args[1], cspv_vec_type(ctx, elem, cspv_num_components(bt)), 1);
+		else cspv_wg_expr(g, args[1], 1);
+		spush(*out, ')');
+		return;
+	}
+	if (!strcmp(name, "not")) {
+		sappend(*out, "(!");
+		cspv_wg_expr(g, args[0], 2);
+		spush(*out, ')');
+		return;
+	}
+
+	// Barriers.
+	if (!strcmp(name, "barrier") || !strcmp(name, "groupMemoryBarrier") || !strcmp(name, "memoryBarrierShared")) {
+		sappend(*out, "workgroupBarrier()");
+		return;
+	}
+	if (!strcmp(name, "memoryBarrier") || !strcmp(name, "memoryBarrierBuffer") || !strcmp(name, "memoryBarrierImage")) {
+		sappend(*out, "storageBarrier()");
+		return;
+	}
+
+	// Atomics.
+	if (cspv_wg_is_atomic_call(name)) {
+		cspv_wg_apath p;
+		if (!cspv_wg_atom_path(g, args[0], &p)) cspv_errorf(ctx, e->line, "unsupported atomic destination in WGSL output");
+		cspv_wg_atom_check_element(g, &p, e->line);
+		if (p.ncomps > 1 || (p.ncomps == 0 && p.atom->cols > 1)) {
+			cspv_errorf(ctx, e->line, "atomic destinations must be scalars in WGSL output");
+		}
+		if (cspv_wg_is_cas(e)) cspv_errorf(ctx, e->line, "atomicCompSwap was not lowered to a statement in WGSL output");
+		sfmt_append(*out, "%s(&", name);
+		cspv_wg_atom_lv(g, &p, p.ncomps ? p.comps[0] : 0);
+		for (int i = 1; i < argc; i++) {
+			sappend(*out, ", ");
+			cspv_wg_expr_to(g, args[i], p.atom->scalar, 0);
+		}
+		spush(*out, ')');
+		return;
+	}
+
+	// Bit casts, sized by the result.
+	if (!strcmp(name, "floatBitsToInt") || !strcmp(name, "floatBitsToUint") ||
+	    !strcmp(name, "intBitsToFloat") || !strcmp(name, "uintBitsToFloat")) {
+		sfmt_append(*out, "bitcast<%s>(", cspv_wg_type(g, e->rtype));
+		cspv_wg_expr(g, args[0], 0);
+		spush(*out, ')');
+		return;
+	}
+
+	// isnan/isinf on the bit pattern (WGSL has neither, and may assume finite math).
+	if (!strcmp(name, "isnan") || !strcmp(name, "isinf")) {
+		cspv_type* at = cspv_wg_rtype(g, args[0]);
+		int n = at ? cspv_num_components(at) : 1;
+		const char* ut = cspv_wg_type(g, cspv_vec_type(ctx, ctx->t_uint, n));
+		sfmt_append(*out, "((bitcast<%s>(", ut);
+		cspv_wg_expr(g, args[0], 0);
+		if (n > 1) sfmt_append(*out, ") & %s(0x7fffffffu)) %s %s(0x7f800000u))", ut, !strcmp(name, "isnan") ? ">" : "==", ut);
+		else sfmt_append(*out, ") & 0x7fffffffu) %s 0x7f800000u)", !strcmp(name, "isnan") ? ">" : "==");
+		return;
+	}
+
+	if (!strcmp(name, "inverse")) {
+		cspv_type* at = cspv_wg_rtype(g, args[0]);
+		int n = at ? at->cols : 4;
+		g->helpers |= CSPV_WGH_INVERSE << (n - 2);
+		sfmt_append(*out, "cspv_inverse%d(", n);
+		cspv_wg_expr(g, args[0], 0);
+		spush(*out, ')');
+		return;
+	}
+
+	// mix with a boolean selector is a select.
+	if (!strcmp(name, "mix") && argc == 3) {
+		cspv_type* st = cspv_wg_rtype(g, args[2]);
+		if (st && cspv_elem_type(st)->kind == CSPV_T_BOOL) {
+			sappend(*out, "select(");
+			cspv_wg_expr(g, args[0], 0);
+			sappend(*out, ", ");
+			cspv_wg_expr(g, args[1], 0);
+			sappend(*out, ", ");
+			cspv_wg_expr(g, args[2], 0);
+			spush(*out, ')');
+			return;
+		}
+	}
+
+	// Everything else: renames, with genType scalar arguments splatted.
+	int cols = 1;
+	cspv_type* elem = NULL;
+	bool splat = cspv_wg_splats(name);
+	if (splat) {
+		for (int i = 0; i < argc; i++) {
+			cspv_type* t = cspv_wg_etype(g, args[i]);
+			if (t && t->kind == CSPV_T_VEC && t->cols > cols) cols = t->cols;
+			if (t && !elem) elem = cspv_elem_type(t);
+		}
+	}
+	if (!strcmp(name, "mod")) {
+		g->helpers |= CSPV_WGH_MOD << (cols - 1);
+		if (cols > 1) sfmt_append(*out, "cspv_mod%d(", cols);
+		else sappend(*out, "cspv_mod(");
+	} else {
+		sfmt_append(*out, "%s(", cspv_wg_rename_intrinsic(name, argc));
+	}
+	for (int i = 0; i < argc; i++) {
+		if (i) sappend(*out, ", ");
+		cspv_type* t = cspv_wg_etype(g, args[i]);
+		if (splat && cols > 1 && t && t->kind != CSPV_T_VEC) {
+			sfmt_append(*out, "%s(", cspv_wg_type(g, cspv_vec_type(ctx, cspv_elem_type(t), cols)));
+			cspv_wg_expr(g, args[i], 0);
+			spush(*out, ')');
+		} else {
+			cspv_wg_expr(g, args[i], 0);
+		}
+	}
+	spush(*out, ')');
+	(void)elem;
+}
+
+//--------------------------------------------------------------------------------------------------
+// WGSL: statements.
+
+static void cspv_wg_stmt(cspv_wg* g, cspv_stmt* s);
+
+static void cspv_wg_push_shadow(cspv_wg* g, const char* name, bool is_ptr)
+{
+	apush(g->shadows, name);
+	apush(g->shadow_ptr, is_ptr);
+}
+
+static void cspv_wg_scope_begin(cspv_wg* g)
+{
+	apush(g->shadow_marks, (int)asize(g->shadows));
+}
+
+static void cspv_wg_scope_end(cspv_wg* g)
+{
+	int mark = apop(g->shadow_marks);
+	while ((int)asize(g->shadows) > mark) {
+		apop(g->shadows);
+		apop(g->shadow_ptr);
+	}
+}
+
+// GLSL fixes an out/inout l-value at the call: its subscripts evaluate once, before the call,
+// so the copy-back lands where the copy-in read even if the call changes the index.
+static void cspv_wg_pin_subscripts(cspv_wg* g, cspv_expr* e)
+{
+	while (e->kind == CSPV_E_MEMBER || e->kind == CSPV_E_INDEX) {
+		if (e->kind == CSPV_E_MEMBER) {
+			e = e->u.member.base;
+			continue;
+		}
+		cspv_expr* x = e->u.index.index;
+		if (x->kind != CSPV_E_INT_LIT && x->kind != CSPV_E_UINT_LIT) {
+			char buf[32];
+			snprintf(buf, sizeof(buf), "cspv_i%d", g->temp_counter++);
+			const char* t = sintern(buf);
+			cspv_wg_indent(g);
+			sfmt_append(g->ctx->tp_out, "let %s = ", t);
+			cspv_wg_node(g, x, 0);
+			sappend(g->ctx->tp_out, ";\n");
+			map_set(g->lowered, (uint64_t)(uintptr_t)x, t);
+		}
+		e = e->u.index.base;
+	}
+}
+
+static void cspv_wg_hoist_visit(cspv_wg* g, cspv_expr* e, void* user)
+{
+	(void)user;
+	if (e->kind != CSPV_E_CALL) return;
+	cspv_decl* f = cspv_wg_resolve(g, e);
+	if (!f) return;
+	for (int i = 0; i < f->num_params; i++) {
+		if (!f->params[i].qual) continue;
+		cspv_expr* a = e->u.call.args[i];
+		bool is_ptr = false;
+		if (cspv_wg_out_arg_direct(g, a, &is_ptr) || cspv_wg_hoist_temp(g, a) >= 0) continue;
+		cspv_wg_pin_subscripts(g, a);
+		int t = g->temp_counter++;
+		cspv_wg_indent(g);
+		sfmt_append(g->ctx->tp_out, "var cspv_o%d: %s", t, cspv_wg_type(g, f->params[i].type));
+		if (f->params[i].qual == 2) {
+			sappend(g->ctx->tp_out, " = ");
+			cspv_wg_expr(g, a, 0);
+		}
+		sappend(g->ctx->tp_out, ";\n");
+		cspv_wg_hoist h;
+		h.arg = a;
+		h.temp = t;
+		apush(g->hoists, h);
+	}
+}
+
+// Pre-order walk that skips subtrees already lowered into temporaries (their calls were
+// handled where they printed).
+static void cspv_wg_hoist_walk(cspv_wg* g, cspv_expr* e)
+{
+	if (!e || map_get(g->lowered, (uint64_t)(uintptr_t)e)) return;
+	cspv_wg_hoist_visit(g, e, NULL);
+	switch (e->kind) {
+	case CSPV_E_BINARY: cspv_wg_hoist_walk(g, e->u.bin.l); cspv_wg_hoist_walk(g, e->u.bin.r); break;
+	case CSPV_E_UNARY: cspv_wg_hoist_walk(g, e->u.un.e); break;
+	case CSPV_E_COND: cspv_wg_hoist_walk(g, e->u.cond.c); cspv_wg_hoist_walk(g, e->u.cond.a); cspv_wg_hoist_walk(g, e->u.cond.b); break;
+	case CSPV_E_CALL: for (int i = 0; i < (int)asize(e->u.call.args); i++) cspv_wg_hoist_walk(g, e->u.call.args[i]); break;
+	case CSPV_E_MEMBER: case CSPV_E_LENGTH: cspv_wg_hoist_walk(g, e->u.member.base); break;
+	case CSPV_E_INDEX: cspv_wg_hoist_walk(g, e->u.index.base); cspv_wg_hoist_walk(g, e->u.index.index); break;
+	default: break;
+	}
+}
+
+// Temporaries for the out/inout arguments in `e` that cannot pass as pointers.
+static int cspv_wg_hoist_begin(cspv_wg* g, cspv_expr* e)
+{
+	int base = (int)asize(g->hoists);
+	// A statement-level comma hoists per side as cspv_wg_expr_stmt prints it; a nested one is
+	// lowered, so the walk would skip it anyway.
+	if (e && e->kind == CSPV_E_BINARY && e->u.bin.op == ',') return base;
+	cspv_wg_hoist_walk(g, e);
+	return base;
+}
+
+static void cspv_wg_assign(cspv_wg* g, cspv_expr* lhs, int op, cspv_expr* rhs, const char* rhs_text, bool inline_form, int line);
+
+// Copy the temporaries of the current statement back into their arguments.
+static void cspv_wg_hoist_end(cspv_wg* g, int base)
+{
+	int n = (int)asize(g->hoists);
+	for (int i = base; i < n; i++) {
+		char tmp[32];
+		snprintf(tmp, sizeof(tmp), "cspv_o%d", g->hoists[i].temp);
+		cspv_wg_assign(g, g->hoists[i].arg, '=', NULL, tmp, false, g->hoists[i].arg->line);
+	}
+	while ((int)asize(g->hoists) > base) apop(g->hoists);
+}
+
+static bool cspv_wg_multi_swizzle(cspv_wg* g, cspv_expr* e)
+{
+	if (e->kind != CSPV_E_MEMBER) return false;
+	cspv_type* bt = cspv_wg_rtype(g, e->u.member.base);
+	return bt && bt->kind == CSPV_T_VEC && strlen(e->u.member.member) > 1;
+}
+
+static void cspv_wg_rhs(cspv_wg* g, cspv_expr* rhs, const char* text, cspv_type* want, int wrap)
+{
+	if (text) sappend(g->ctx->tp_out, text);
+	else cspv_wg_expr_to(g, rhs, want, wrap);
+}
+
+static const char* cspv_wg_atomic_rmw(int op)
+{
+	switch (op) {
+	case CSPV_P_ADD_ASSIGN: return "atomicAdd";
+	case CSPV_P_SUB_ASSIGN: return "atomicSub";
+	case CSPV_P_AND_ASSIGN: return "atomicAnd";
+	case CSPV_P_OR_ASSIGN: return "atomicOr";
+	case CSPV_P_XOR_ASSIGN: return "atomicXor";
+	default: return NULL;
+	}
+}
+
+// An assignment statement `lhs op rhs` (rhs as an expression, or preprinted text of the lhs
+// type). WGSL cannot assign through multi-component swizzles: those go component by component
+// from a temporary. Atomic destinations become atomicStore/atomic read-modify-writes.
+static void cspv_wg_assign(cspv_wg* g, cspv_expr* lhs, int op, cspv_expr* rhs, const char* rhs_text, bool inline_form, int line)
+{
+	cspv_ctx* ctx = g->ctx;
+	CK_SDYNA char** out = &ctx->tp_out;
+	cspv_type* lt = cspv_wg_rtype(g, lhs);
+	cspv_type* rt = rhs ? cspv_wg_rtype(g, rhs) : lt;
+	// Compound ops balance the rhs element kind to the lhs (shifts take u32 amounts).
+	cspv_type* want = rhs ? rhs->want : NULL;
+	if (op != '=' && rhs && cspv_wg_is_numeric(lt) && cspv_wg_is_numeric(rt) && cspv_elem_type(lt)->kind != cspv_elem_type(rt)->kind) {
+		want = cspv_vec_type(ctx, cspv_elem_type(lt), cspv_num_components(rt));
+	}
+
+	cspv_wg_apath p;
+	if (cspv_wg_atom_path(g, lhs, &p)) {
+		cspv_wg_atom_check_element(g, &p, line);
+		int n = p.ncomps ? p.ncomps : p.atom->cols;
+		const char* rmw = op == '=' ? "atomicStore" : cspv_wg_atomic_rmw(op);
+		if (!rmw) cspv_errorf(ctx, line, "'%s' on an atomically used variable is not supported in WGSL output", cspv_tp_op_str(op));
+		if (n == 1) {
+			if (!inline_form) cspv_wg_indent(g);
+			sfmt_append(*out, "%s(&", rmw);
+			cspv_wg_atom_lv(g, &p, p.ncomps ? p.comps[0] : 0);
+			sappend(*out, ", ");
+			cspv_wg_rhs(g, rhs, rhs_text, op == '=' ? p.atom->scalar : (want ? want : p.atom->scalar), 0);
+			sappend(*out, inline_form ? ")" : ");\n");
+			return;
+		}
+		if (inline_form) cspv_errorf(ctx, line, "vector writes to atomically used variables are not supported here in WGSL output");
+		int t = g->temp_counter++;
+		cspv_wg_indent(g);
+		sappend(*out, "{\n");
+		g->indent++;
+		cspv_wg_indent(g);
+		sfmt_append(*out, "let cspv_t%d = ", t);
+		cspv_wg_rhs(g, rhs, rhs_text, want, 0);
+		sappend(*out, ";\n");
+		bool scalar_rhs = rt && rt->kind != CSPV_T_VEC;
+		for (int i = 0; i < n; i++) {
+			cspv_wg_indent(g);
+			sfmt_append(*out, "%s(&", rmw);
+			cspv_wg_atom_lv(g, &p, p.ncomps ? p.comps[i] : i);
+			if (scalar_rhs) sfmt_append(*out, ", cspv_t%d);\n", t);
+			else sfmt_append(*out, ", cspv_t%d.%c);\n", t, "xyzw"[i]);
+		}
+		g->indent--;
+		cspv_wg_indent(g);
+		sappend(*out, "}\n");
+		return;
+	}
+
+	if (cspv_wg_multi_swizzle(g, lhs)) {
+		if (inline_form) cspv_errorf(ctx, line, "multi-component swizzle assignment is not supported here in WGSL output");
+		if (op == CSPV_P_SHL_ASSIGN || op == CSPV_P_SHR_ASSIGN) cspv_errorf(ctx, line, "shift-assign through a swizzle is not supported in WGSL output");
+		const char* m = lhs->u.member.member;
+		int t = g->temp_counter++;
+		cspv_wg_indent(g);
+		sappend(*out, "{\n");
+		g->indent++;
+		cspv_wg_indent(g);
+		sfmt_append(*out, "let cspv_t%d = ", t);
+		cspv_wg_rhs(g, rhs, rhs_text, want, 0);
+		sappend(*out, ";\n");
+		bool scalar_rhs = rt && rt->kind != CSPV_T_VEC;
+		for (int i = 0; m[i]; i++) {
+			int c = cspv_wg_swizzle_comp(m[i]);
+			cspv_wg_indent(g);
+			cspv_wg_expr(g, lhs->u.member.base, 2);
+			sfmt_append(*out, ".%c %s ", "xyzw"[c], cspv_tp_op_str(op));
+			if (scalar_rhs) sfmt_append(*out, "cspv_t%d;\n", t);
+			else sfmt_append(*out, "cspv_t%d.%c;\n", t, "xyzw"[i]);
+		}
+		g->indent--;
+		cspv_wg_indent(g);
+		sappend(*out, "}\n");
+		return;
+	}
+
+	if (!inline_form) cspv_wg_indent(g);
+	if (op == CSPV_P_DIV_ASSIGN && lt && lt->kind == CSPV_T_MAT) {
+		cspv_wg_node(g, lhs, 0);
+		sappend(*out, " *= 1.0 / ");
+		cspv_wg_rhs(g, rhs, rhs_text, ctx->t_float, 1);
+	} else {
+		cspv_wg_node(g, lhs, 0);
+		sfmt_append(*out, " %s ", cspv_tp_op_str(op));
+		if (op == CSPV_P_SHL_ASSIGN || op == CSPV_P_SHR_ASSIGN) {
+			cspv_wg_shift_amount(g, rhs, lt ? cspv_num_components(lt) : 1);
+		} else if ((op == CSPV_P_AND_ASSIGN || op == CSPV_P_OR_ASSIGN || op == CSPV_P_XOR_ASSIGN) &&
+		           rhs && lt && rt && lt->kind == CSPV_T_VEC && rt->kind != CSPV_T_VEC) {
+			cspv_wg_splat(g, rhs, cspv_elem_type(lt), lt->cols);
+		} else {
+			cspv_wg_rhs(g, rhs, rhs_text, want, 0);
+		}
+	}
+	if (!inline_form) sappend(*out, ";\n");
+}
+
+static void cspv_wg_incdec(cspv_wg* g, cspv_expr* e, bool inline_form)
+{
+	cspv_ctx* ctx = g->ctx;
+	CK_SDYNA char** out = &ctx->tp_out;
+	bool inc = e->u.un.op == CSPV_P_INC;
+	cspv_expr* x = e->u.un.e;
+	cspv_type* t = cspv_wg_rtype(g, x);
+	cspv_wg_apath p;
+	if (cspv_wg_atom_path(g, x, &p)) {
+		cspv_wg_atom_check_element(g, &p, e->line);
+		if (p.ncomps > 1 || (!p.ncomps && p.atom->cols > 1)) cspv_errorf(ctx, e->line, "++/-- on an atomic vector is not supported in WGSL output");
+		if (!inline_form) cspv_wg_indent(g);
+		sfmt_append(*out, "%s(&", inc ? "atomicAdd" : "atomicSub");
+		cspv_wg_atom_lv(g, &p, p.ncomps ? p.comps[0] : 0);
+		sappend(*out, p.atom->scalar->kind == CSPV_T_UINT ? ", 1u)" : ", 1)");
+		if (!inline_form) sappend(*out, ";\n");
+		return;
+	}
+	if (cspv_wg_multi_swizzle(g, x)) cspv_errorf(ctx, e->line, "++/-- through a swizzle is not supported in WGSL output");
+	if (!inline_form) cspv_wg_indent(g);
+	cspv_wg_node(g, x, 0);
+	bool int_scalar = t && (t->kind == CSPV_T_INT || t->kind == CSPV_T_UINT);
+	if (int_scalar) {
+		sappend(*out, inc ? "++" : "--");
+	} else if (t) {
+		sappend(*out, inc ? " += " : " -= ");
+		cspv_type* el = cspv_elem_type(t);
+		const char* one = el->kind == CSPV_T_FLOAT ? "1.0" : el->kind == CSPV_T_UINT ? "1u" : "1";
+		if (t->kind == CSPV_T_VEC) sfmt_append(*out, "%s(%s)", cspv_wg_type(g, t), one);
+		else sappend(*out, one);
+	}
+	if (!inline_form) sappend(*out, ";\n");
+}
+
+// Builtins whose result WGSL lets a call statement discard.
+static bool cspv_wg_void_builtin(const char* name)
+{
+	return !strcmp(name, "imageStore") || !strcmp(name, "barrier") || !strcmp(name, "groupMemoryBarrier") ||
+		!strcmp(name, "memoryBarrier") || !strcmp(name, "memoryBarrierShared") || !strcmp(name, "memoryBarrierBuffer") ||
+		!strcmp(name, "memoryBarrierImage") || (cspv_wg_is_atomic_call(name) && strcmp(name, "atomicCompSwap"));
+}
+
+// Whether an expression statement prints as one simple statement (for-loop update form).
+static bool cspv_wg_simple_stmt(cspv_wg* g, cspv_expr* e)
+{
+	if (e->kind == CSPV_E_BINARY && e->u.bin.op == ',') return false;
+	cspv_wg_apath p;
+	if (e->kind == CSPV_E_BINARY && cspv_tp_is_assign_op(e->u.bin.op)) {
+		if (cspv_wg_multi_swizzle(g, e->u.bin.l)) return false;
+		if (cspv_wg_atom_path(g, e->u.bin.l, &p) && (p.ncomps > 1 || (!p.ncomps && p.atom->cols > 1))) return false;
+	}
+	return true;
+}
+
+static void cspv_wg_lower(cspv_wg* g, cspv_expr* e, bool root);
+
+static void cspv_wg_expr_stmt(cspv_wg* g, cspv_expr* e, bool inline_form)
+{
+	CK_SDYNA char** out = &g->ctx->tp_out;
+	if (e->kind == CSPV_E_BINARY && e->u.bin.op == ',') {
+		// Each side is its own statement, lowered and hoisted in turn: the right side's
+		// temporaries must see the left side's writes. Never inline (cspv_wg_simple_stmt).
+		cspv_expr* sides[2] = { e->u.bin.l, e->u.bin.r };
+		for (int i = 0; i < 2; i++) {
+			cspv_wg_lower(g, sides[i], true);
+			int base = cspv_wg_hoist_begin(g, sides[i]);
+			cspv_wg_expr_stmt(g, sides[i], false);
+			cspv_wg_hoist_end(g, base);
+		}
+		return;
+	}
+	if (e->kind == CSPV_E_BINARY && cspv_tp_is_assign_op(e->u.bin.op)) {
+		cspv_wg_assign(g, e->u.bin.l, e->u.bin.op, e->u.bin.r, NULL, inline_form, e->line);
+		return;
+	}
+	if (e->kind == CSPV_E_UNARY && (e->u.un.op == CSPV_P_INC || e->u.un.op == CSPV_P_DEC)) {
+		cspv_wg_incdec(g, e, inline_form);
+		return;
+	}
+	if (!inline_form) cspv_wg_indent(g);
+	bool plain = e->kind == CSPV_E_CALL && (cspv_wg_resolve(g, e) || cspv_wg_void_builtin(e->u.call.name));
+	if (!plain) sappend(*out, "_ = ");
+	cspv_wg_expr(g, e, 0);
+	if (!inline_form) sappend(*out, ";\n");
+}
+
+static void cspv_wg_collect_locals(cspv_stmt* s, CK_DYNA const char*** names)
+{
+	if (!s) return;
+	switch (s->kind) {
+	case CSPV_S_BLOCK: for (int i = 0; i < (int)asize(s->u.block); i++) cspv_wg_collect_locals(s->u.block[i], names); break;
+	case CSPV_S_DECL: for (cspv_stmt* n = s; n; n = n->u.decl.next_decl) apush(*names, n->u.decl.name); break;
+	case CSPV_S_IF: cspv_wg_collect_locals(s->u.if_s.then_s, names); cspv_wg_collect_locals(s->u.if_s.else_s, names); break;
+	case CSPV_S_FOR: cspv_wg_collect_locals(s->u.for_s.init, names); cspv_wg_collect_locals(s->u.for_s.body, names); break;
+	case CSPV_S_WHILE: case CSPV_S_DO: cspv_wg_collect_locals(s->u.while_s.body, names); break;
+	case CSPV_S_SWITCH: {
+		cspv_switch_group* groups = s->u.switch_s.groups;
+		for (int i = 0; i < (int)asize(groups); i++) {
+			for (int j = 0; j < (int)asize(groups[i].stmts); j++) cspv_wg_collect_locals(groups[i].stmts[j], names);
+		}
+		break;
+	}
+	default: break;
+	}
+}
+
+// discard is statement-only, so it reaches an expression solely through a call.
+static bool cspv_wg_stmt_discards(cspv_stmt* s)
+{
+	if (!s) return false;
+	switch (s->kind) {
+	case CSPV_S_DISCARD: return true;
+	case CSPV_S_BLOCK:
+		for (int i = 0; i < (int)asize(s->u.block); i++) {
+			if (cspv_wg_stmt_discards(s->u.block[i])) return true;
+		}
+		return false;
+	case CSPV_S_IF: return cspv_wg_stmt_discards(s->u.if_s.then_s) || cspv_wg_stmt_discards(s->u.if_s.else_s);
+	case CSPV_S_FOR: return cspv_wg_stmt_discards(s->u.for_s.init) || cspv_wg_stmt_discards(s->u.for_s.body);
+	case CSPV_S_WHILE: case CSPV_S_DO: return cspv_wg_stmt_discards(s->u.while_s.body);
+	case CSPV_S_SWITCH: {
+		cspv_switch_group* groups = s->u.switch_s.groups;
+		for (int i = 0; i < (int)asize(groups); i++) {
+			for (int j = 0; j < (int)asize(groups[i].stmts); j++) {
+				if (cspv_wg_stmt_discards(groups[i].stmts[j])) return true;
+			}
+		}
+		return false;
+	}
+	default: return false;
+	}
+}
+
+static bool cspv_wg_module_name(cspv_wg* g, const char* name)
+{
+	cspv_ctx* ctx = g->ctx;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind == CSPV_D_FUNC) continue;
+		if (d->name == name || d->instance_name == name) return true;
+		if (d->kind == CSPV_D_BLOCK && !d->instance_name) {
+			for (int j = 0; j < d->num_members; j++) {
+				if (d->member_names[j] == name) return true;
+			}
+		}
+	}
+	return false;
+}
+
+typedef struct cspv_wg_fx_scan
+{
+	cspv_decl* f;
+	CK_DYNA const char** locals;
+	bool effects;
+} cspv_wg_fx_scan;
+
+static bool cspv_wg_func_effects(cspv_wg* g, cspv_decl* f);
+
+// Names match by scope-free comparison, so a local shadowing a module name counts as the
+// module name (conservative).
+static bool cspv_wg_fx_local(cspv_wg* g, cspv_wg_fx_scan* scan, const char* root)
+{
+	if (!root || cspv_wg_module_name(g, root)) return false;
+	for (int i = 0; i < scan->f->num_params; i++) {
+		if (scan->f->params[i].name == root) return true;
+	}
+	for (int i = 0; i < (int)asize(scan->locals); i++) {
+		if (scan->locals[i] == root) return true;
+	}
+	return false;
+}
+
+static void cspv_wg_fx_visit(cspv_wg* g, cspv_expr* e, void* user)
+{
+	cspv_wg_fx_scan* scan = (cspv_wg_fx_scan*)user;
+	if (scan->effects) return;
+	if (e->kind == CSPV_E_BINARY && cspv_tp_is_assign_op(e->u.bin.op)) {
+		if (!cspv_wg_fx_local(g, scan, cspv_wg_lvalue_root(e->u.bin.l))) scan->effects = true;
+	} else if (e->kind == CSPV_E_UNARY && (e->u.un.op == CSPV_P_INC || e->u.un.op == CSPV_P_DEC)) {
+		if (!cspv_wg_fx_local(g, scan, cspv_wg_lvalue_root(e->u.un.e))) scan->effects = true;
+	} else if (e->kind == CSPV_E_CALL) {
+		const char* name = e->u.call.name;
+		if (e->u.call.array_size == -1 && (cspv_wg_is_atomic_call(name) || !strcmp(name, "imageStore"))) {
+			scan->effects = true;
+			return;
+		}
+		cspv_decl* f = cspv_wg_resolve(g, e);
+		if (!f) return;
+		if (cspv_wg_func_effects(g, f)) scan->effects = true;
+		for (int i = 0; i < f->num_params; i++) {
+			if (f->params[i].qual && !cspv_wg_fx_local(g, scan, cspv_wg_lvalue_root(e->u.call.args[i]))) scan->effects = true;
+		}
+	}
+}
+
+// Whether calling `f` writes anything outside its own locals and parameters: module
+// variables, stage outputs, buffers, shared memory, images, atomics, transitively. A
+// discard counts too: select() would run it unconditionally.
+static bool cspv_wg_func_effects(cspv_wg* g, cspv_decl* f)
+{
+	uint64_t key = (uint64_t)(uintptr_t)f;
+	int state = map_get(g->func_effects, key);
+	if (state) return state == 3;
+	map_set(g->func_effects, key, 1);
+	cspv_wg_fx_scan scan;
+	scan.f = f;
+	scan.locals = NULL;
+	scan.effects = cspv_wg_stmt_discards(f->body);
+	cspv_wg_collect_locals(f->body, &scan.locals);
+	cspv_wg_walk_stmt(g, f->body, cspv_wg_fx_visit, &scan);
+	afree(scan.locals);
+	map_set(g->func_effects, key, scan.effects ? 3 : 2);
+	return scan.effects;
+}
+
+// Whether evaluating `e` writes anything: assignments, ++/--, out/inout arguments, atomics,
+// imageStore, and calls to functions that write outside their locals or discard.
+static bool cspv_wg_effects(cspv_wg* g, cspv_expr* e)
+{
+	if (!e) return false;
+	switch (e->kind) {
+	case CSPV_E_BINARY:
+		if (cspv_tp_is_assign_op(e->u.bin.op)) return true;
+		return cspv_wg_effects(g, e->u.bin.l) || cspv_wg_effects(g, e->u.bin.r);
+	case CSPV_E_UNARY:
+		if (e->u.un.op == CSPV_P_INC || e->u.un.op == CSPV_P_DEC) return true;
+		return cspv_wg_effects(g, e->u.un.e);
+	case CSPV_E_COND:
+		return cspv_wg_effects(g, e->u.cond.c) || cspv_wg_effects(g, e->u.cond.a) || cspv_wg_effects(g, e->u.cond.b);
+	case CSPV_E_CALL: {
+		const char* name = e->u.call.name;
+		if (e->u.call.array_size == -1 && (cspv_wg_is_atomic_call(name) || !strcmp(name, "imageStore"))) return true;
+		cspv_decl* f = cspv_wg_resolve(g, e);
+		if (f && cspv_wg_func_effects(g, f)) return true;
+		for (int i = 0; f && i < f->num_params; i++) {
+			if (f->params[i].qual) return true;
+		}
+		for (int i = 0; i < (int)asize(e->u.call.args); i++) {
+			if (cspv_wg_effects(g, e->u.call.args[i])) return true;
+		}
+		return false;
+	}
+	case CSPV_E_MEMBER: case CSPV_E_LENGTH: return cspv_wg_effects(g, e->u.member.base);
+	case CSPV_E_INDEX: return cspv_wg_effects(g, e->u.index.base) || cspv_wg_effects(g, e->u.index.index);
+	default: return false;
+	}
+}
+
+// Whether `e` (below its root) holds anything cspv_wg_lower turns into statements.
+static bool cspv_wg_needs_lowering(cspv_wg* g, cspv_expr* e, bool root)
+{
+	if (!e) return false;
+	switch (e->kind) {
+	case CSPV_E_BINARY:
+		if (!root && (cspv_tp_is_assign_op(e->u.bin.op) || e->u.bin.op == ',')) return true;
+		if ((e->u.bin.op == CSPV_P_AND || e->u.bin.op == CSPV_P_OR) && cspv_wg_effects(g, e->u.bin.r)) return true;
+		return cspv_wg_needs_lowering(g, e->u.bin.l, false) || cspv_wg_needs_lowering(g, e->u.bin.r, false);
+	case CSPV_E_UNARY:
+		if (!root && (e->u.un.op == CSPV_P_INC || e->u.un.op == CSPV_P_DEC)) return true;
+		return cspv_wg_needs_lowering(g, e->u.un.e, false);
+	case CSPV_E_COND: {
+		cspv_type* t = e->rtype ? e->rtype : cspv_wg_etype(g, e->u.cond.a);
+		if (!cspv_wg_is_scalar_or_vec(t) || cspv_wg_effects(g, e->u.cond.a) || cspv_wg_effects(g, e->u.cond.b)) return true;
+		return cspv_wg_needs_lowering(g, e->u.cond.c, false);
+	}
+	case CSPV_E_CALL:
+		if (cspv_wg_is_cas(e)) return true;
+		for (int i = 0; i < (int)asize(e->u.call.args); i++) {
+			if (cspv_wg_needs_lowering(g, e->u.call.args[i], false)) return true;
+		}
+		return false;
+	case CSPV_E_MEMBER: case CSPV_E_LENGTH: return cspv_wg_needs_lowering(g, e->u.member.base, false);
+	case CSPV_E_INDEX: return cspv_wg_needs_lowering(g, e->u.index.base, false) || cspv_wg_needs_lowering(g, e->u.index.index, false);
+	default: return false;
+	}
+}
+
+static const char* cspv_wg_capture(cspv_wg* g, cspv_expr* e)
+{
+	g->saved_out = g->ctx->tp_out;
+	g->ctx->tp_out = NULL;
+	cspv_wg_node(g, e, 2);
+	const char* text = sintern(g->ctx->tp_out ? g->ctx->tp_out : "");
+	sfree(g->ctx->tp_out);
+	g->ctx->tp_out = g->saved_out;
+	g->saved_out = NULL;
+	return text;
+}
+
+static const char* cspv_wg_temp_name(cspv_wg* g, int t)
+{
+	char buf[32];
+	snprintf(buf, sizeof(buf), "cspv_t%d", t);
+	return sintern(buf);
+}
+
+static void cspv_wg_lower(cspv_wg* g, cspv_expr* e, bool root);
+static void cspv_wg_expr_stmt(cspv_wg* g, cspv_expr* e, bool inline_form);
+
+// `target = e;` as a statement, e lowered and its out-arguments hoisted first.
+static void cspv_wg_store_value(cspv_wg* g, const char* target, cspv_expr* e, cspv_type* t)
+{
+	cspv_wg_lower(g, e, false);
+	int base = cspv_wg_hoist_begin(g, e);
+	cspv_wg_indent(g);
+	sfmt_append(g->ctx->tp_out, "%s = ", target);
+	cspv_wg_expr_to(g, e, t, 0);
+	sappend(g->ctx->tp_out, ";\n");
+	cspv_wg_hoist_end(g, base);
+}
+
+// atomicCompSwap is strong; atomicCompareExchangeWeak may fail spuriously, so it retries until
+// it exchanges or observes a value other than the comparator. Operands evaluate once.
+static void cspv_wg_cas(cspv_wg* g, cspv_expr* e)
+{
+	cspv_ctx* ctx = g->ctx;
+	CK_SDYNA char** out = &ctx->tp_out;
+	CK_DYNA cspv_expr** args = e->u.call.args;
+	cspv_wg_apath p;
+	if (!cspv_wg_atom_path(g, args[0], &p)) cspv_errorf(ctx, e->line, "unsupported atomic destination in WGSL output");
+	cspv_wg_atom_check_element(g, &p, e->line);
+	if (p.ncomps > 1 || (p.ncomps == 0 && p.atom->cols > 1)) {
+		cspv_errorf(ctx, e->line, "atomic destinations must be scalars in WGSL output");
+	}
+	cspv_wg_pin_subscripts(g, args[0]);
+	const char* st = cspv_wg_type(g, p.atom->scalar);
+	int t = g->temp_counter++;
+	for (int i = 1; i < 3; i++) {
+		int base = cspv_wg_hoist_begin(g, args[i]);
+		cspv_wg_indent(g);
+		sfmt_append(*out, "let cspv_%c%d: %s = ", i == 1 ? 'c' : 'v', t, st);
+		cspv_wg_expr_to(g, args[i], p.atom->scalar, 0);
+		sappend(*out, ";\n");
+		cspv_wg_hoist_end(g, base);
+	}
+	cspv_wg_indent(g);
+	sfmt_append(*out, "var cspv_t%d: %s;\n", t, st);
+	cspv_wg_indent(g);
+	sappend(*out, "loop\n");
+	cspv_wg_indent(g);
+	sappend(*out, "{\n");
+	g->indent++;
+	cspv_wg_indent(g);
+	sfmt_append(*out, "let cspv_r%d = atomicCompareExchangeWeak(&", t);
+	cspv_wg_atom_lv(g, &p, p.ncomps ? p.comps[0] : 0);
+	sfmt_append(*out, ", cspv_c%d, cspv_v%d);\n", t, t);
+	cspv_wg_indent(g);
+	sfmt_append(*out, "cspv_t%d = cspv_r%d.old_value;\n", t, t);
+	cspv_wg_indent(g);
+	sfmt_append(*out, "if (cspv_r%d.exchanged || cspv_r%d.old_value != cspv_c%d) { break; }\n", t, t, t);
+	g->indent--;
+	cspv_wg_indent(g);
+	sappend(*out, "}\n");
+	map_set(g->lowered, (uint64_t)(uintptr_t)e, cspv_wg_temp_name(g, t));
+}
+
+// GLSL expressions WGSL can only state as statements, emitted ahead of the statement using
+// them, each node then printing as its temporary: assignments and ++/-- used as values, ?:
+// on non-scalar/vector values or with side-effecting arms (only the taken arm may run),
+// && / || with a side-effecting right side, and atomicCompSwap (a retry loop). `root`: e is
+// the statement's own expression.
+static void cspv_wg_lower(cspv_wg* g, cspv_expr* e, bool root)
+{
+	if (!e || !cspv_wg_needs_lowering(g, e, root)) return;
+	cspv_ctx* ctx = g->ctx;
+	CK_SDYNA char** out = &ctx->tp_out;
+	uint64_t key = (uint64_t)(uintptr_t)e;
+	switch (e->kind) {
+	case CSPV_E_BINARY: {
+		int op = e->u.bin.op;
+		cspv_expr* l = e->u.bin.l;
+		cspv_expr* r = e->u.bin.r;
+		// A statement-level comma is a statement sequence, lowered side by side as it prints.
+		if (op == ',' && root) return;
+		if (cspv_tp_is_assign_op(op)) {
+			cspv_wg_lower(g, l, false);
+			cspv_wg_lower(g, r, false);
+			if (root) return;
+			int base = cspv_wg_hoist_begin(g, r);
+			cspv_wg_assign(g, l, op, r, NULL, false, e->line);
+			cspv_wg_hoist_end(g, base);
+			map_set(g->lowered, key, cspv_wg_capture(g, l));
+			return;
+		}
+		if (op == ',' && !root) {
+			cspv_wg_lower(g, l, true);
+			int base = cspv_wg_hoist_begin(g, l);
+			cspv_wg_expr_stmt(g, l, false);
+			cspv_wg_hoist_end(g, base);
+			cspv_wg_lower(g, r, false);
+			map_set(g->lowered, key, cspv_wg_capture(g, r));
+			return;
+		}
+		if ((op == CSPV_P_AND || op == CSPV_P_OR) && cspv_wg_effects(g, r)) {
+			const char* t = cspv_wg_temp_name(g, g->temp_counter++);
+			cspv_wg_lower(g, l, false);
+			int base = cspv_wg_hoist_begin(g, l);
+			cspv_wg_indent(g);
+			sfmt_append(*out, "var %s: bool = ", t);
+			cspv_wg_expr(g, l, 0);
+			sappend(*out, ";\n");
+			cspv_wg_hoist_end(g, base);
+			cspv_wg_indent(g);
+			sfmt_append(*out, op == CSPV_P_AND ? "if (%s)\n" : "if (!%s)\n", t);
+			cspv_wg_indent(g);
+			sappend(*out, "{\n");
+			g->indent++;
+			cspv_wg_store_value(g, t, r, ctx->t_bool);
+			g->indent--;
+			cspv_wg_indent(g);
+			sappend(*out, "}\n");
+			map_set(g->lowered, key, t);
+			return;
+		}
+		cspv_wg_lower(g, l, false);
+		cspv_wg_lower(g, r, false);
+		return;
+	}
+	case CSPV_E_UNARY: {
+		cspv_expr* x = e->u.un.e;
+		if (!root && (e->u.un.op == CSPV_P_INC || e->u.un.op == CSPV_P_DEC)) {
+			cspv_wg_lower(g, x, false);
+			if (e->u.un.postfix) {
+				const char* t = cspv_wg_temp_name(g, g->temp_counter++);
+				cspv_wg_indent(g);
+				sfmt_append(*out, "let %s = ", t);
+				cspv_wg_node(g, x, 0);
+				sappend(*out, ";\n");
+				cspv_wg_incdec(g, e, false);
+				map_set(g->lowered, key, t);
+			} else {
+				cspv_wg_incdec(g, e, false);
+				map_set(g->lowered, key, cspv_wg_capture(g, x));
+			}
+			return;
+		}
+		cspv_wg_lower(g, x, false);
+		return;
+	}
+	case CSPV_E_COND: {
+		cspv_type* t = e->rtype ? e->rtype : cspv_wg_etype(g, e->u.cond.a);
+		cspv_wg_lower(g, e->u.cond.c, false);
+		if (cspv_wg_is_scalar_or_vec(t) && !cspv_wg_effects(g, e->u.cond.a) && !cspv_wg_effects(g, e->u.cond.b)) return;
+		const char* tn = cspv_wg_temp_name(g, g->temp_counter++);
+		cspv_wg_indent(g);
+		sfmt_append(*out, "var %s: %s;\n", tn, cspv_wg_type(g, t));
+		int base = cspv_wg_hoist_begin(g, e->u.cond.c);
+		cspv_wg_indent(g);
+		sappend(*out, "if (");
+		cspv_wg_expr(g, e->u.cond.c, 0);
+		sappend(*out, ")\n");
+		cspv_wg_hoist_end(g, base);
+		cspv_wg_indent(g);
+		sappend(*out, "{\n");
+		g->indent++;
+		cspv_wg_store_value(g, tn, e->u.cond.a, t);
+		g->indent--;
+		cspv_wg_indent(g);
+		sappend(*out, "}\n");
+		cspv_wg_indent(g);
+		sappend(*out, "else\n");
+		cspv_wg_indent(g);
+		sappend(*out, "{\n");
+		g->indent++;
+		cspv_wg_store_value(g, tn, e->u.cond.b, t);
+		g->indent--;
+		cspv_wg_indent(g);
+		sappend(*out, "}\n");
+		map_set(g->lowered, key, tn);
+		return;
+	}
+	case CSPV_E_CALL:
+		for (int i = 0; i < (int)asize(e->u.call.args); i++) cspv_wg_lower(g, e->u.call.args[i], false);
+		if (cspv_wg_is_cas(e)) cspv_wg_cas(g, e);
+		return;
+	case CSPV_E_MEMBER: case CSPV_E_LENGTH:
+		cspv_wg_lower(g, e->u.member.base, false);
+		return;
+	case CSPV_E_INDEX:
+		cspv_wg_lower(g, e->u.index.base, false);
+		cspv_wg_lower(g, e->u.index.index, false);
+		return;
+	default:
+		return;
+	}
+}
+
+static void cspv_wg_decl(cspv_wg* g, cspv_stmt* s, bool inline_form)
+{
+	CK_SDYNA char** out = &g->ctx->tp_out;
+	for (cspv_stmt* n = s; n; n = n->u.decl.next_decl) {
+		cspv_type* t = n->u.decl.type;
+		cspv_expr* init = n->u.decl.init;
+		if (!inline_form) cspv_wg_indent(g);
+		if (t->kind == CSPV_T_ARRAY && t->cols < 0 && init && init->kind == CSPV_E_CALL && init->u.call.array_size != -1) {
+			int len = init->u.call.array_size ? init->u.call.array_size : (int)asize(init->u.call.args);
+			sfmt_append(*out, "var %s: array<%s, %d>", cspv_wg_id(g, n->u.decl.name), cspv_wg_type(g, t->elem), len);
+		} else {
+			sfmt_append(*out, "var %s: %s", cspv_wg_id(g, n->u.decl.name), cspv_wg_type(g, t));
+		}
+		if (init) {
+			sappend(*out, " = ");
+			cspv_wg_expr_to(g, init, t, 0);
+		}
+		cspv_wg_push_shadow(g, n->u.decl.name, false);
+		if (!inline_form) sappend(*out, ";\n");
+	}
+}
+
+// Statements of a body printed inside an already-open brace pair.
+static void cspv_wg_body(cspv_wg* g, cspv_stmt* s)
+{
+	cspv_wg_scope_begin(g);
+	if (s->kind == CSPV_S_BLOCK) {
+		for (int i = 0; i < (int)asize(s->u.block); i++) cspv_wg_stmt(g, s->u.block[i]);
+	} else {
+		cspv_wg_stmt(g, s);
+	}
+	cspv_wg_scope_end(g);
+}
+
+static void cspv_wg_block(cspv_wg* g, cspv_stmt* s)
+{
+	cspv_wg_indent(g);
+	sappend(g->ctx->tp_out, "{\n");
+	g->indent++;
+	cspv_wg_body(g, s);
+	g->indent--;
+	cspv_wg_indent(g);
+	sappend(g->ctx->tp_out, "}\n");
+}
+
+// A condition evaluated ahead of its statement when out-argument temporaries must copy back
+// first. Returns the temp's index, or -1 when the condition prints in place.
+static int cspv_wg_pre_eval(cspv_wg* g, cspv_expr* e, cspv_type* t)
+{
+	cspv_wg_lower(g, e, false);
+	int base = cspv_wg_hoist_begin(g, e);
+	if ((int)asize(g->hoists) == base) return -1;
+	int tmp = g->temp_counter++;
+	cspv_wg_indent(g);
+	sfmt_append(g->ctx->tp_out, "let cspv_t%d = ", tmp);
+	cspv_wg_expr_to(g, e, t, 0);
+	sappend(g->ctx->tp_out, ";\n");
+	cspv_wg_hoist_end(g, base);
+	return tmp;
+}
+
+static void cspv_wg_if(cspv_wg* g, cspv_stmt* s)
+{
+	CK_SDYNA char** out = &g->ctx->tp_out;
+	int tmp = cspv_wg_pre_eval(g, s->u.if_s.cond, g->ctx->t_bool);
+	cspv_wg_indent(g);
+	if (tmp >= 0) sfmt_append(*out, "if (cspv_t%d)\n", tmp);
+	else {
+		sappend(*out, "if (");
+		cspv_wg_expr(g, s->u.if_s.cond, 0);
+		sappend(*out, ")\n");
+	}
+	cspv_wg_block(g, s->u.if_s.then_s);
+	if (s->u.if_s.else_s) {
+		cspv_wg_indent(g);
+		sappend(*out, "else\n");
+		cspv_wg_block(g, s->u.if_s.else_s);
+	}
+}
+
+static bool cspv_wg_terminates(cspv_stmt* s)
+{
+	return s->kind == CSPV_S_BREAK || s->kind == CSPV_S_RETURN || s->kind == CSPV_S_CONTINUE || s->kind == CSPV_S_DISCARD;
+}
+
+static void cspv_wg_switch(cspv_wg* g, cspv_stmt* s)
+{
+	CK_SDYNA char** out = &g->ctx->tp_out;
+	cspv_type* st = cspv_wg_rtype(g, s->u.switch_s.sel);
+	bool sel_uint = st && cspv_elem_type(st)->kind == CSPV_T_UINT;
+	int tmp = cspv_wg_pre_eval(g, s->u.switch_s.sel, st);
+	cspv_wg_indent(g);
+	if (tmp >= 0) sfmt_append(*out, "switch (cspv_t%d)\n", tmp);
+	else {
+		sappend(*out, "switch (");
+		cspv_wg_expr(g, s->u.switch_s.sel, 0);
+		sappend(*out, ")\n");
+	}
+	cspv_wg_indent(g);
+	sappend(*out, "{\n");
+	g->indent++;
+	cspv_switch_group* groups = s->u.switch_s.groups;
+	int ng = (int)asize(groups);
+	bool has_default = false;
+	for (int i = 0; i < ng; i++) {
+		cspv_switch_group* grp = groups + i;
+		cspv_wg_indent(g);
+		sappend(*out, "case ");
+		bool first = true;
+		for (int j = 0; j < (int)asize(grp->labels); j++) {
+			if (!first) sappend(*out, ", ");
+			first = false;
+			if (sel_uint) sfmt_append(*out, "%uu", (uint32_t)grp->labels[j]);
+			else sfmt_append(*out, "%d", (int32_t)grp->labels[j]);
+		}
+		if (grp->is_default) {
+			if (!first) sappend(*out, ", ");
+			sappend(*out, "default");
+			has_default = true;
+		}
+		sappend(*out, ":\n");
+		cspv_wg_indent(g);
+		sappend(*out, "{\n");
+		g->indent++;
+		cspv_wg_scope_begin(g);
+		// WGSL clauses never fall through: a GLSL group that does runs on into the next
+		// groups' statements up to the first terminator.
+		for (int k = i; k < ng; k++) {
+			cspv_switch_group* run = groups + k;
+			for (int j = 0; j < (int)asize(run->stmts); j++) cspv_wg_stmt(g, run->stmts[j]);
+			int n = (int)asize(run->stmts);
+			if (n && cspv_wg_terminates(run->stmts[n - 1])) break;
+		}
+		cspv_wg_scope_end(g);
+		g->indent--;
+		cspv_wg_indent(g);
+		sappend(*out, "}\n");
+	}
+	if (!has_default) {
+		cspv_wg_indent(g);
+		sappend(*out, "default:\n");
+		cspv_wg_indent(g);
+		sappend(*out, "{\n");
+		cspv_wg_indent(g);
+		sappend(*out, "}\n");
+	}
+	g->indent--;
+	cspv_wg_indent(g);
+	sappend(*out, "}\n");
+}
+
+// Whether a loop condition must be evaluated by statements at the top of each iteration.
+static bool cspv_wg_complex_cond(cspv_wg* g, cspv_expr* cond)
+{
+	return cond && (cspv_wg_effects(g, cond) || cspv_wg_needs_lowering(g, cond, false));
+}
+
+// `if (!cond) { break; }` (or `break if !cond;` closing a continuing block), with the
+// condition's statements emitted first.
+static void cspv_wg_loop_exit(cspv_wg* g, cspv_expr* cond, bool break_if)
+{
+	CK_SDYNA char** out = &g->ctx->tp_out;
+	int tmp = cspv_wg_pre_eval(g, cond, g->ctx->t_bool);
+	cspv_wg_indent(g);
+	sappend(*out, break_if ? "break if !" : "if (!");
+	if (tmp >= 0) sfmt_append(*out, "cspv_t%d", tmp);
+	else cspv_wg_expr(g, cond, 2);
+	sappend(*out, break_if ? ";\n" : ") { break; }\n");
+}
+
+static void cspv_wg_for(cspv_wg* g, cspv_stmt* s)
+{
+	CK_SDYNA char** out = &g->ctx->tp_out;
+	cspv_stmt* init = s->u.for_s.init;
+	cspv_expr* iter = s->u.for_s.iter;
+	bool init_inline = !init || (init->kind == CSPV_S_DECL && !init->u.decl.next_decl) ||
+		(init->kind == CSPV_S_EXPR && cspv_wg_simple_stmt(g, init->u.expr) &&
+		 !(init->u.expr->kind == CSPV_E_BINARY && init->u.expr->u.bin.op == ','));
+	bool iter_inline = (!iter || (cspv_wg_simple_stmt(g, iter) && !cspv_wg_needs_lowering(g, iter, true))) &&
+		!cspv_wg_complex_cond(g, s->u.for_s.cond);
+	if (init && init->kind == CSPV_S_DECL && init->u.decl.init && cspv_wg_needs_lowering(g, init->u.decl.init, false)) init_inline = false;
+	if (init && init->kind == CSPV_S_EXPR && cspv_wg_needs_lowering(g, init->u.expr, true)) init_inline = false;
+	cspv_wg_scope_begin(g);
+	bool wrapped = !init_inline || !iter_inline;
+	if (wrapped) {
+		cspv_wg_indent(g);
+		sappend(*out, "{\n");
+		g->indent++;
+		if (init) cspv_wg_stmt(g, init);
+	}
+	if (iter_inline) {
+		cspv_wg_indent(g);
+		sappend(*out, "for (");
+		if (init && init_inline) {
+			if (init->kind == CSPV_S_DECL) cspv_wg_decl(g, init, true);
+			else cspv_wg_expr_stmt(g, init->u.expr, true);
+		}
+		sappend(*out, "; ");
+		if (s->u.for_s.cond) cspv_wg_expr(g, s->u.for_s.cond, 0);
+		sappend(*out, "; ");
+		if (iter) cspv_wg_expr_stmt(g, iter, true);
+		sappend(*out, ")\n");
+		cspv_wg_block(g, s->u.for_s.body);
+	} else {
+		cspv_wg_indent(g);
+		sappend(*out, "loop\n");
+		cspv_wg_indent(g);
+		sappend(*out, "{\n");
+		g->indent++;
+		if (s->u.for_s.cond) cspv_wg_loop_exit(g, s->u.for_s.cond, false);
+		cspv_wg_body(g, s->u.for_s.body);
+		if (iter) {
+			cspv_wg_indent(g);
+			sappend(*out, "continuing\n");
+			cspv_wg_indent(g);
+			sappend(*out, "{\n");
+			g->indent++;
+			cspv_wg_lower(g, iter, true);
+			int base = cspv_wg_hoist_begin(g, iter);
+			cspv_wg_expr_stmt(g, iter, false);
+			cspv_wg_hoist_end(g, base);
+			g->indent--;
+			cspv_wg_indent(g);
+			sappend(*out, "}\n");
+		}
+		g->indent--;
+		cspv_wg_indent(g);
+		sappend(*out, "}\n");
+	}
+	if (wrapped) {
+		g->indent--;
+		cspv_wg_indent(g);
+		sappend(*out, "}\n");
+	}
+	cspv_wg_scope_end(g);
+}
+
+static void cspv_wg_stmt(cspv_wg* g, cspv_stmt* s)
+{
+	CK_SDYNA char** out = &g->ctx->tp_out;
+	switch (s->kind) {
+	case CSPV_S_BLOCK:
+		cspv_wg_block(g, s);
+		break;
+
+	case CSPV_S_DECL: {
+		for (cspv_stmt* n = s; n; n = n->u.decl.next_decl) cspv_wg_lower(g, n->u.decl.init, false);
+		int base = (int)asize(g->hoists);
+		for (cspv_stmt* n = s; n; n = n->u.decl.next_decl) cspv_wg_hoist_walk(g, n->u.decl.init);
+		cspv_wg_decl(g, s, false);
+		cspv_wg_hoist_end(g, base);
+		break;
+	}
+
+	case CSPV_S_EXPR: {
+		cspv_wg_lower(g, s->u.expr, true);
+		int base = cspv_wg_hoist_begin(g, s->u.expr);
+		cspv_wg_expr_stmt(g, s->u.expr, false);
+		cspv_wg_hoist_end(g, base);
+		break;
+	}
+
+	case CSPV_S_IF:
+		cspv_wg_if(g, s);
+		break;
+
+	case CSPV_S_FOR:
+		cspv_wg_for(g, s);
+		break;
+
+	case CSPV_S_WHILE:
+		if (cspv_wg_complex_cond(g, s->u.while_s.cond)) {
+			cspv_wg_indent(g);
+			sappend(*out, "loop\n");
+			cspv_wg_indent(g);
+			sappend(*out, "{\n");
+			g->indent++;
+			cspv_wg_loop_exit(g, s->u.while_s.cond, false);
+			cspv_wg_body(g, s->u.while_s.body);
+			g->indent--;
+			cspv_wg_indent(g);
+			sappend(*out, "}\n");
+			break;
+		}
+		cspv_wg_indent(g);
+		sappend(*out, "while (");
+		cspv_wg_expr(g, s->u.while_s.cond, 0);
+		sappend(*out, ")\n");
+		cspv_wg_block(g, s->u.while_s.body);
+		break;
+
+	case CSPV_S_DO:
+		cspv_wg_indent(g);
+		sappend(*out, "loop\n");
+		cspv_wg_indent(g);
+		sappend(*out, "{\n");
+		g->indent++;
+		cspv_wg_body(g, s->u.while_s.body);
+		cspv_wg_indent(g);
+		sappend(*out, "continuing\n");
+		cspv_wg_indent(g);
+		sappend(*out, "{\n");
+		g->indent++;
+		cspv_wg_loop_exit(g, s->u.while_s.cond, true);
+		g->indent--;
+		cspv_wg_indent(g);
+		sappend(*out, "}\n");
+		g->indent--;
+		cspv_wg_indent(g);
+		sappend(*out, "}\n");
+		break;
+
+	case CSPV_S_SWITCH:
+		cspv_wg_switch(g, s);
+		break;
+
+	case CSPV_S_RETURN:
+		if (s->u.ret) {
+			int tmp = cspv_wg_pre_eval(g, s->u.ret, s->u.ret->want ? s->u.ret->want : cspv_wg_rtype(g, s->u.ret));
+			cspv_wg_indent(g);
+			if (tmp >= 0) {
+				sfmt_append(*out, "return cspv_t%d;\n", tmp);
+			} else {
+				sappend(*out, "return ");
+				cspv_wg_expr(g, s->u.ret, 0);
+				sappend(*out, ";\n");
+			}
+		} else {
+			cspv_wg_indent(g);
+			sappend(*out, "return;\n");
+		}
+		break;
+
+	case CSPV_S_DISCARD:
+		cspv_wg_indent(g);
+		sappend(*out, "discard;\n");
+		break;
+
+	case CSPV_S_BREAK:
+		cspv_wg_indent(g);
+		sappend(*out, "break;\n");
+		break;
+
+	case CSPV_S_CONTINUE:
+		cspv_wg_indent(g);
+		sappend(*out, "continue;\n");
+		break;
+	}
+}
+
+// Every path through s returns, the way WGSL's behavior analysis sees it. Loops, switches, and
+// discard count as falling through, which only costs a dead return.
+static bool cspv_wg_always_returns(cspv_stmt* s)
+{
+	if (!s) return false;
+	switch (s->kind) {
+	case CSPV_S_RETURN: return true;
+	case CSPV_S_BLOCK:
+		for (int i = 0; i < (int)asize(s->u.block); i++) {
+			if (cspv_wg_always_returns(s->u.block[i])) return true;
+		}
+		return false;
+	case CSPV_S_IF: return cspv_wg_always_returns(s->u.if_s.then_s) && cspv_wg_always_returns(s->u.if_s.else_s);
+	default: return false;
+	}
+}
+
+static void cspv_wg_func(cspv_wg* g, cspv_decl* d)
+{
+	cspv_ctx* ctx = g->ctx;
+	CK_SDYNA char** out = &ctx->tp_out;
+	cspv_wg_scope_begin(g);
+	sfmt_append(*out, "fn %s(", cspv_wg_func_name(g, d));
+	bool* copied = (bool*)cspv_arena_alloc(&ctx->arena, sizeof(bool) * (d->num_params + 1));
+	for (int i = 0; i < d->num_params; i++) {
+		if (i) sappend(*out, ", ");
+		cspv_param* p = d->params + i;
+		const char* pn = cspv_wg_id(g, p->name);
+		copied[i] = false;
+		if (p->type->kind == CSPV_T_SAMPLER2D) {
+			sfmt_append(*out, "%s: %s, %s: %s", pn, cspv_wg_texture_type(p->type), cspv_wg_sampler_name(p->name),
+				cspv_wg_shadow_dim(p->type->cols) ? "sampler_comparison" : "sampler");
+			cspv_wg_push_shadow(g, p->name, false);
+		} else if (p->qual) {
+			sfmt_append(*out, "%s: ptr<function, %s>", pn, cspv_wg_type(g, p->type));
+			cspv_wg_push_shadow(g, p->name, true);
+		} else if (cspv_wg_param_written(g, d, p->name)) {
+			copied[i] = true;
+			sfmt_append(*out, "cspv_p_%s: %s", p->name, cspv_wg_type(g, p->type));
+			cspv_wg_push_shadow(g, p->name, false);
+		} else {
+			sfmt_append(*out, "%s: %s", pn, cspv_wg_type(g, p->type));
+			cspv_wg_push_shadow(g, p->name, false);
+		}
+	}
+	spush(*out, ')');
+	if (d->type->kind != CSPV_T_VOID) sfmt_append(*out, " -> %s", cspv_wg_type(g, d->type));
+	sappend(*out, "\n{\n");
+	g->indent = 1;
+	for (int i = 0; i < d->num_params; i++) {
+		if (!copied[i]) continue;
+		sfmt_append(*out, "\tvar %s: %s = cspv_p_%s;\n", cspv_wg_id(g, d->params[i].name), cspv_wg_type(g, d->params[i].type), d->params[i].name);
+	}
+	cspv_wg_body(g, d->body);
+	// WGSL rejects a value-returning function whose end is reachable; GLSL leaves it undefined.
+	if (d->type->kind != CSPV_T_VOID && !cspv_wg_always_returns(d->body)) {
+		sfmt_append(*out, "\treturn %s();\n", cspv_wg_type(g, d->type));
+	}
+	g->indent = 0;
+	sappend(*out, "}\n");
+	cspv_wg_scope_end(g);
+}
+
+//--------------------------------------------------------------------------------------------------
+// WGSL: module.
+
+static void cspv_wg_helpers(cspv_wg* g)
+{
+	CK_SDYNA char** out = &g->ctx->tp_out;
+	unsigned h = g->helpers;
+	for (int n = 1; n <= 4; n++) {
+		if (!(h & (CSPV_WGH_MOD << (n - 1)))) continue;
+		const char* t = n == 1 ? "f32" : n == 2 ? "vec2f" : n == 3 ? "vec3f" : "vec4f";
+		if (n == 1) sappend(*out, "\nfn cspv_mod(x: f32, y: f32) -> f32\n");
+		else sfmt_append(*out, "\nfn cspv_mod%d(x: %s, y: %s) -> %s\n", n, t, t, t);
+		sappend(*out, "{\n\treturn x - y * floor(x / y);\n}\n");
+	}
+	for (int n = 2; n <= 4; n++) {
+		if (!(h & (CSPV_WGH_DIAG << (n - 2)))) continue;
+		sfmt_append(*out, "\nfn cspv_diag%d(s: f32) -> mat%dx%df\n{\n\treturn mat%dx%df(", n, n, n, n, n);
+		for (int c = 0; c < n; c++) {
+			for (int r = 0; r < n; r++) {
+				if (c || r) sappend(*out, ", ");
+				sappend(*out, c == r ? "s" : "0.0");
+			}
+		}
+		sappend(*out, ");\n}\n");
+	}
+	for (int from = 2; from <= 4; from++) {
+		for (int to = 2; to <= 4; to++) {
+			if (!(h & (CSPV_WGH_MATCVT << ((from - 2) * 3 + (to - 2))))) continue;
+			sfmt_append(*out, "\nfn cspv_mat%d_from%d(m: mat%dx%df) -> mat%dx%df\n{\n\treturn mat%dx%df(", to, from, from, from, to, to, to, to);
+			static const char* swz[3] = { "xy", "xyz", "xyzw" };
+			for (int c = 0; c < to; c++) {
+				if (c) sappend(*out, ", ");
+				if (c < from) {
+					if (to < from) sfmt_append(*out, "m[%d].%s", c, swz[to - 2]);
+					else if (to == from) sfmt_append(*out, "m[%d]", c);
+					else {
+						sfmt_append(*out, "vec%df(m[%d]", to, c);
+						for (int r = from; r < to; r++) sappend(*out, r == c ? ", 1.0" : ", 0.0");
+						spush(*out, ')');
+					}
+				} else {
+					sfmt_append(*out, "vec%df(", to);
+					for (int r = 0; r < to; r++) {
+						if (r) sappend(*out, ", ");
+						sappend(*out, r == c ? "1.0" : "0.0");
+					}
+					spush(*out, ')');
+				}
+			}
+			sappend(*out, ");\n}\n");
+		}
+	}
+	if (h & (CSPV_WGH_INVERSE << 0)) {
+		sappend(*out,
+			"\nfn cspv_inverse2(m: mat2x2f) -> mat2x2f\n{\n"
+			"\tlet d = 1.0 / determinant(m);\n"
+			"\treturn mat2x2f(m[1][1] * d, -m[0][1] * d, -m[1][0] * d, m[0][0] * d);\n}\n");
+	}
+	if (h & (CSPV_WGH_INVERSE << 1)) {
+		sappend(*out,
+			"\nfn cspv_inverse3(m: mat3x3f) -> mat3x3f\n{\n"
+			"\tlet r0 = cross(m[1], m[2]);\n"
+			"\tlet r1 = cross(m[2], m[0]);\n"
+			"\tlet r2 = cross(m[0], m[1]);\n"
+			"\treturn transpose(mat3x3f(r0, r1, r2)) * (1.0 / dot(r2, m[2]));\n}\n");
+	}
+	if (h & (CSPV_WGH_INVERSE << 2)) {
+		sappend(*out,
+			"\nfn cspv_inverse4(m: mat4x4f) -> mat4x4f\n{\n"
+			"\tlet a00 = m[0][0]; let a01 = m[0][1]; let a02 = m[0][2]; let a03 = m[0][3];\n"
+			"\tlet a10 = m[1][0]; let a11 = m[1][1]; let a12 = m[1][2]; let a13 = m[1][3];\n"
+			"\tlet a20 = m[2][0]; let a21 = m[2][1]; let a22 = m[2][2]; let a23 = m[2][3];\n"
+			"\tlet a30 = m[3][0]; let a31 = m[3][1]; let a32 = m[3][2]; let a33 = m[3][3];\n"
+			"\tlet b00 = a00 * a11 - a01 * a10; let b01 = a00 * a12 - a02 * a10;\n"
+			"\tlet b02 = a00 * a13 - a03 * a10; let b03 = a01 * a12 - a02 * a11;\n"
+			"\tlet b04 = a01 * a13 - a03 * a11; let b05 = a02 * a13 - a03 * a12;\n"
+			"\tlet b06 = a20 * a31 - a21 * a30; let b07 = a20 * a32 - a22 * a30;\n"
+			"\tlet b08 = a20 * a33 - a23 * a30; let b09 = a21 * a32 - a22 * a31;\n"
+			"\tlet b10 = a21 * a33 - a23 * a31; let b11 = a22 * a33 - a23 * a32;\n"
+			"\tlet d = 1.0 / (b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06);\n"
+			"\treturn mat4x4f(\n"
+			"\t\t(a11 * b11 - a12 * b10 + a13 * b09) * d, (a02 * b10 - a01 * b11 - a03 * b09) * d,\n"
+			"\t\t(a31 * b05 - a32 * b04 + a33 * b03) * d, (a22 * b04 - a21 * b05 - a23 * b03) * d,\n"
+			"\t\t(a12 * b08 - a10 * b11 - a13 * b07) * d, (a00 * b11 - a02 * b08 + a03 * b07) * d,\n"
+			"\t\t(a32 * b02 - a30 * b05 - a33 * b01) * d, (a20 * b05 - a22 * b02 + a23 * b01) * d,\n"
+			"\t\t(a10 * b10 - a11 * b08 + a13 * b06) * d, (a01 * b08 - a00 * b10 - a03 * b06) * d,\n"
+			"\t\t(a30 * b04 - a31 * b02 + a33 * b00) * d, (a21 * b02 - a20 * b04 - a23 * b00) * d,\n"
+			"\t\t(a11 * b07 - a10 * b09 - a12 * b06) * d, (a00 * b09 - a01 * b07 + a02 * b06) * d,\n"
+			"\t\t(a31 * b01 - a30 * b03 - a32 * b00) * d, (a20 * b03 - a21 * b01 + a22 * b00) * d);\n}\n");
+	}
+}
+
+static void cspv_wg_sort_by_binding(cspv_decl** list)
+{
+	for (int i = 1; i < (int)asize(list); i++) {
+		cspv_decl* d = list[i];
+		int j = i - 1;
+		while (j >= 0 && list[j]->binding > d->binding) { list[j + 1] = list[j]; j--; }
+		list[j + 1] = d;
+	}
+}
+
+static void cspv_wg_reflect(cspv_wg* g, const char* name, int set, int slot, int binding, CSPV_WgslBindingKind kind)
+{
+	CSPV_WgslBinding b;
+	memset(&b, 0, sizeof(b));
+	b.name = name;
+	b.set = set;
+	b.slot = slot;
+	b.binding = binding;
+	b.kind = kind;
+	apush(g->ctx->reflection.wgsl_bindings, b);
+}
+
+static CSPV_WgslTextureDim cspv_wg_dim(int sdim)
+{
+	switch (sdim) {
+	case CSPV_SDIM_CUBE: case CSPV_SDIM_CUBE_SHADOW: return CSPV_WGSL_DIM_CUBE;
+	case CSPV_SDIM_3D: return CSPV_WGSL_DIM_3D;
+	case CSPV_SDIM_2D_ARRAY: case CSPV_SDIM_2D_ARRAY_SHADOW: return CSPV_WGSL_DIM_2D_ARRAY;
+	default: return CSPV_WGSL_DIM_2D;
+	}
+}
+
+// Resource groups: textures/samplers, storage textures, storage buffers, split load sides.
+static void cspv_wg_resources(cspv_wg* g)
+{
+	cspv_ctx* ctx = g->ctx;
+	CK_SDYNA char** out = &ctx->tp_out;
+	for (int set = 0; set < 4; set++) {
+		CK_DYNA cspv_decl** samp = NULL;
+		CK_DYNA cspv_decl** imgs = NULL;
+		CK_DYNA cspv_decl** bufs = NULL;
+		for (int i = 0; i < (int)asize(ctx->decls); i++) {
+			cspv_decl* d = ctx->decls + i;
+			if (d->set != set) continue;
+			if (d->kind == CSPV_D_OPAQUE && d->type->kind == CSPV_T_SAMPLER2D) apush(samp, d);
+			else if (d->kind == CSPV_D_OPAQUE) apush(imgs, d);
+			else if (d->kind == CSPV_D_BLOCK && d->is_buffer) apush(bufs, d);
+		}
+		cspv_wg_sort_by_binding(samp);
+		cspv_wg_sort_by_binding(imgs);
+		cspv_wg_sort_by_binding(bufs);
+		int n = (int)asize(samp);
+		int m = (int)asize(imgs);
+		int p = (int)asize(bufs);
+		if (n + m + p) spush(*out, '\n');
+		for (int i = 0; i < n; i++) {
+			cspv_decl* d = samp[i];
+			bool shadow = cspv_wg_shadow_dim(d->type->cols);
+			sfmt_append(*out, "@group(%d) @binding(%d) var %s: %s;\n", set, 2 * i, cspv_wg_id(g, d->name), cspv_wg_texture_type(d->type));
+			sfmt_append(*out, "@group(%d) @binding(%d) var %s: %s;\n", set, 2 * i + 1, cspv_wg_sampler_name(d->name), shadow ? "sampler_comparison" : "sampler");
+			cspv_wg_reflect(g, d->name, set, d->binding, 2 * i, CSPV_WGSL_SAMPLED_TEXTURE);
+			CSPV_WgslBinding* b = &alast(ctx->reflection.wgsl_bindings);
+			b->dim = cspv_wg_dim(d->type->cols);
+			b->sample_type = shadow ? CSPV_WGSL_SAMPLE_DEPTH : (d->type->elem && d->type->elem->kind == CSPV_T_UINT) ? CSPV_WGSL_SAMPLE_UINT : CSPV_WGSL_SAMPLE_FLOAT;
+			cspv_wg_reflect(g, d->name, set, d->binding, 2 * i + 1, CSPV_WGSL_SAMPLER);
+			alast(ctx->reflection.wgsl_bindings).comparison = shadow;
+		}
+		for (int j = 0; j < m; j++) {
+			cspv_decl* d = imgs[j];
+			cspv_wg_image* im = cspv_wg_find_image(g, d->name);
+			im->binding = 2 * n + j;
+			sfmt_append(*out, "@group(%d) @binding(%d) var %s: texture_storage_2d<%s, %s>;\n", set, im->binding,
+				cspv_wg_id(g, d->name), cspv_wg_format(d->type->cols), im->access);
+			cspv_wg_reflect(g, d->name, set, d->binding, im->binding, CSPV_WGSL_STORAGE_TEXTURE);
+			CSPV_WgslBinding* b = &alast(ctx->reflection.wgsl_bindings);
+			b->access = !strcmp(im->access, "read") ? CSPV_WGSL_ACCESS_READ : !strcmp(im->access, "write") ? CSPV_WGSL_ACCESS_WRITE : CSPV_WGSL_ACCESS_READ_WRITE;
+			b->image_format = d->type->cols;
+			b->format = cspv_wg_format(d->type->cols);
+		}
+		for (int k = 0; k < p; k++) {
+			cspv_decl* d = bufs[k];
+			// Graphics stages get read-only storage unless the shader writes it (WebGPU has no
+			// writable storage in vertex shaders at all).
+			bool written = cspv_wg_is_written(g, d);
+			bool read_only = d->readonly || (ctx->stage != CSPV_STAGE_COMPUTE && !written);
+			if (ctx->stage == CSPV_STAGE_VERTEX && written) {
+				cspv_errorf(ctx, d->line, "vertex shaders cannot write storage buffers in WGSL output (WebGPU), '%s'", d->name);
+			}
+			cspv_wg_atom** atom_of = (cspv_wg_atom**)cspv_arena_alloc(&ctx->arena, sizeof(cspv_wg_atom*) * (d->num_members + 1));
+			for (int j = 0; j < d->num_members; j++) {
+				atom_of[j] = cspv_wg_find_atom(g, d, j);
+				if (atom_of[j] && read_only) cspv_errorf(ctx, d->line, "atomics on readonly buffer '%s' are not supported in WGSL output", d->name);
+			}
+			sfmt_append(*out, "struct cspv_SB_%s\n{\n", d->name);
+			cspv_wg_struct_body(g, d->num_members, d->member_types, d->member_names, false, atom_of, d->line);
+			sappend(*out, "}\n");
+			if (d->instance_name) {
+				sfmt_append(*out, "@group(%d) @binding(%d) var<storage, %s> %s: cspv_SB_%s;\n", set, 2 * n + m + k,
+					read_only ? "read" : "read_write", cspv_wg_id(g, d->instance_name), d->name);
+			} else {
+				sfmt_append(*out, "@group(%d) @binding(%d) var<storage, %s> cspv_sb_%s: cspv_SB_%s;\n", set, 2 * n + m + k,
+					read_only ? "read" : "read_write", d->name, d->name);
+			}
+			cspv_wg_reflect(g, d->name, set, d->binding, 2 * n + m + k, CSPV_WGSL_STORAGE_BUFFER);
+			alast(ctx->reflection.wgsl_bindings).access = read_only ? CSPV_WGSL_ACCESS_READ : CSPV_WGSL_ACCESS_READ_WRITE;
+		}
+		// Split load sides, after everything else in the group, in order of first load.
+		int next = 2 * n + m + p;
+		for (int order = 0; order < g->load_counter; order++) {
+			for (int j = 0; j < m; j++) {
+				cspv_wg_image* im = cspv_wg_find_image(g, imgs[j]->name);
+				if (!im->split || im->load_order != order) continue;
+				im->load_binding = next++;
+				bool u = cspv_wg_format_uint(imgs[j]->type->cols);
+				sfmt_append(*out, "@group(%d) @binding(%d) var cspv_ld_%s: texture_2d<%s>;\n", set, im->load_binding, imgs[j]->name, u ? "u32" : "f32");
+				cspv_wg_reflect(g, imgs[j]->name, set, imgs[j]->binding, im->load_binding, CSPV_WGSL_SPLIT_LOAD_TEXTURE);
+				CSPV_WgslBinding* b = &alast(ctx->reflection.wgsl_bindings);
+				b->sample_type = u ? CSPV_WGSL_SAMPLE_UINT : CSPV_WGSL_SAMPLE_FLOAT;
+				b->image_format = imgs[j]->type->cols;
+				b->format = cspv_wg_format(imgs[j]->type->cols);
+				CSPV_WgslSplit sp;
+				sp.name = imgs[j]->name;
+				sp.set = set;
+				sp.store_binding = im->binding;
+				sp.load_binding = im->load_binding;
+				apush(ctx->reflection.wgsl_splits, sp);
+			}
+		}
+		afree(samp);
+		afree(imgs);
+		afree(bufs);
+	}
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind != CSPV_D_BLOCK || d->is_buffer) continue;
+		sfmt_append(*out, "\nstruct cspv_UB_%s\n{\n", d->name);
+		cspv_wg_struct_body(g, d->num_members, d->member_types, d->member_names, true, NULL, d->line);
+		sappend(*out, "}\n");
+		if (d->instance_name) {
+			sfmt_append(*out, "@group(%d) @binding(%d) var<uniform> %s: cspv_UB_%s;\n", d->set, d->binding, cspv_wg_id(g, d->instance_name), d->name);
+		} else {
+			sfmt_append(*out, "@group(%d) @binding(%d) var<uniform> cspv_ub_%s: cspv_UB_%s;\n", d->set, d->binding, d->name, d->name);
+		}
+		cspv_wg_reflect(g, d->name, d->set, d->binding, d->binding, CSPV_WGSL_UNIFORM_BUFFER);
+	}
+}
+
+static bool cspv_wg_used(cspv_wg* g, const char* name)
+{
+	return map_has(g->used, (uint64_t)(uintptr_t)sintern(name));
+}
+
+// Structs reachable from buffer blocks print with std430 padding.
+static void cspv_wg_mark_buffer_struct(CK_DYNA cspv_type*** list, cspv_type* t)
+{
+	while (t->kind == CSPV_T_ARRAY) t = t->elem;
+	if (t->kind != CSPV_T_STRUCT) return;
+	for (int i = 0; i < (int)asize(*list); i++) {
+		if ((*list)[i] == t) return;
+	}
+	apush(*list, t);
+	for (int i = 0; i < (int)asize(t->field_types); i++) cspv_wg_mark_buffer_struct(list, t->field_types[i]);
+}
+
+static void cspv_emit_wgsl(cspv_ctx* ctx)
+{
+	cspv_wg* g = (cspv_wg*)cspv_arena_alloc(&ctx->arena, sizeof(cspv_wg));
+	memset(g, 0, sizeof(*g));
+	g->ctx = ctx;
+	ctx->wg = g;
+	cspv_wg_init_reserved(g);
+	CK_SDYNA char** out = &ctx->tp_out;
+	CSPV_Stage stage = ctx->stage;
+
+	// ---- Validation and analysis. ----
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind == CSPV_D_INOUT && !cspv_wg_is_scalar_or_vec(d->type)) {
+			cspv_errorf(ctx, d->line, "stage inputs/outputs must be scalars or vectors in WGSL output ('%s')", d->name);
+		}
+		if (d->kind == CSPV_D_INOUT && cspv_elem_type(d->type)->kind == CSPV_T_BOOL) {
+			cspv_errorf(ctx, d->line, "bool stage inputs/outputs are not supported in WGSL output ('%s')", d->name);
+		}
+		if (d->kind == CSPV_D_FUNC) {
+			for (int p = 0; p < d->num_params; p++) {
+				if (d->params[p].type->kind == CSPV_T_IMAGE2D) cspv_errorf(ctx, d->line, "image2D function parameters are not supported in WGSL output");
+			}
+		}
+		if (d->kind == CSPV_D_OPAQUE && d->type->kind == CSPV_T_IMAGE2D) {
+			cspv_wg_image im;
+			memset(&im, 0, sizeof(im));
+			im.decl = d;
+			im.load_order = -1;
+			apush(g->images, im);
+		}
+	}
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind == CSPV_D_FUNC) cspv_wg_walk_stmt(g, d->body, cspv_wg_analyze_visit, NULL);
+		else if (d->kind == CSPV_D_GLOBAL && d->init) cspv_wg_walk_expr(g, d->init, cspv_wg_analyze_visit, NULL);
+	}
+	for (int i = 0; i < (int)asize(g->images); i++) {
+		cspv_wg_image* im = g->images + i;
+		int format = im->decl->type->cols;
+		if (im->decl->readonly) im->access = "read";
+		else if (im->decl->writeonly) im->access = "write";
+		else if (im->loaded && im->stored) {
+			if (format == 3 || format == 33) im->access = "read_write";
+			else { im->access = "write"; im->split = true; }
+		} else if (im->loaded) im->access = "read";
+		else im->access = "write";
+	}
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind != CSPV_D_BLOCK || d->instance_name) continue;
+		for (int j = 0; j < d->num_members; j++) {
+			char buf[256];
+			snprintf(buf, sizeof(buf), "cspv_%s_%s.%s", d->is_buffer ? "sb" : "ub", d->name, cspv_wg_id(g, d->member_names[j]));
+			apush(g->rename_from, d->member_names[j]);
+			apush(g->rename_to, sintern(buf));
+		}
+	}
+
+	// ---- Module-scope declarations. ----
+	*out = NULL;
+	sappend(*out, "// Generated by cute_spirv.h (WGSL transpiler backend).\n");
+	if (stage == CSPV_STAGE_FRAGMENT) sappend(*out, "diagnostic(off, derivative_uniformity);\n");
+
+	CK_DYNA cspv_type** buffer_structs = NULL;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind != CSPV_D_BLOCK || !d->is_buffer) continue;
+		for (int j = 0; j < d->num_members; j++) cspv_wg_mark_buffer_struct(&buffer_structs, d->member_types[j]);
+	}
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind != CSPV_D_STRUCT) continue;
+		bool laid = false;
+		for (int j = 0; j < (int)asize(buffer_structs); j++) {
+			if (buffer_structs[j] == d->type) laid = true;
+		}
+		sfmt_append(*out, "\nstruct %s\n{\n", cspv_wg_id(g, d->name));
+		if (laid) {
+			cspv_wg_struct_body(g, (int)asize(d->type->field_types), d->type->field_types, d->type->field_names, false, NULL, d->line);
+		} else {
+			for (int j = 0; j < (int)asize(d->type->field_types); j++) {
+				sfmt_append(*out, "\t%s: %s,\n", cspv_wg_id(g, d->type->field_names[j]), cspv_wg_type(g, d->type->field_types[j]));
+			}
+		}
+		sappend(*out, "}\n");
+	}
+	afree(buffer_structs);
+
+	cspv_wg_resources(g);
+
+	bool any_private = false;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind == CSPV_D_SHARED) {
+			if (!any_private) spush(*out, '\n');
+			any_private = true;
+			cspv_wg_atom* a = cspv_wg_find_atom(g, d, -1);
+			sfmt_append(*out, "var<workgroup> %s: ", cspv_wg_id(g, d->name));
+			if (a) {
+				const char* at = a->scalar->kind == CSPV_T_INT ? "atomic<i32>" : "atomic<u32>";
+				if (d->type->kind == CSPV_T_ARRAY) sfmt_append(*out, "array<%s, %d>;\n", at, d->type->cols * a->cols);
+				else if (a->cols > 1) sfmt_append(*out, "array<%s, %d>;\n", at, a->cols);
+				else sfmt_append(*out, "%s;\n", at);
+			} else {
+				sfmt_append(*out, "%s;\n", cspv_wg_type(g, d->type));
+			}
+		}
+	}
+	spush(*out, '\n');
+	if (stage == CSPV_STAGE_VERTEX) {
+		sappend(*out, "var<private> gl_Position: vec4f;\n");
+		if (cspv_wg_used(g, "gl_VertexIndex")) sappend(*out, "var<private> gl_VertexIndex: i32;\n");
+		if (cspv_wg_used(g, "gl_InstanceIndex")) sappend(*out, "var<private> gl_InstanceIndex: i32;\n");
+	} else if (stage == CSPV_STAGE_FRAGMENT) {
+		if (cspv_wg_used(g, "gl_FragCoord")) sappend(*out, "var<private> gl_FragCoord: vec4f;\n");
+		if (ctx->frag_depth_var) sappend(*out, "var<private> gl_FragDepth: f32;\n");
+	} else {
+		if (cspv_wg_used(g, "gl_GlobalInvocationID")) sappend(*out, "var<private> gl_GlobalInvocationID: vec3u;\n");
+		if (cspv_wg_used(g, "gl_LocalInvocationID")) sappend(*out, "var<private> gl_LocalInvocationID: vec3u;\n");
+		if (cspv_wg_used(g, "gl_WorkGroupID")) sappend(*out, "var<private> gl_WorkGroupID: vec3u;\n");
+		if (cspv_wg_used(g, "gl_NumWorkGroups")) sappend(*out, "var<private> gl_NumWorkGroups: vec3u;\n");
+		if (cspv_wg_used(g, "gl_LocalInvocationIndex")) sappend(*out, "var<private> gl_LocalInvocationIndex: u32;\n");
+	}
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind == CSPV_D_INOUT || (d->kind == CSPV_D_GLOBAL && !d->is_const)) {
+			sfmt_append(*out, "var<private> %s: %s;\n", cspv_wg_id(g, d->name), cspv_wg_type(g, d->type));
+		} else if (d->kind == CSPV_D_GLOBAL) {
+			sfmt_append(*out, "const %s: %s", cspv_wg_id(g, d->name), cspv_wg_type(g, d->type));
+			if (d->init) {
+				sappend(*out, " = ");
+				cspv_wg_expr_to(g, d->init, d->type, 0);
+			}
+			sappend(*out, ";\n");
+		}
+	}
+
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind != CSPV_D_FUNC) continue;
+		spush(*out, '\n');
+		cspv_wg_func(g, d);
+	}
+
+	// ---- Entry point: bridge stage IO and builtins into the private globals. ----
+	bool has_in = false, has_out = false;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind != CSPV_D_INOUT) continue;
+		if (d->is_input) has_in = true;
+		else has_out = true;
+	}
+	bool frag_depth = stage == CSPV_STAGE_FRAGMENT && ctx->frag_depth_var;
+	if (frag_depth) has_out = true;
+	if (stage == CSPV_STAGE_VERTEX) {
+		if (has_in) {
+			sappend(*out, "\nstruct cspv_vs_in\n{\n");
+			for (int i = 0; i < (int)asize(ctx->decls); i++) {
+				cspv_decl* d = ctx->decls + i;
+				if (d->kind == CSPV_D_INOUT && d->is_input) sfmt_append(*out, "\t@location(%d) %s: %s,\n", d->location, cspv_wg_id(g, d->name), cspv_wg_type(g, d->type));
+			}
+			sappend(*out, "}\n");
+		}
+		sappend(*out, "\nstruct cspv_vs_out\n{\n\t@builtin(position) cspv_position: vec4f,\n");
+		for (int i = 0; i < (int)asize(ctx->decls); i++) {
+			cspv_decl* d = ctx->decls + i;
+			if (d->kind == CSPV_D_INOUT && !d->is_input) {
+				sfmt_append(*out, "\t@location(%d)%s %s: %s,\n", d->location, d->flat ? " @interpolate(flat)" : "", cspv_wg_id(g, d->name), cspv_wg_type(g, d->type));
+			}
+		}
+		sappend(*out, "}\n\n@vertex\nfn main(");
+		bool first = true;
+		if (has_in) { sappend(*out, "cspv_in: cspv_vs_in"); first = false; }
+		if (cspv_wg_used(g, "gl_VertexIndex")) { sfmt_append(*out, "%s@builtin(vertex_index) cspv_vid: u32", first ? "" : ", "); first = false; }
+		if (cspv_wg_used(g, "gl_InstanceIndex")) { sfmt_append(*out, "%s@builtin(instance_index) cspv_iid: u32", first ? "" : ", "); first = false; }
+		sappend(*out, ") -> cspv_vs_out\n{\n");
+		for (int i = 0; i < (int)asize(ctx->decls); i++) {
+			cspv_decl* d = ctx->decls + i;
+			if (d->kind == CSPV_D_INOUT && d->is_input) sfmt_append(*out, "\t%s = cspv_in.%s;\n", cspv_wg_id(g, d->name), cspv_wg_id(g, d->name));
+		}
+		if (cspv_wg_used(g, "gl_VertexIndex")) sappend(*out, "\tgl_VertexIndex = i32(cspv_vid);\n");
+		if (cspv_wg_used(g, "gl_InstanceIndex")) sappend(*out, "\tgl_InstanceIndex = i32(cspv_iid);\n");
+	} else if (stage == CSPV_STAGE_FRAGMENT) {
+		sappend(*out, "\nstruct cspv_fs_in\n{\n\t@builtin(position) cspv_frag_coord: vec4f,\n");
+		for (int i = 0; i < (int)asize(ctx->decls); i++) {
+			cspv_decl* d = ctx->decls + i;
+			if (d->kind == CSPV_D_INOUT && d->is_input) {
+				sfmt_append(*out, "\t@location(%d)%s %s: %s,\n", d->location, d->flat ? " @interpolate(flat)" : "", cspv_wg_id(g, d->name), cspv_wg_type(g, d->type));
+			}
+		}
+		sappend(*out, "}\n");
+		if (has_out) {
+			sappend(*out, "\nstruct cspv_fs_out\n{\n");
+			if (frag_depth) sappend(*out, "\t@builtin(frag_depth) cspv_frag_depth: f32,\n");
+			for (int i = 0; i < (int)asize(ctx->decls); i++) {
+				cspv_decl* d = ctx->decls + i;
+				if (d->kind == CSPV_D_INOUT && !d->is_input) sfmt_append(*out, "\t@location(%d) %s: %s,\n", d->location, cspv_wg_id(g, d->name), cspv_wg_type(g, d->type));
+			}
+			sappend(*out, "}\n");
+		}
+		sfmt_append(*out, "\n@fragment\nfn main(cspv_in: cspv_fs_in)%s\n{\n", has_out ? " -> cspv_fs_out" : "");
+		if (cspv_wg_used(g, "gl_FragCoord")) sappend(*out, "\tgl_FragCoord = cspv_in.cspv_frag_coord;\n");
+		for (int i = 0; i < (int)asize(ctx->decls); i++) {
+			cspv_decl* d = ctx->decls + i;
+			if (d->kind == CSPV_D_INOUT && d->is_input) sfmt_append(*out, "\t%s = cspv_in.%s;\n", cspv_wg_id(g, d->name), cspv_wg_id(g, d->name));
+		}
+	} else {
+		static const struct { const char* glsl; const char* wgsl; const char* type; } cs[] = {
+			{ "gl_GlobalInvocationID", "global_invocation_id", "vec3u" },
+			{ "gl_LocalInvocationID", "local_invocation_id", "vec3u" },
+			{ "gl_WorkGroupID", "workgroup_id", "vec3u" },
+			{ "gl_NumWorkGroups", "num_workgroups", "vec3u" },
+			{ "gl_LocalInvocationIndex", "local_invocation_index", "u32" },
+		};
+		sfmt_append(*out, "\n@compute @workgroup_size(%d, %d, %d)\nfn main(",
+			ctx->local_size[0], ctx->local_size[1] ? ctx->local_size[1] : 1, ctx->local_size[2] ? ctx->local_size[2] : 1);
+		bool first = true;
+		for (int i = 0; i < 5; i++) {
+			if (!cspv_wg_used(g, cs[i].glsl)) continue;
+			sfmt_append(*out, "%s@builtin(%s) cspv_%s: %s", first ? "" : ", ", cs[i].wgsl, cs[i].wgsl, cs[i].type);
+			first = false;
+		}
+		sappend(*out, ")\n{\n");
+		for (int i = 0; i < 5; i++) {
+			if (cspv_wg_used(g, cs[i].glsl)) sfmt_append(*out, "\t%s = cspv_%s;\n", cs[i].glsl, cs[i].wgsl);
+		}
+	}
+	g->indent = 1;
+	for (int i = 0; i < (int)asize(ctx->decls); i++) {
+		cspv_decl* d = ctx->decls + i;
+		if (d->kind == CSPV_D_GLOBAL && !d->is_const && d->init) {
+			sfmt_append(*out, "\t%s = ", cspv_wg_id(g, d->name));
+			cspv_wg_expr_to(g, d->init, d->type, 0);
+			sappend(*out, ";\n");
+		}
+	}
+	g->indent = 0;
+	sappend(*out, "\tcspv_main_();\n");
+	if (stage == CSPV_STAGE_VERTEX) {
+		sappend(*out, "\tvar cspv_out: cspv_vs_out;\n\tcspv_out.cspv_position = gl_Position;\n");
+	} else if (stage == CSPV_STAGE_FRAGMENT && has_out) {
+		sappend(*out, "\tvar cspv_out: cspv_fs_out;\n");
+		if (frag_depth) sappend(*out, "\tcspv_out.cspv_frag_depth = gl_FragDepth;\n");
+	}
+	if (stage != CSPV_STAGE_COMPUTE && has_out) {
+		for (int i = 0; i < (int)asize(ctx->decls); i++) {
+			cspv_decl* d = ctx->decls + i;
+			if (d->kind == CSPV_D_INOUT && !d->is_input) sfmt_append(*out, "\tcspv_out.%s = %s;\n", cspv_wg_id(g, d->name), cspv_wg_id(g, d->name));
+		}
+	}
+	if (stage == CSPV_STAGE_VERTEX || (stage == CSPV_STAGE_FRAGMENT && has_out)) sappend(*out, "\treturn cspv_out;\n");
+	sappend(*out, "}\n");
+
+	cspv_wg_helpers(g);
+	cspv_wg_free(ctx);
+}
+
+//--------------------------------------------------------------------------------------------------
 // Context setup.
 
 static cspv_type* cspv_make_type(cspv_ctx* ctx, cspv_type_kind kind, cspv_type* elem, int cols, int rows)
@@ -10065,6 +13475,9 @@ static void cspv_cleanup(cspv_ctx* ctx)
 	afree(ctx->reflection.inputs);
 	afree(ctx->reflection.write_sites);
 	afree(ctx->reflection.loaded_images);
+	afree(ctx->reflection.wgsl_bindings);
+	afree(ctx->reflection.wgsl_splits);
+	cspv_wg_free(ctx);
 	afree(ctx->decls);
 	sfree(ctx->tp_out);
 	cspv_arena_free(&ctx->arena);
@@ -10160,6 +13573,11 @@ CSPV_Result cspv_compile_ex(const char* source, CSPV_Stage stage, const CSPV_Opt
 		result.msl = ctx->tp_out; // Ownership moved to the result.
 		ctx->tp_out = NULL;
 	}
+	if (opts && opts->emit_wgsl) {
+		cspv_emit_wgsl(ctx);
+		result.wgsl = ctx->tp_out; // Ownership moved to the result.
+		ctx->tp_out = NULL;
+	}
 
 	result.spirv = cspv_assemble(ctx, &result.word_count);
 	result.success = true;
@@ -10195,10 +13613,13 @@ void cspv_free(CSPV_Result* result)
 	afree(result->reflection.inputs);
 	afree(result->reflection.write_sites);
 	afree(result->reflection.loaded_images);
+	afree(result->reflection.wgsl_bindings);
+	afree(result->reflection.wgsl_splits);
 	sfree(result->preprocessed);
 	sfree(result->glsl300);
 	sfree(result->hlsl);
 	sfree(result->msl);
+	sfree(result->wgsl);
 	memset(result, 0, sizeof(*result));
 }
 

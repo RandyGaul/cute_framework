@@ -18,6 +18,194 @@ extern "C" {
 // There should be little to no external includes since cute-shader is not depending on cute framework.
 
 /**
+ * @enum     CF_PixelFormat
+ * @category graphics
+ * @brief    The various supported pixel formats for GPU.
+ * @remarks  Pixel format support varies depending on driver, hardware, and usage flags.
+ *           The `PIXEL_FORMAT_R8G8B8A8_UNORM` represents a safe default format.
+ * @related  CF_PixelFormat cf_pixel_format_to_string CF_PixelFormatOp
+ */
+#define CF_PIXEL_FORMAT_DEFS \
+	/* @entry Invalid pixel format. */                                                         \
+	CF_ENUM(PIXEL_FORMAT_INVALID,                -1)                                           \
+	/* @entry 8-bit alpha channel, 8 bits total, unsigned normalized. */                       \
+	CF_ENUM(PIXEL_FORMAT_A8_UNORM,                0)                                           \
+	/* @entry 8-bit red channel, 8 bits total, unsigned normalized. */                         \
+	CF_ENUM(PIXEL_FORMAT_R8_UNORM,                1)                                           \
+	/* @entry 8-bit red/green channels, 16 bits total, unsigned normalized. */                 \
+	CF_ENUM(PIXEL_FORMAT_R8G8_UNORM,              2)                                           \
+	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, unsigned normalized. */      \
+	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_UNORM,          3)                                           \
+	/* @entry 16-bit red channel, 16 bits total, unsigned normalized. */                       \
+	CF_ENUM(PIXEL_FORMAT_R16_UNORM,               4)                                           \
+	/* @entry 16-bit red/green channels, 32 bits total, unsigned normalized. */                \
+	CF_ENUM(PIXEL_FORMAT_R16G16_UNORM,            5)                                           \
+	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total, unsigned normalized. */     \
+	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_UNORM,      6)                                           \
+	/* @entry 10-bit red/green/blue channels, 2-bit alpha channel, 32 bits total, unsigned normalized. */\
+	CF_ENUM(PIXEL_FORMAT_R10G10B10A2_UNORM,       7)                                           \
+	/* @entry 5-bit blue, 6-bit green, 5-bit red channels, 16 bits total, unsigned normalized. */\
+	CF_ENUM(PIXEL_FORMAT_B5G6R5_UNORM,            8)                                           \
+	/* @entry 5-bit blue/green/red channels, 1-bit alpha channel, 16 bits total, unsigned normalized. */\
+	CF_ENUM(PIXEL_FORMAT_B5G5R5A1_UNORM,          9)                                           \
+	/* @entry 4-bit blue/green/red/alpha channels, 16 bits total, unsigned normalized. */      \
+	CF_ENUM(PIXEL_FORMAT_B4G4R4A4_UNORM,         10)                                           \
+	/* @entry 8-bit blue/green/red/alpha channels, 32 bits total, unsigned normalized. */      \
+	CF_ENUM(PIXEL_FORMAT_B8G8R8A8_UNORM,         11)                                           \
+	/* @entry BC1 compressed format, unsigned normalized. */                                   \
+	CF_ENUM(PIXEL_FORMAT_BC1_RGBA_UNORM,         12)                                           \
+	/* @entry BC2 compressed format, unsigned normalized. */                                   \
+	CF_ENUM(PIXEL_FORMAT_BC2_RGBA_UNORM,         13)                                           \
+	/* @entry BC3 compressed format, unsigned normalized. */                                   \
+	CF_ENUM(PIXEL_FORMAT_BC3_RGBA_UNORM,         14)                                           \
+	/* @entry BC4 compressed format, unsigned normalized. */                                   \
+	CF_ENUM(PIXEL_FORMAT_BC4_R_UNORM,            15)                                           \
+	/* @entry BC5 compressed format, unsigned normalized. */                                   \
+	CF_ENUM(PIXEL_FORMAT_BC5_RG_UNORM,           16)                                           \
+	/* @entry BC7 compressed format, unsigned normalized. */                                   \
+	CF_ENUM(PIXEL_FORMAT_BC7_RGBA_UNORM,         17)                                           \
+	/* @entry BC6H compressed format, signed float. */                                         \
+	CF_ENUM(PIXEL_FORMAT_BC6H_RGB_FLOAT,         18)                                           \
+	/* @entry BC6H compressed format, unsigned float. */                                       \
+	CF_ENUM(PIXEL_FORMAT_BC6H_RGB_UFLOAT,        19)                                           \
+	/* @entry 8-bit red channel, 8 bits total, signed normalized. */                           \
+	CF_ENUM(PIXEL_FORMAT_R8_SNORM,               20)                                           \
+	/* @entry 8-bit red/green channels, 16 bits total, signed normalized. */                   \
+	CF_ENUM(PIXEL_FORMAT_R8G8_SNORM,             21)                                           \
+	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, signed normalized. */        \
+	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_SNORM,         22)                                           \
+	/* @entry 16-bit red channel, 16 bits total, signed normalized. */                         \
+	CF_ENUM(PIXEL_FORMAT_R16_SNORM,              23)                                           \
+	/* @entry 16-bit red/green channels, 32 bits total, signed normalized. */                  \
+	CF_ENUM(PIXEL_FORMAT_R16G16_SNORM,           24)                                           \
+	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total, signed normalized. */       \
+	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_SNORM,     25)                                           \
+	/* @entry 16-bit red channel, 16 bits total, float. */                                     \
+	CF_ENUM(PIXEL_FORMAT_R16_FLOAT,              26)                                           \
+	/* @entry 16-bit red/green channels, 32 bits total, float. */                              \
+	CF_ENUM(PIXEL_FORMAT_R16G16_FLOAT,           27)                                           \
+	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total, float. */                   \
+	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_FLOAT,     28)                                           \
+	/* @entry 32-bit red channel, 32 bits total, float. */                                     \
+	CF_ENUM(PIXEL_FORMAT_R32_FLOAT,              29)                                           \
+	/* @entry 32-bit red/green channels, 64 bits total, float. */                              \
+	CF_ENUM(PIXEL_FORMAT_R32G32_FLOAT,           30)                                           \
+	/* @entry 32-bit red/green/blue/alpha channels, 128 bits total, float. */                  \
+	CF_ENUM(PIXEL_FORMAT_R32G32B32A32_FLOAT,     31)                                           \
+	/* @entry 11-bit red/green channels, 10-bit blue channel, 32 bits total, unsigned float. */\
+	CF_ENUM(PIXEL_FORMAT_R11G11B10_UFLOAT,       32)                                           \
+	/* @entry 8-bit red channel, 8 bits total, unsigned integer. */                            \
+	CF_ENUM(PIXEL_FORMAT_R8_UINT,                33)                                           \
+	/* @entry 8-bit red/green channels, 16 bits total, unsigned integer. */                    \
+	CF_ENUM(PIXEL_FORMAT_R8G8_UINT,              34)                                           \
+	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, unsigned integer. */         \
+	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_UINT,          35)                                           \
+	/* @entry 16-bit red-only channel, unsigned integer. */                                    \
+	CF_ENUM(PIXEL_FORMAT_R16_UINT,               36)                                           \
+	/* @entry 16-bit red/green channels, 32 bits total, unsigned integer. */                   \
+	CF_ENUM(PIXEL_FORMAT_R16G16_UINT,            37)                                           \
+	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total, unsigned integer. */        \
+	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_UINT,      38)                                           \
+	/* @entry 8-bit red channel, 8 bits total, signed integer. */                              \
+	CF_ENUM(PIXEL_FORMAT_R8_INT,                 39)                                           \
+	/* @entry 8-bit red/green channels, 16 bits total, signed integer. */                      \
+	CF_ENUM(PIXEL_FORMAT_R8G8_INT,               40)                                           \
+	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, signed integer. */           \
+	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_INT,           41)                                           \
+	/* @entry 16-bit red channel, 16 bits total, signed integer. */                            \
+	CF_ENUM(PIXEL_FORMAT_R16_INT,                42)                                           \
+	/* @entry 16-bit red/green channels, 32 bits total, signed integer. */                     \
+	CF_ENUM(PIXEL_FORMAT_R16G16_INT,             43)                                           \
+	/* @entry 16-bit red/green/blue/alpha channels, 64 bits total, signed integer. */          \
+	CF_ENUM(PIXEL_FORMAT_R16G16B16A16_INT,       44)                                           \
+	/* @entry 8-bit red/green/blue/alpha channels, 32 bits total, unsigned normalized, sRGB. */\
+	CF_ENUM(PIXEL_FORMAT_R8G8B8A8_UNORM_SRGB,    45)                                           \
+	/* @entry 8-bit blue/green/red/alpha channels, 32 bits total, unsigned normalized, sRGB. */\
+	CF_ENUM(PIXEL_FORMAT_B8G8R8A8_UNORM_SRGB,    46)                                           \
+	/* @entry BC1 compressed format, unsigned normalized, sRGB. */                             \
+	CF_ENUM(PIXEL_FORMAT_BC1_RGBA_UNORM_SRGB,    47)                                           \
+	/* @entry BC2 compressed format, unsigned normalized, sRGB. */                             \
+	CF_ENUM(PIXEL_FORMAT_BC2_RGBA_UNORM_SRGB,    48)                                           \
+	/* @entry BC3 compressed format, unsigned normalized, sRGB. */                             \
+	CF_ENUM(PIXEL_FORMAT_BC3_RGBA_UNORM_SRGB,    49)                                           \
+	/* @entry BC7 compressed format, unsigned normalized, sRGB. */                             \
+	CF_ENUM(PIXEL_FORMAT_BC7_RGBA_UNORM_SRGB,    50)                                           \
+	/* @entry 16-bit depth, 16 bits total, unsigned normalized. */                             \
+	CF_ENUM(PIXEL_FORMAT_D16_UNORM,              51)                                           \
+	/* @entry 24-bit depth, 24 bits total, unsigned normalized. */                             \
+	CF_ENUM(PIXEL_FORMAT_D24_UNORM,              52)                                           \
+	/* @entry 32-bit depth, 32 bits total, float. */                                           \
+	CF_ENUM(PIXEL_FORMAT_D32_FLOAT,              53)                                           \
+	/* @entry 24-bit depth, 8-bit stencil, 32 bits total, unsigned normalized depth, unsigned integer stencil. */\
+	CF_ENUM(PIXEL_FORMAT_D24_UNORM_S8_UINT,      54)                                           \
+	/* @entry 32-bit depth, 8-bit stencil, 40 bits total, float depth, unsigned integer stencil. */\
+	CF_ENUM(PIXEL_FORMAT_D32_FLOAT_S8_UINT,      55)
+	/* @end */
+
+typedef enum CF_PixelFormat
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_PIXEL_FORMAT_DEFS
+	#undef CF_ENUM
+} CF_PixelFormat;
+
+/**
+ * @function cf_pixel_format_to_string
+ * @category graphics
+ * @brief    Returns a `CF_PixelFormat` converted to a C string.
+ * @related  CF_PixelFormat cf_pixel_format_to_string CF_PixelFormatOp
+ */
+CF_INLINE const char* cf_pixel_format_to_string(CF_PixelFormat format) {
+	switch (format) {
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+	CF_PIXEL_FORMAT_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+/**
+ * @enum     CF_TextureType
+ * @category graphics
+ * @brief    The shape of a texture: 2D, cube map, 3D, or 2D array.
+ * @remarks  Matches the sampler type in the shader: `sampler2D`, `samplerCube`, `sampler3D`, or
+ *           `sampler2DArray`. See `CF_TextureParams` and `cf_texture_update_layer`.
+ * @related  CF_TextureType cf_texture_type_to_string CF_TextureParams cf_make_texture cf_texture_update_layer
+ */
+#define CF_TEXTURE_TYPE_DEFS \
+	/* @entry An ordinary 2D texture (the default). */                                          \
+	CF_ENUM(TEXTURE_TYPE_2D,       0)                                                           \
+	/* @entry A cube map: six square 2D faces, sampled by direction with `samplerCube`. */      \
+	CF_ENUM(TEXTURE_TYPE_CUBE,     1)                                                           \
+	/* @entry A 3D (volume) texture, sampled with `sampler3D`. */                               \
+	CF_ENUM(TEXTURE_TYPE_3D,       2)                                                           \
+	/* @entry An array of 2D layers, sampled with `sampler2DArray`. */                          \
+	CF_ENUM(TEXTURE_TYPE_2D_ARRAY, 3)                                                           \
+	/* @end */
+
+typedef enum CF_TextureType
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_TEXTURE_TYPE_DEFS
+	#undef CF_ENUM
+} CF_TextureType;
+
+/**
+ * @function cf_texture_type_to_string
+ * @category graphics
+ * @brief    Returns a `CF_TextureType` value as a string.
+ * @related  CF_TextureType
+ */
+CF_INLINE const char* cf_texture_type_to_string(CF_TextureType type) {
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+	CF_TEXTURE_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+/**
  * @enum     CF_ShaderInfoDataType
  * @category graphics
  * @brief    Data types of shader elements.
@@ -197,6 +385,191 @@ typedef struct CF_ShaderWriteSite
 // @end
 
 /**
+ * @enum     CF_ShaderWgslBindingKind
+ * @category graphics
+ * @brief    What one group/binding pair of a shader's WGSL source holds, for the WebGPU backend.
+ * @remarks  CF descriptor set N is WGSL group N. Inside a resource group, sampled texture i (in binding order) is
+ *           binding 2i and its sampler binding 2i+1; storage textures follow, then storage buffers, then the load
+ *           sides of split storage images (see `CF_ShaderWgslSplit`). Inside a uniform group, block slot u is
+ *           binding u.
+ * @related  CF_ShaderWgslBinding CF_ShaderWgslSplit CF_ShaderInfo
+ */
+#define CF_SHADER_WGSL_BINDING_KIND_DEFS \
+	/* @entry A sampled texture: `texture_2d<f32>`, `texture_cube<f32>`, `texture_depth_2d` and so on. */ \
+	CF_ENUM(SHADER_WGSL_BINDING_KIND_SAMPLED_TEXTURE,    0) \
+	/* @entry The sampler paired with a sampled texture: `sampler` or `sampler_comparison`. */ \
+	CF_ENUM(SHADER_WGSL_BINDING_KIND_SAMPLER,            1) \
+	/* @entry A storage texture: `texture_storage_2d<format, access>`. */ \
+	CF_ENUM(SHADER_WGSL_BINDING_KIND_STORAGE_TEXTURE,    2) \
+	/* @entry A storage buffer: `var<storage, read>` or `var<storage, read_write>`. */ \
+	CF_ENUM(SHADER_WGSL_BINDING_KIND_STORAGE_BUFFER,     3) \
+	/* @entry A uniform block: `var<uniform>`, laid out to match its std140 bytes. */ \
+	CF_ENUM(SHADER_WGSL_BINDING_KIND_UNIFORM_BUFFER,     4) \
+	/* @entry The `texture_2d` load side of a split storage image, see `CF_ShaderWgslSplit`. */ \
+	CF_ENUM(SHADER_WGSL_BINDING_KIND_SPLIT_LOAD_TEXTURE, 5) \
+	/* @end */
+
+typedef enum CF_ShaderWgslBindingKind
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_SHADER_WGSL_BINDING_KIND_DEFS
+	#undef CF_ENUM
+} CF_ShaderWgslBindingKind;
+
+/**
+ * @function cf_shader_wgsl_binding_kind_to_string
+ * @category graphics
+ * @brief    Returns a `CF_ShaderWgslBindingKind` converted to a C string.
+ * @related  CF_ShaderWgslBindingKind
+ */
+static inline const char* cf_shader_wgsl_binding_kind_to_string(CF_ShaderWgslBindingKind kind)
+{
+	switch (kind) {
+	#define CF_ENUM(K, V) case CF_##K: return "CF_" #K;
+	CF_SHADER_WGSL_BINDING_KIND_DEFS
+	#undef CF_ENUM
+	}
+	return NULL;
+}
+
+/**
+ * @enum     CF_ShaderWgslSampleType
+ * @category graphics
+ * @brief    The sample type of a sampled texture in a shader's WGSL source.
+ * @related  CF_ShaderWgslBinding
+ */
+#define CF_SHADER_WGSL_SAMPLE_TYPE_DEFS \
+	/* @entry `texture_2d<f32>` and the like, bound to a filterable texture. */ \
+	CF_ENUM(SHADER_WGSL_SAMPLE_TYPE_FLOAT,              0) \
+	/* @entry `f32` textures that cannot be filtered, such as 32-bit float formats without float32-filterable. */ \
+	CF_ENUM(SHADER_WGSL_SAMPLE_TYPE_UNFILTERABLE_FLOAT, 1) \
+	/* @entry `texture_depth_2d` and the like. */ \
+	CF_ENUM(SHADER_WGSL_SAMPLE_TYPE_DEPTH,              2) \
+	/* @entry `texture_2d<i32>` and the like. */ \
+	CF_ENUM(SHADER_WGSL_SAMPLE_TYPE_SINT,               3) \
+	/* @entry `texture_2d<u32>` and the like. */ \
+	CF_ENUM(SHADER_WGSL_SAMPLE_TYPE_UINT,               4) \
+	/* @end */
+
+typedef enum CF_ShaderWgslSampleType
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_SHADER_WGSL_SAMPLE_TYPE_DEFS
+	#undef CF_ENUM
+} CF_ShaderWgslSampleType;
+
+/**
+ * @function cf_shader_wgsl_sample_type_to_string
+ * @category graphics
+ * @brief    Returns a `CF_ShaderWgslSampleType` converted to a C string.
+ * @related  CF_ShaderWgslSampleType
+ */
+static inline const char* cf_shader_wgsl_sample_type_to_string(CF_ShaderWgslSampleType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return "CF_" #K;
+	CF_SHADER_WGSL_SAMPLE_TYPE_DEFS
+	#undef CF_ENUM
+	}
+	return NULL;
+}
+
+/**
+ * @enum     CF_ShaderWgslAccess
+ * @category graphics
+ * @brief    The access mode of a storage texture or storage buffer in a shader's WGSL source.
+ * @related  CF_ShaderWgslBinding
+ */
+#define CF_SHADER_WGSL_ACCESS_DEFS \
+	/* @entry `read`. */ \
+	CF_ENUM(SHADER_WGSL_ACCESS_READ,       0) \
+	/* @entry `write`. Storage textures only. */ \
+	CF_ENUM(SHADER_WGSL_ACCESS_WRITE,      1) \
+	/* @entry `read_write`. */ \
+	CF_ENUM(SHADER_WGSL_ACCESS_READ_WRITE, 2) \
+	/* @end */
+
+typedef enum CF_ShaderWgslAccess
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_SHADER_WGSL_ACCESS_DEFS
+	#undef CF_ENUM
+} CF_ShaderWgslAccess;
+
+/**
+ * @function cf_shader_wgsl_access_to_string
+ * @category graphics
+ * @brief    Returns a `CF_ShaderWgslAccess` converted to a C string.
+ * @related  CF_ShaderWgslAccess
+ */
+static inline const char* cf_shader_wgsl_access_to_string(CF_ShaderWgslAccess access)
+{
+	switch (access) {
+	#define CF_ENUM(K, V) case CF_##K: return "CF_" #K;
+	CF_SHADER_WGSL_ACCESS_DEFS
+	#undef CF_ENUM
+	}
+	return NULL;
+}
+
+/**
+ * @struct   CF_ShaderWgslBinding
+ * @category graphics
+ * @brief    One group/binding pair declared by a shader's WGSL source, with everything a bind group layout entry needs.
+ * @remarks  Members that do not apply to the binding's `kind` are zero.
+ * @related  CF_ShaderWgslBindingKind CF_ShaderWgslSampleType CF_ShaderWgslAccess CF_ShaderWgslSplit CF_ShaderInfo
+ */
+typedef struct CF_ShaderWgslBinding
+{
+	/* @member The sampler, image or block this binding serves, as declared in the shader. */
+	const char* name;
+	/* @member What the binding holds. */
+	CF_ShaderWgslBindingKind kind;
+	/* @member The CF descriptor set, equal to the WGSL group. */
+	int set;
+	/* @member The resource's binding within its CF set, as declared in the shader. */
+	int slot;
+	/* @member The WGSL binding. */
+	int binding;
+	/* @member Sampled, split-load and storage textures: the texture's shape. */
+	CF_TextureType dimension;
+	/* @member Sampled and split-load textures: the sample type. */
+	CF_ShaderWgslSampleType sample_type;
+	/* @member Sampled textures: true for `texture_multisampled_2d` and `texture_depth_multisampled_2d`. */
+	bool multisampled;
+	/* @member Storage and split-load textures: the image's texel format, or `CF_PIXEL_FORMAT_INVALID` for a format `CF_PixelFormat` lacks (`r32ui`). */
+	CF_PixelFormat storage_format;
+	/* @member Storage textures and storage buffers: the access mode. */
+	CF_ShaderWgslAccess storage_access;
+	/* @member Samplers: true for `sampler_comparison`. */
+	bool comparison;
+} CF_ShaderWgslBinding;
+// @end
+
+/**
+ * @struct   CF_ShaderWgslSplit
+ * @category graphics
+ * @brief    A storage image a shader both loads and stores, split in two for WebGPU.
+ * @remarks  WebGPU only allows read-write storage access for r32 formats, and forbids binding one texture as both a
+ *           writable storage texture and a sampled texture in one dispatch. A shader that loads and stores an image of
+ *           any other format stores through a write-only storage texture at `store_binding`, and loads through a
+ *           `texture_2d` at `load_binding`. Bind a copy of the image, taken before the dispatch, as the load side.
+ * @related  CF_ShaderWgslBinding CF_ShaderInfo
+ */
+typedef struct CF_ShaderWgslSplit
+{
+	/* @member The image's name as declared. */
+	const char* name;
+	/* @member The CF descriptor set, equal to the WGSL group. */
+	int set;
+	/* @member The WGSL binding of the write-only storage texture. */
+	int store_binding;
+	/* @member The WGSL binding of the `texture_2d` load side. */
+	int load_binding;
+} CF_ShaderWgslSplit;
+// @end
+
+/**
  * @struct   CF_ShaderInfo
  * @category graphics
  * @brief    Reflection info for a shader.
@@ -254,6 +627,16 @@ typedef struct CF_ShaderInfo
 	int num_write_sites;
 	/* @member The GLSL ES compute emulation's write sites, see `CF_ShaderWriteSite`. */
 	CF_ShaderWriteSite* write_sites;
+
+	/* @member Number of bindings the WGSL source declares (zero without WGSL). */
+	int num_wgsl_bindings;
+	/* @member Every group/binding pair of the WGSL source, see `CF_ShaderWgslBinding`. */
+	CF_ShaderWgslBinding* wgsl_bindings;
+
+	/* @member Number of split storage images in the WGSL source. */
+	int num_wgsl_splits;
+	/* @member Storage images split into a store side and a load side, see `CF_ShaderWgslSplit`. */
+	CF_ShaderWgslSplit* wgsl_splits;
 } CF_ShaderInfo;
 // @end
 
@@ -282,6 +665,10 @@ typedef struct CF_ShaderBytecode
 	const char* msl_src;
 	/* @member Size of the MSL source. */
 	size_t msl_src_size;
+	/* @member The transpiled WGSL source for WebGPU (entry point "main"), or NULL when not compiled for WebGPU. */
+	const char* wgsl_src;
+	/* @member Size of the WGSL source. */
+	size_t wgsl_src_size;
 	/* @member Shader reflection info. */
 	CF_ShaderInfo shader_info;
 } CF_ShaderBytecode;
