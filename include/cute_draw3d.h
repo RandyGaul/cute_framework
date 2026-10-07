@@ -122,12 +122,11 @@
 //     - A shader pushed inside `begin`/`end` records frozen; one that was merely ambient
 //       (pushed outside, or not at all) stays a free variable -- `cf_draw_list` binds
 //       whatever `cf_draw3d_push_shader` has pushed then, record-time shader as fallback.
-//     - A render state pushed inside `begin`/`end` records frozen -- even one equal to the
-//       ambient state, which is the idiom to pin it. Otherwise it stays a free variable and
-//       `cf_draw_list` binds the top of the `cf_draw3d_push_render_state` stack then (the
-//       stack always holds a default, so there is no fallback case). Strokes derive and
-//       push their own state, so they always record frozen. 2d drawing inside a list follows
-//       the same rule against `cf_draw_push_render_state`.
+//     - A render state pushed inside `begin`/`end` records frozen just like shader -- even one
+//       equal to the ambient state. Otherwise it stays a free variable and `cf_draw_list` binds
+//       the top of the `cf_draw3d_push_render_state` stack. Strokes derive and push their
+//       own state, so they always record frozen. 2d drawing inside a list follows the same rule
+//       as `cf_draw_push_render_state`.
 //     - A uniform or texture set inside the recording records frozen; a name that was only
 //       ambient binds the live `cf_draw3d_set_uniform`/`set_texture` value at
 //       `cf_draw_list` time, record-time value as fallback. Set `u_time` each frame and a
