@@ -2436,11 +2436,13 @@ static CSPV_Result s_emit_every_target(CSPV_Stage stage, const char* src)
 	opts.emit_glsl300 = true;
 	opts.emit_hlsl = true;
 	opts.emit_msl = true;
+	opts.emit_wgsl = true;
 	CSPV_Result r = cspv_compile_ex(src, stage, &opts);
 	CHECK_MSG(r.success, r.error_message);
 	if (r.success) {
 		CHECK(validate_spirv(r.spirv, r.word_count));
-		CHECK(r.glsl300 && r.hlsl && r.msl);
+		CHECK(r.glsl300 && r.hlsl && r.msl && r.wgsl);
+		if (r.wgsl) CHECK(validate_wgsl(r.wgsl));
 	}
 	return r;
 }
@@ -2470,7 +2472,9 @@ static void test_frag_depth(void)
 			CHECK(strstr(r.hlsl, "SV_Depth") != NULL);
 			CHECK(strstr(r.msl, "[[depth(any)]]") != NULL);
 			CHECK(strstr(r.glsl300, "gl_FragDepth") != NULL);
-			CHECK(validate_es_frag(r.glsl300));		}
+			CHECK(validate_es_frag(r.glsl300));
+			CHECK(strstr(r.wgsl, "@builtin(frag_depth)") != NULL);
+		}
 		cspv_free(&r);
 	}
 	// A shader that never touches depth gets no depth output on any target.
@@ -2482,6 +2486,7 @@ static void test_frag_depth(void)
 			CHECK(strstr(r.hlsl, "Depth") == NULL);
 			CHECK(strstr(r.msl, "depth(") == NULL);
 			CHECK(strstr(r.glsl300, "gl_FragDepth") == NULL);
+			CHECK(strstr(r.wgsl, "frag_depth") == NULL);
 		}
 		cspv_free(&r);
 	}
@@ -2904,6 +2909,28 @@ static void test_wgsl_semantics(void)
 			CHECK(strstr(s, "select(1u, pure_sq(k), (k > 3u))") != NULL);
 			CHECK(count_substr(s, "\tif ((k > ") == 3);
 			CHECK(strstr(s, "cspv_t0 = bump_twice();") != NULL);
+		}
+		cspv_free(&r);
+	}
+
+	// A comma for-loop update runs each side exactly once per iteration, in order:
+	// distance_polygon's `j = i, i++` once ran twice, skipping every other edge.
+	{
+		CSPV_Result r = cspv_compile_ex(
+			"layout(local_size_x = 1) in;\n"
+			"layout(std430, set = 1, binding = 0) buffer Out { int data[]; };\n"
+			"void main() {\n"
+			"	for (int i = 0, j = 3; i < 4; j = i, i++) { data[i] = j; }\n"
+			"}\n", CSPV_STAGE_COMPUTE, &o);
+		CHECK_MSG(r.success, r.error_message);
+		if (r.success) {
+			const char* s = r.wgsl;
+			CHECK(validate_wgsl(s));
+			CHECK(count_substr(s, "i++;") == 1);
+			CHECK(count_substr(s, "j = i;") == 1);
+			const char* copy = strstr(s, "j = i;");
+			const char* inc = strstr(s, "i++;");
+			CHECK(copy && inc && copy < inc);
 		}
 		cspv_free(&r);
 	}

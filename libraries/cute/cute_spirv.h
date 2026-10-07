@@ -11656,6 +11656,9 @@ static void cspv_wg_hoist_walk(cspv_wg* g, cspv_expr* e)
 static int cspv_wg_hoist_begin(cspv_wg* g, cspv_expr* e)
 {
 	int base = (int)asize(g->hoists);
+	// A statement-level comma hoists per side as cspv_wg_expr_stmt prints it; a nested one is
+	// lowered, so the walk would skip it anyway.
+	if (e && e->kind == CSPV_E_BINARY && e->u.bin.op == ',') return base;
 	cspv_wg_hoist_walk(g, e);
 	return base;
 }
@@ -11853,12 +11856,21 @@ static bool cspv_wg_simple_stmt(cspv_wg* g, cspv_expr* e)
 	return true;
 }
 
+static void cspv_wg_lower(cspv_wg* g, cspv_expr* e, bool root);
+
 static void cspv_wg_expr_stmt(cspv_wg* g, cspv_expr* e, bool inline_form)
 {
 	CK_SDYNA char** out = &g->ctx->tp_out;
 	if (e->kind == CSPV_E_BINARY && e->u.bin.op == ',') {
-		cspv_wg_expr_stmt(g, e->u.bin.l, inline_form);
-		cspv_wg_expr_stmt(g, e->u.bin.r, inline_form);
+		// Each side is its own statement, lowered and hoisted in turn: the right side's
+		// temporaries must see the left side's writes. Never inline (cspv_wg_simple_stmt).
+		cspv_expr* sides[2] = { e->u.bin.l, e->u.bin.r };
+		for (int i = 0; i < 2; i++) {
+			cspv_wg_lower(g, sides[i], true);
+			int base = cspv_wg_hoist_begin(g, sides[i]);
+			cspv_wg_expr_stmt(g, sides[i], false);
+			cspv_wg_hoist_end(g, base);
+		}
 		return;
 	}
 	if (e->kind == CSPV_E_BINARY && cspv_tp_is_assign_op(e->u.bin.op)) {
@@ -12162,6 +12174,8 @@ static void cspv_wg_lower(cspv_wg* g, cspv_expr* e, bool root)
 		int op = e->u.bin.op;
 		cspv_expr* l = e->u.bin.l;
 		cspv_expr* r = e->u.bin.r;
+		// A statement-level comma is a statement sequence, lowered side by side as it prints.
+		if (op == ',' && root) return;
 		if (cspv_tp_is_assign_op(op)) {
 			cspv_wg_lower(g, l, false);
 			cspv_wg_lower(g, r, false);
@@ -13060,6 +13074,7 @@ static void cspv_emit_wgsl(cspv_ctx* ctx)
 		if (cspv_wg_used(g, "gl_InstanceIndex")) sappend(*out, "var<private> gl_InstanceIndex: i32;\n");
 	} else if (stage == CSPV_STAGE_FRAGMENT) {
 		if (cspv_wg_used(g, "gl_FragCoord")) sappend(*out, "var<private> gl_FragCoord: vec4f;\n");
+		if (ctx->frag_depth_var) sappend(*out, "var<private> gl_FragDepth: f32;\n");
 	} else {
 		if (cspv_wg_used(g, "gl_GlobalInvocationID")) sappend(*out, "var<private> gl_GlobalInvocationID: vec3u;\n");
 		if (cspv_wg_used(g, "gl_LocalInvocationID")) sappend(*out, "var<private> gl_LocalInvocationID: vec3u;\n");
@@ -13096,6 +13111,8 @@ static void cspv_emit_wgsl(cspv_ctx* ctx)
 		if (d->is_input) has_in = true;
 		else has_out = true;
 	}
+	bool frag_depth = stage == CSPV_STAGE_FRAGMENT && ctx->frag_depth_var;
+	if (frag_depth) has_out = true;
 	if (stage == CSPV_STAGE_VERTEX) {
 		if (has_in) {
 			sappend(*out, "\nstruct cspv_vs_in\n{\n");
@@ -13135,6 +13152,7 @@ static void cspv_emit_wgsl(cspv_ctx* ctx)
 		sappend(*out, "}\n");
 		if (has_out) {
 			sappend(*out, "\nstruct cspv_fs_out\n{\n");
+			if (frag_depth) sappend(*out, "\t@builtin(frag_depth) cspv_frag_depth: f32,\n");
 			for (int i = 0; i < (int)asize(ctx->decls); i++) {
 				cspv_decl* d = ctx->decls + i;
 				if (d->kind == CSPV_D_INOUT && !d->is_input) sfmt_append(*out, "\t@location(%d) %s: %s,\n", d->location, cspv_wg_id(g, d->name), cspv_wg_type(g, d->type));
@@ -13183,6 +13201,7 @@ static void cspv_emit_wgsl(cspv_ctx* ctx)
 		sappend(*out, "\tvar cspv_out: cspv_vs_out;\n\tcspv_out.cspv_position = gl_Position;\n");
 	} else if (stage == CSPV_STAGE_FRAGMENT && has_out) {
 		sappend(*out, "\tvar cspv_out: cspv_fs_out;\n");
+		if (frag_depth) sappend(*out, "\tcspv_out.cspv_frag_depth = gl_FragDepth;\n");
 	}
 	if (stage != CSPV_STAGE_COMPUTE && has_out) {
 		for (int i = 0; i < (int)asize(ctx->decls); i++) {
