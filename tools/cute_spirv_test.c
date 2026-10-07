@@ -2201,8 +2201,6 @@ static void check_hrc_dir(const char* dir, bool required)
 
 static void test_compute_es(void)
 {
-	detect_glslang();
-
 	// The HRC shaders: CF's sample copies always, a game's copies when named.
 	{
 		char* dir = smake(__FILE__);
@@ -2405,9 +2403,90 @@ static void test_compute_es(void)
 		}
 		cspv_free(&r);
 	}
+}
 
-	sfree(g_glslang_path);
-	sfree(g_temp_frag);
+//--------------------------------------------------------------------------------------------------
+// Fragment depth output.
+
+// Scans a module for one instruction whose operand words (after the result/target id) start with
+// the given values.
+static bool spirv_has(const uint32_t* words, size_t count, int opcode, uint32_t a, uint32_t b)
+{
+	size_t i = 5;
+	while (i < count) {
+		uint32_t n = words[i] >> 16;
+		if (!n) return false;
+		if ((int)(words[i] & 0xFFFF) == opcode && n >= 4 && words[i + 2] == a && words[i + 3] == b) return true;
+		if ((int)(words[i] & 0xFFFF) == opcode && n == 3 && words[i + 2] == a && b == 0) return true;
+		i += n;
+	}
+	return false;
+}
+
+#define SPV_OP_EXECUTION_MODE 16
+#define SPV_OP_DECORATE 71
+#define SPV_DECORATION_BUILTIN 11
+#define SPV_BUILTIN_FRAG_DEPTH 22
+#define SPV_EXECUTION_MODE_DEPTH_REPLACING 12
+
+static CSPV_Result s_emit_every_target(CSPV_Stage stage, const char* src)
+{
+	CSPV_Options opts;
+	memset(&opts, 0, sizeof(opts));
+	opts.emit_glsl300 = true;
+	opts.emit_hlsl = true;
+	opts.emit_msl = true;
+	CSPV_Result r = cspv_compile_ex(src, stage, &opts);
+	CHECK_MSG(r.success, r.error_message);
+	if (r.success) {
+		CHECK(validate_spirv(r.spirv, r.word_count));
+		CHECK(r.glsl300 && r.hlsl && r.msl);
+	}
+	return r;
+}
+
+static void test_frag_depth(void)
+{
+	// The first reference sits inside a helper's branch; main must still see the same output
+	// after the helper's scope has closed.
+	{
+		CSPV_Result r = s_emit_every_target(CSPV_STAGE_FRAGMENT,
+			"layout(location = 0) in vec2 uv;\n"
+			"layout(location = 0) out vec4 result;\n"
+			"void write_depth(float d)\n"
+			"{\n"
+			"	if (d > 0.5) gl_FragDepth = d;\n"
+			"	else gl_FragDepth = 1.0 - d;\n"
+			"}\n"
+			"void main()\n"
+			"{\n"
+			"	write_depth(uv.x);\n"
+			"	gl_FragDepth += 0.125;\n"
+			"	result = vec4(gl_FragDepth);\n"
+			"}\n");
+		if (r.success) {
+			CHECK(spirv_has(r.spirv, r.word_count, SPV_OP_DECORATE, SPV_DECORATION_BUILTIN, SPV_BUILTIN_FRAG_DEPTH));
+			CHECK(spirv_has(r.spirv, r.word_count, SPV_OP_EXECUTION_MODE, SPV_EXECUTION_MODE_DEPTH_REPLACING, 0));
+			CHECK(strstr(r.hlsl, "SV_Depth") != NULL);
+			CHECK(strstr(r.msl, "[[depth(any)]]") != NULL);
+			CHECK(strstr(r.glsl300, "gl_FragDepth") != NULL);
+			CHECK(validate_es_frag(r.glsl300));		}
+		cspv_free(&r);
+	}
+	// A shader that never touches depth gets no depth output on any target.
+	{
+		CSPV_Result r = s_emit_every_target(CSPV_STAGE_FRAGMENT, FS_MAIN("result = vec4(gl_FragCoord.z);"));
+		if (r.success) {
+			CHECK(!spirv_has(r.spirv, r.word_count, SPV_OP_DECORATE, SPV_DECORATION_BUILTIN, SPV_BUILTIN_FRAG_DEPTH));
+			CHECK(!spirv_has(r.spirv, r.word_count, SPV_OP_EXECUTION_MODE, SPV_EXECUTION_MODE_DEPTH_REPLACING, 0));
+			CHECK(strstr(r.hlsl, "Depth") == NULL);
+			CHECK(strstr(r.msl, "depth(") == NULL);
+			CHECK(strstr(r.glsl300, "gl_FragDepth") == NULL);
+		}
+		cspv_free(&r);
+	}
+	// Depth is a fragment output only.
+	expect_err(CSPV_STAGE_VERTEX, "void main() { gl_FragDepth = 0.5; gl_Position = vec4(0); }\n", "undeclared identifier 'gl_FragDepth'");
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -2944,6 +3023,7 @@ static void test_wgsl_no_dead_return(void)
 int main(void)
 {
 	detect_spirv_val();
+	detect_glslang();
 	detect_naga();
 	TEST(test_wgsl_corpus);
 	TEST(test_wgsl_contract);
@@ -2979,6 +3059,7 @@ int main(void)
 	TEST(test_errors_recursion);
 	TEST(test_emitters);
 	TEST(test_compute_es);
+	TEST(test_frag_depth);
 
 	if (g_has_naga) {
 		printf("\nWGSL validated by naga:\n");
@@ -2990,6 +3071,8 @@ int main(void)
 	sfree(g_naga_path);
 	sfree(g_temp_wgsl);
 	sfree(g_temp_naga_log);
+	sfree(g_glslang_path);
+	sfree(g_temp_frag);
 
 	printf("\n%d checks, %d failures.\n", g_checks, g_fails);
 	return g_fails ? 1 : 0;

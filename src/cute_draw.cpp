@@ -237,6 +237,65 @@ void cf_get_pixels(ATLAS_CACHE_U64 image_id, void* buffer, int bytes_to_fill, vo
 }
 
 
+// Depth at one ndc point of the 2d plane at world `z`: the 3d point on that plane under the
+// pixel (the camera ray through ndc meets z = const), mapped through `vp`. Falls back to the
+// point (0, 0, z) when the camera sees the plane edge-on, and to the near plane when the
+// plane lies behind the camera.
+static float s_plane_depth_at(const CF_M4x4& vp, float z, float nx, float ny)
+{
+	const float* e = vp.elements; // Column-major: row r is (e[r], e[4+r], e[8+r], e[12+r]).
+	float k0 = e[8] * z + e[12], k1 = e[9] * z + e[13], k2 = e[10] * z + e[14], k3 = e[11] * z + e[15];
+	float a00 = e[0] - nx * e[3], a01 = e[4] - nx * e[7], b0 = -(k0 - nx * k3);
+	float a10 = e[1] - ny * e[3], a11 = e[5] - ny * e[7], b1 = -(k1 - ny * k3);
+	float det = a00 * a11 - a01 * a10;
+	float x = 0, y = 0;
+	if (fabsf(det) > 1.0e-12f) {
+		x = (b0 * a11 - a01 * b1) / det;
+		y = (a00 * b1 - b0 * a10) / det;
+	}
+	float w = e[3] * x + e[7] * y + k3;
+	if (w <= 1.0e-6f) return 0;
+	return cf_clamp01((e[2] * x + e[6] * y + k2) / w);
+}
+
+// The depth plane 2d geometry at world `z` rasterizes with: depth = plane . (ndc.x, ndc.y, 1).
+// A plane of constant world z has depth affine in ndc under any projective camera, so three
+// samples pin it exactly; a camera looking straight down z gives a flat plane. With no 3d
+// camera (vp NULL), z maps linearly onto the default range, higher z nearer.
+static void s_depth_plane(const CF_M4x4* vp, float z, float* plane)
+{
+	if (!vp) {
+		float zc = cf_clamp(z, -CF_DRAW_Z_RANGE, CF_DRAW_Z_RANGE);
+		plane[0] = 0;
+		plane[1] = 0;
+		plane[2] = 0.5f - zc * (0.5f / CF_DRAW_Z_RANGE);
+		return;
+	}
+	float d0 = s_plane_depth_at(*vp, z, 0, 0);
+	plane[0] = s_plane_depth_at(*vp, z, 1, 0) - d0;
+	plane[1] = s_plane_depth_at(*vp, z, 0, 1) - d0;
+	plane[2] = d0;
+}
+
+// Captures the z stack onto a geometry. Planes are cached across geometries: z and the 3d
+// camera rarely change from one draw to the next.
+static CF_INLINE void s_capture_depth(BatchGeometry& g)
+{
+	if (s_draw->zs.count() <= 1) return;
+	float z = s_draw->zs.last();
+	g.depth.has_z = true;
+	g.depth.z = z;
+	CF_M4x4 vp;
+	uint64_t cam = cf_draw3d_depth_camera(&vp);
+	if (!s_draw->depth_cache_valid || s_draw->depth_cache_z != z || s_draw->depth_cache_cam != cam) {
+		s_depth_plane(cam ? &vp : NULL, z, s_draw->depth_cache_plane);
+		s_draw->depth_cache_z = z;
+		s_draw->depth_cache_cam = cam;
+		s_draw->depth_cache_valid = true;
+	}
+	CF_MEMCPY(g.depth.plane, s_draw->depth_cache_plane, sizeof(g.depth.plane));
+}
+
 // Appends a zero-initialized geometry directly into the current command
 // (fill-in-place: no stack struct, no copy; unset fields stay zero).
 static CF_INLINE BatchGeometry& s_push_geom()
@@ -252,6 +311,7 @@ static CF_INLINE BatchGeometry& s_push_geom()
 	g.fx.outline_width = s_draw->outline_widths.last();
 	g.fx.glow = premultiply(s_draw->glows.last());
 	g.fx.glow_radius = s_draw->glow_radii.last();
+	s_capture_depth(g);
 	return g;
 }
 
@@ -324,6 +384,12 @@ static CF_TiledBatchStats s_tiled_batch_stats(const BatchGeometry* geoms, int st
 		case BATCH_GEOMETRY_TYPE_SPRITE: src = geom.shape; src_world = true; is_sdf = false; break;
 		case BATCH_GEOMETRY_TYPE_TRI:    src = geom.shape; src_world = true; nverts = 3; is_sdf = false; break;
 		case BATCH_GEOMETRY_TYPE_GLYPH:  is_sdf = false; break; // Winding coverage, not a cull-capable SDF.
+		case BATCH_GEOMETRY_TYPE_CUSTOM: is_sdf = false; break; // User fields never claim cover.
+		case BATCH_GEOMETRY_TYPE_CSG:
+			for (int oi = 0; oi < geom.n && i + 1 + oi < end; ++oi) {
+				if (geoms[i + 1 + oi].type == BATCH_GEOMETRY_TYPE_CUSTOM) is_sdf = false;
+			}
+			break;
 		default: break;
 		}
 		float min_x = FLT_MAX, min_y = FLT_MAX, max_x = -FLT_MAX, max_y = -FLT_MAX;
@@ -387,7 +453,7 @@ static bool s_tiled_batch_eligible(int count)
 	// Viewports remap NDC; the tile walk derives NDC from gl_FragCoord -- mesh path.
 	if (cmd.viewport.w >= 0 && cmd.viewport.h >= 0) return false;
 	// In-register composition is only equivalent to the default premultiplied src-over state.
-	if (CF_MEMCMP(&cmd.render_state, &s_draw->default_render_state, sizeof(CF_RenderState)) != 0) return false;
+	if (!(cmd.render_state == s_draw->default_render_state)) return false;
 	return true;
 }
 
@@ -421,7 +487,17 @@ static CF_RenderState s_blend_run_state(CF_RenderState rs, int blend, bool tiled
 	return rs;
 }
 
-static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* uvs, int start, int end, uint64_t texture_id, int texture_w, int texture_h, int blend, bool instanced)
+// Depth-tested canvas state for a Z run (see s_depth_mode): depth 1 tests, 2 also writes. A
+// depth test the caller pushed is kept; otherwise LESS_EQUAL, so equal-z draws keep paint order.
+static CF_RenderState s_depth_run_state(CF_RenderState rs, int depth)
+{
+	if (!depth) return rs;
+	if (rs.depth_compare == CF_COMPARE_FUNCTION_ALWAYS) rs.depth_compare = CF_COMPARE_FUNCTION_LESS_THAN_OR_EQUAL;
+	rs.depth_write_enabled = depth == 2;
+	return rs;
+}
+
+static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* uvs, int start, int end, uint64_t texture_id, int texture_w, int texture_h, int blend, int depth, bool instanced)
 {
 	CF_Command& cmd = *s_draw->processing_cmd;
 	int canvas_w, canvas_h;
@@ -443,6 +519,8 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 	CF_M3x2 last_mvp;
 	bool have_mvp = false;
 	uint32_t inv_off = 0;
+	float last_plane[3];
+	uint32_t depth_off = 0; // 0 until the first depth block lands (offset 0 is always the palette).
 	float ux0 = FLT_MAX, uy0 = FLT_MAX, ux1 = -FLT_MAX, uy1 = -FLT_MAX;
 
 	// Walk the geometry stream range in paint order. Sprite/text atlas uvs come from
@@ -481,10 +559,11 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 			axmax = cf_max(axmax, poly[j].x);
 			aymax = cf_max(aymax, poly[j].y);
 		}
-		// An outline or glow paints past the shape's own coverage box, so grow the pixel AABB
-		// the tile walk masks against by that reach (world units scaled into pixels by the mvp).
+		// A glow paints past the shape's own coverage box, so grow the pixel AABB the tile walk
+		// masks against by its reach (world units scaled into pixels by the mvp). Outlines sit
+		// inside the shape and need nothing.
 		if (!instanced) {
-			float fx_extent = cf_max(geom.fx.outline_width, geom.fx.glow_radius);
+			float fx_extent = geom.fx.glow_radius;
 			if (fx_extent > 0) {
 				float sx = cf_len(cf_v2(geom.mvp.m.x.x, geom.mvp.m.x.y)) * w2;
 				float sy = cf_len(cf_v2(geom.mvp.m.y.x, geom.mvp.m.y.y)) * h2;
@@ -526,6 +605,7 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		tc.user[3] = geom.user_params.a;
 
 		bool is_sdf = false;
+		bool field = geom.type == BATCH_GEOMETRY_TYPE_CUSTOM; // User field: not a trusted distance.
 		switch (geom.type) {
 		case BATCH_GEOMETRY_TYPE_SPRITE:
 		{
@@ -678,7 +758,7 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 					case BATCH_GEOMETRY_TYPE_TRI_SDF: prim = 5; break;
 					case BATCH_GEOMETRY_TYPE_POLYGON: prim = 6; aux = (float)og.n; break;
 					case BATCH_GEOMETRY_TYPE_ARROW: prim = 8; break;
-					case BATCH_GEOMETRY_TYPE_CUSTOM: prim = 9; aux = (float)og.n; break;
+					case BATCH_GEOMETRY_TYPE_CUSTOM: prim = 9; aux = (float)og.n; field = true; break;
 					default: prim = 3; break; // Circle/capsule/segment.
 					}
 					pay.add({ prim, aux, (float)og.csg_op, og.csg_k });
@@ -706,15 +786,27 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		}
 
 		// Shape effects: a trailing payload block (outline rgba, glow rgba, widths) pointed at
-		// by tc.fx.x. tc.fx.y is how far past the shape the effects reach, so the coverage quad
-		// and the tile cull can pad for a glow rather than clipping it.
+		// by tc.fx.x. tc.fx.y is how far past the shape the effects reach -- only a glow does,
+		// the outline lies inside the edge -- so the coverage quad and the tile cull can pad
+		// for a glow rather than clipping it.
 		if (is_sdf && (geom.fx.outline_width > 0 || geom.fx.glow_radius > 0)) {
 			uint32_t fx_offset = (uint32_t)pay.count();
 			CF_MEMCPY(&tc.fx[0], &fx_offset, sizeof(fx_offset));
-			tc.fx[1] = cf_max(geom.fx.outline_width, geom.fx.glow_radius);
+			tc.fx[1] = geom.fx.glow_radius;
 			pay.add({ geom.fx.outline.r, geom.fx.outline.g, geom.fx.outline.b, geom.fx.outline.a });
 			pay.add({ geom.fx.glow.r, geom.fx.glow.g, geom.fx.glow.b, geom.fx.glow.a });
 			pay.add({ geom.fx.outline_width, geom.fx.glow_radius, 0, 0 });
+		}
+
+		// 2d depth block (cf_draw_push_z): the ndc depth plane, and whether the run writes depth
+		// (the fragment stage then drops the AA fringe). Deduped across consecutive commands.
+		if (depth && geom.depth.has_z) {
+			if (!depth_off || CF_MEMCMP(geom.depth.plane, last_plane, sizeof(last_plane)) != 0) {
+				CF_MEMCPY(last_plane, geom.depth.plane, sizeof(last_plane));
+				depth_off = (uint32_t)pay.count();
+				pay.add({ last_plane[0], last_plane[1], last_plane[2], depth == 2 ? 1.0f : 0.0f });
+			}
+			CF_MEMCPY(&tc.fx[2], &depth_off, sizeof(depth_off));
 		}
 
 		// Opaque-cover cull candidate? Filled SDF shape at full alpha under normal
@@ -722,10 +814,15 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		// Clipped segments are excluded: their planes can cut mid-tile, so "interior
 		// covers the tile" cannot be decided from the SDF alone.
 		// Dashed strokes never claim opaque cover: their gaps don't hide what's beneath.
-		// Neither do effects: an outline or glow extends past the shape's own interior.
-		if (is_sdf && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.a >= 1.0f && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED && blend == CF_DRAW_BLEND_NORMAL && !(tc.type & 16u) && tc.fx[1] == 0) {
+		// Effects don't matter here: the cull only fires on tiles wholly inside the fill, where
+		// an outline (src-over an opaque fill) and a glow (under it) both leave alpha at 1.
+		// User fields (custom shapes, groups holding one) can overestimate distance, so they
+		// never claim cover either.
+		if (is_sdf && !field && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.a >= 1.0f && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED && blend == CF_DRAW_BLEND_NORMAL && !(tc.type & 16u)) {
 			tc.opaque = 1.0f;
 		}
+		// Field flag: bin by bounds only.
+		if (field) tc.type |= 32u;
 
 		if (instanced) {
 			// Rasterizer coverage: the instanced VS derives quads from the params, so
@@ -767,7 +864,7 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		cf_material_set_uniform_fs(s_draw->material, "u_alpha_discard", &alpha_discard, CF_UNIFORM_TYPE_INT, 1);
 		int use_smooth_uv = cmd.filter_mode == CF_DRAW_FILTER_SMOOTH ? 0 : 1;
 		cf_material_set_uniform_fs(s_draw->material, "u_use_smooth_uv", &use_smooth_uv, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_render_state(s_draw->material, s_blend_run_state(cmd.render_state, blend, false));
+		cf_material_set_render_state(s_draw->material, s_depth_run_state(s_blend_run_state(cmd.render_state.expand(), blend, false), depth));
 		void* sampler_override = (cmd.filter_mode == CF_DRAW_FILTER_NEAREST) ? s_draw->sampler_nearest : s_draw->sampler_linear;
 		cf_set_sampler_override(sampler_override);
 		cf_apply_mesh(s_draw->corner_mesh);
@@ -871,7 +968,7 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 	int tile_px = CF_TILE_PX;
 	cf_material_set_uniform_fs(s_draw->material, "u_tile_px", &tile_px, CF_UNIFORM_TYPE_INT, 1);
 	cf_material_set_uniform_fs(s_draw->material, "u_blend", &blend, CF_UNIFORM_TYPE_INT, 1);
-	cf_material_set_render_state(s_draw->material, s_blend_run_state(cmd.render_state, blend, true));
+	cf_material_set_render_state(s_draw->material, s_blend_run_state(cmd.render_state.expand(), blend, true));
 
 	void* sampler_override = (cmd.filter_mode == CF_DRAW_FILTER_NEAREST) ? s_draw->sampler_nearest : s_draw->sampler_linear;
 	cf_set_sampler_override(sampler_override);
@@ -931,12 +1028,14 @@ static void s_draw_report(atlas_cache_entry_t* entries, int count, int texture_w
 	}
 }
 
-// Routes one paint-ordered run of the stream to the tiled or instanced path.
-static void s_draw_report_range(const BatchGeometry* geoms, const CF_PendingUV* uvs, int start, int end, uint64_t texture_id, int texture_w, int texture_h, int blend)
+// Routes one paint-ordered run of the stream to the tiled or instanced path. Runs with Z
+// (depth != 0) always rasterize instanced: the tile walk composites in compute-binned lists
+// and has no depth test.
+static void s_draw_report_range(const BatchGeometry* geoms, const CF_PendingUV* uvs, int start, int end, uint64_t texture_id, int texture_w, int texture_h, int blend, int depth)
 {
 	int total = end - start;
 	if (total <= 0) return;
-	if (s_tiled_batch_eligible(total)) {
+	if (!depth && s_tiled_batch_eligible(total)) {
 		// Auto: the instanced path (rasterizer coverage) wins at moderate overdraw;
 		// tiled wins decisively when its opaque-cover cull can engage (up to ~9x on
 		// stacked opaque scenes). Route tiled only when a big opaque cover exists --
@@ -950,13 +1049,13 @@ static void s_draw_report_range(const BatchGeometry* geoms, const CF_PendingUV* 
 		// batch instead (it is O(cmds) regardless of footprint).
 		if (take && stats.footprint_tiles > s_draw->tiled_list_budget) take = false;
 		if (take) {
-			s_draw_report_tiled(geoms, uvs, start, end, texture_id, texture_w, texture_h, blend, false);
+			s_draw_report_tiled(geoms, uvs, start, end, texture_id, texture_w, texture_h, blend, 0, false);
 			return;
 		}
 	}
 	s_draw->instanced_batch_count++;
 	if (!s_draw->instanced_available) return; // Draw shader failed to compile; nothing can render.
-	s_draw_report_tiled(geoms, uvs, start, end, texture_id, texture_w, texture_h, blend, true);
+	s_draw_report_tiled(geoms, uvs, start, end, texture_id, texture_w, texture_h, blend, depth, true);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1239,6 +1338,7 @@ void cf_destroy_draw()
 	cf_destroy_texture(s_draw->white_texture);
 	atlas_cache_term(&s_draw->atlas_cache);
 	cf_destroy_material(s_draw->material);
+	cf_destroy_arena(&s_draw->uniform_arena);
 	s_draw->~CF_Draw();
 	CF_FREE(s_draw);
 	s_draw = NULL;
@@ -1912,7 +2012,16 @@ void cf_draw_prefetch(const CF_Sprite* sprite)
 	}
 }
 
-static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, float radius, bool fill)
+// Strokes sit inside the extent: a band of `stroke` running inward from the edge. The shaders
+// draw strokes centered on `d - radius = 0`, so pulling the radius in by half the stroke lands
+// the band exactly on [-stroke, 0]. A negative result is fine -- the distance functions are
+// exact inside the shape, so the band's inner edge keeps sharp corners sharp.
+static float s_inner_stroke_radius(float rounding, float stroke, bool fill)
+{
+	return fill ? rounding : rounding - stroke * 0.5f;
+}
+
+static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, float rounding, bool fill)
 {
 	float aaf = s_draw->aaf;
 	BatchGeometry& g = s_push_shape_geom();
@@ -1922,7 +2031,10 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	v2 v = skew(u);
 	v2 he = V2(distance(p1, p0), distance(p3, p0)) * 0.5f;
 	v2 c = ((p0 + p1) * 0.5f + (p2 + p3) * 0.5f) * 0.5f;
-	v2 inflate = V2(stroke+radius+aaf,stroke+radius+aaf);
+	// The core box shrinks by the rounding so core + rounding is the requested extent.
+	float radius = cf_clamp(rounding, 0.0f, cf_min(he.x, he.y));
+	he = he - V2(radius, radius);
+	v2 inflate = V2(aaf, aaf);
 	p0 = p0 - u * inflate - v * inflate;
 	p1 = p1 + u * inflate - v * inflate;
 	p2 = p2 + u * inflate + v * inflate;
@@ -1937,57 +2049,35 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	g.shape[2] = u;
 	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
-	g.radius = radius;
+	g.radius = s_inner_stroke_radius(radius, stroke, fill);
 	g.stroke = stroke;
 	g.fill = fill;
 	g.aa = aaf;
 	g.user_params = s_draw->user_params.last();
 }
 
-void cf_draw_quad(CF_Aabb bb, float thickness, float chubbiness)
+void cf_draw_quad(CF_Aabb bb, float thickness, float rounding)
 {
 	CF_V2 verts[4];
 	cf_aabb_verts(verts, bb);
-	s_draw_quad(verts[0], verts[1], verts[2], verts[3], thickness, chubbiness, false);
+	s_draw_quad(verts[0], verts[1], verts[2], verts[3], thickness, rounding, false);
 }
 
-void cf_draw_box_rounded(CF_Aabb bb, float thickness, float radius)
+void cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float rounding)
 {
-	v2 p = center(bb);
-	float x = p.x;
-	float y = p.y;
-	float hw = (width(bb) - 2*radius) * 0.5f;
-	float hh = (height(bb) - 2*radius) * 0.5f;
-	bb = make_aabb(V2(x - hw, y - hh), V2(x + hw, y + hh));
-	draw_box(bb, thickness, radius);
+	s_draw_quad(p0, p1, p2, p3, thickness, rounding, false);
 }
 
-void cf_draw_box_rounded_fill(CF_Aabb bb, float radius)
-{
-	v2 p = center(bb);
-	float x = p.x;
-	float y = p.y;
-	float hw = (width(bb) - 2*radius) * 0.5f;
-	float hh = (height(bb) - 2*radius) * 0.5f;
-	bb = make_aabb(V2(x - hw, y - hh), V2(x + hw, y + hh));
-	draw_box_fill(bb, radius);
-}
-
-void cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float chubbiness)
-{
-	s_draw_quad(p0, p1, p2, p3, thickness, chubbiness, false);
-}
-
-void cf_draw_quad_fill(CF_Aabb bb, float chubbiness)
+void cf_draw_quad_fill(CF_Aabb bb, float rounding)
 {
 	CF_V2 verts[4];
 	cf_aabb_verts(verts, bb);
-	s_draw_quad(verts[0], verts[1], verts[2], verts[3], 0, chubbiness, true);
+	s_draw_quad(verts[0], verts[1], verts[2], verts[3], 0, rounding, true);
 }
 
-void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float chubbiness)
+void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float rounding)
 {
-	s_draw_quad(p0, p1, p2, p3, 0, chubbiness, true);
+	s_draw_quad(p0, p1, p2, p3, 0, rounding, true);
 }
 
 static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
@@ -1997,7 +2087,7 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	g.type = BATCH_GEOMETRY_TYPE_CIRCLE;
 
 	v2 rr = V2(radius, radius);
-	v2 inflate = V2(stroke+aaf, stroke+aaf);
+	v2 inflate = V2(aaf, aaf);
 	CF_Aabb bb = make_aabb(position - (rr+inflate), position + (rr+inflate));
 	cf_aabb_verts(g.box, bb);
 	g.shape[0] = position;
@@ -2005,7 +2095,7 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	g.shape[2] = position;
 	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
-	g.radius = radius;
+	g.radius = s_inner_stroke_radius(radius, stroke, fill);
 	g.stroke = stroke;
 	g.fill = fill;
 	g.aa = aaf;
@@ -2080,23 +2170,178 @@ void cf_draw_capsule_fill2(CF_V2 a, CF_V2 b, float radius)
 }
 
 
-static void s_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fill)
+// The core a rounded polygon's SDF grows by `radius`: the polygon inset by its rounding, so
+// core + radius is exactly the requested extent. count 2 or 1 means the rounding reached what
+// the shape can hold and the core collapsed to a segment or a point (a capsule or circle).
+struct RoundedCore
+{
+	v2 pts[8];
+	int count;
+	float radius;
+};
+
+static float s_signed_area(const v2* pts, int count)
+{
+	float a = 0;
+	for (int i = 0, j = count - 1; i < count; j = i++) a += det2(pts[j], pts[i]);
+	return a * 0.5f;
+}
+
+static bool s_is_convex_ccw(const v2* pts, int count)
+{
+	for (int i = 0; i < count; ++i) {
+		v2 a = pts[i];
+		v2 b = pts[(i + 1) % count];
+		v2 c = pts[(i + 2) % count];
+		if (det2(b - a, c - b) < -1.0e-6f * len(b - a) * len(c - b)) return false;
+	}
+	return true;
+}
+
+// Sutherland-Hodgman against the half-plane dot(n, p) >= d. Grows the count by at most one.
+static int s_clip_halfplane(const v2* in, int count, v2 n, float d, v2* out)
+{
+	int k = 0;
+	for (int i = 0; i < count; ++i) {
+		v2 a = in[i];
+		v2 b = in[i + 1 == count ? 0 : i + 1];
+		float da = dot(n, a) - d;
+		float db = dot(n, b) - d;
+		if (da >= 0) out[k++] = a;
+		if ((da >= 0) != (db >= 0)) out[k++] = a + (b - a) * (da / (da - db));
+	}
+	return k;
+}
+
+// Convex CCW polygon inset by r: every edge's half-plane pushed in by r, intersected. Edges
+// too short to survive simply drop out. out holds up to 24 points; near-duplicates are merged.
+static int s_inset_convex(const v2* pts, int count, float r, float eps, v2* out)
+{
+	v2 buf[2][24];
+	int k = count;
+	for (int i = 0; i < count; ++i) buf[0][i] = pts[i];
+	int cur = 0;
+	for (int i = 0; i < count && k > 0; ++i) {
+		v2 e = pts[i + 1 == count ? 0 : i + 1] - pts[i];
+		float l = len(e);
+		if (l <= 0) continue;
+		v2 n = skew(e) / l;
+		k = s_clip_halfplane(buf[cur], k, n, dot(n, pts[i]) + r, buf[cur ^ 1]);
+		cur ^= 1;
+	}
+	int m = 0;
+	for (int i = 0; i < k; ++i) {
+		if (m > 0 && len(buf[cur][i] - out[m - 1]) <= eps) continue;
+		out[m++] = buf[cur][i];
+	}
+	while (m > 1 && len(out[m - 1] - out[0]) <= eps) --m;
+	return m;
+}
+
+static RoundedCore s_rounded_core(const v2* points, int count, float rounding)
+{
+	RoundedCore core;
+	core.count = count;
+	core.radius = 0;
+	for (int i = 0; i < count; ++i) core.pts[i] = points[i];
+	float area = s_signed_area(points, count);
+	if (!(rounding > 0) || count < 3 || area == 0) return core;
+
+	v2 p[8];
+	for (int i = 0; i < count; ++i) p[i] = area > 0 ? points[i] : points[count - 1 - i];
+	CF_Aabb bb = make_aabb(p, count);
+	float scale = len(bb.max - bb.min);
+	float eps = scale * 1.0e-5f;
+	float r = rounding;
+
+	if (s_is_convex_ccw(p, count)) {
+		v2 out[24];
+		int k = s_inset_convex(p, count, r, eps, out);
+		if (k == 0) {
+			// Past the inscribed circle: settle on the largest rounding that still leaves a core.
+			float lo = 0, hi = r;
+			for (int i = 0; i < 32; ++i) {
+				float mid = (lo + hi) * 0.5f;
+				if (s_inset_convex(p, count, mid, eps, out) > 0) lo = mid;
+				else hi = mid;
+			}
+			r = lo;
+			k = s_inset_convex(p, count, r, eps, out);
+		}
+		if (k < 3 || CF_FABSF(s_signed_area(out, k)) <= scale * scale * 1.0e-6f) {
+			// Collapsed: the core's farthest pair spans the remaining segment (or point).
+			int ia = 0, ib = 0;
+			float best = -1;
+			for (int i = 0; i < k; ++i) for (int j = i + 1; j < k; ++j) {
+				float d2 = len_sq(out[i] - out[j]);
+				if (d2 > best) { best = d2; ia = i; ib = j; }
+			}
+			out[0] = out[ia];
+			out[1] = out[ib];
+			k = best > eps * eps ? 2 : 1;
+		}
+		if (k > 8) return core;
+		for (int i = 0; i < k; ++i) core.pts[i] = out[i];
+		core.count = k;
+	} else {
+		// Concave: offset each edge inward by r and meet neighbors at the miter. Reflex corners
+		// stay sharp (their outward offsets meet at the original vertex); convex corners round.
+		// Clamp where the first edge would vanish -- best effort, not an exact inscribed limit.
+		v2 m[8];
+		for (int i = 0; i < count; ++i) {
+			v2 n0 = skew(safe_norm(p[i] - p[(i + count - 1) % count]));
+			v2 n1 = skew(safe_norm(p[(i + 1) % count] - p[i]));
+			m[i] = (n0 + n1) / cf_max(1.0f + dot(n0, n1), 1.0e-4f);
+		}
+		for (int i = 0; i < count; ++i) {
+			int j = (i + 1) % count;
+			v2 e = p[j] - p[i];
+			float l = len(e);
+			if (l <= 0) continue;
+			float shrink = dot(m[i], e / l) - dot(m[j], e / l);
+			if (shrink > 0) r = cf_min(r, l / shrink);
+		}
+		for (int i = 0; i < count; ++i) core.pts[i] = p[i] + m[i] * r;
+	}
+	core.radius = r;
+	return core;
+}
+
+// Emits a collapsed rounded core as the capsule (segment) or circle (point) it became.
+static void s_set_collapsed_core(BatchGeometry& g, const RoundedCore& core)
+{
+	g.type = BATCH_GEOMETRY_TYPE_CAPSULE;
+	g.shape[0] = core.pts[0];
+	g.shape[1] = core.pts[core.count - 1];
+	g.shape[2] = core.pts[0];
+	g.dash = { };
+}
+
+static void s_set_box_from_points(BatchGeometry& g, const v2* pts, int count, float pad)
+{
+	CF_Aabb bb = expand(make_aabb(pts, count), pad);
+	aabb_verts(g.box, bb);
+}
+
+static void s_draw_tri(v2 a, v2 b, v2 c, float stroke, float rounding, bool fill)
 {
 	BatchGeometry& g = s_push_shape_geom();
+	float radius = 0;
 
 	// A CSG group needs a distance function, so force the SDF triangle variant there.
-	if (stroke > 0 || radius > 0 || !fill || s_draw->antialias.last() || s_draw->shape_group_active) {
+	if (stroke > 0 || rounding > 0 || !fill || s_draw->antialias.last() || s_draw->shape_group_active) {
 		g.type = BATCH_GEOMETRY_TYPE_TRI_SDF;
-		float tri_pad = radius + stroke + s_draw->aaf;
-	v2 tri_mn = V2(cf_min(a.x, cf_min(b.x, c.x)) - tri_pad, cf_min(a.y, cf_min(b.y, c.y)) - tri_pad);
-	v2 tri_mx = V2(cf_max(a.x, cf_max(b.x, c.x)) + tri_pad, cf_max(a.y, cf_max(b.y, c.y)) + tri_pad);
-	g.box[0] = tri_mn;
-	g.box[1] = V2(tri_mx.x, tri_mn.y);
-	g.box[2] = tri_mx;
-	g.box[3] = V2(tri_mn.x, tri_mx.y);
-		g.shape[0] = a;
-		g.shape[1] = b;
-		g.shape[2] = c;
+		v2 tri[3] = { a, b, c };
+		s_set_box_from_points(g, tri, 3, s_draw->aaf);
+		RoundedCore core = s_rounded_core(tri, 3, rounding);
+		radius = core.radius;
+		if (core.count == 3) {
+			g.shape[0] = core.pts[0];
+			g.shape[1] = core.pts[1];
+			g.shape[2] = core.pts[2];
+		} else {
+			s_set_collapsed_core(g, core);
+		}
 	} else {
 		g.type = BATCH_GEOMETRY_TYPE_TRI;
 		g.shape[0] = a;
@@ -2106,7 +2351,7 @@ static void s_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fill)
 
 	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
-	g.radius = radius;
+	g.radius = s_inner_stroke_radius(radius, stroke, fill);
 	g.stroke = stroke;
 	g.fill = fill;
 	g.aa = s_draw->aaf;
@@ -2130,14 +2375,14 @@ static void s_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fill)
 
 }
 
-void cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, float chubbiness)
+void cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, float rounding)
 {
-	s_draw_tri(p0, p1, p2, thickness, chubbiness, false);
+	s_draw_tri(p0, p1, p2, thickness, rounding, false);
 }
 
-void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, float chubbiness)
+void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, float rounding)
 {
-	s_draw_tri(p0, p1, p2, 0, chubbiness, true);
+	s_draw_tri(p0, p1, p2, 0, rounding, true);
 }
 
 void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness)
@@ -2249,27 +2494,27 @@ void cf_draw_polyline(const CF_V2* pts, int count, float thickness, bool loop)
 	}
 }
 
-void cf_draw_polygon_fill(const CF_V2* points, int count, float chubbiness)
+void cf_draw_polygon_fill(const CF_V2* points, int count, float rounding)
 {
 	CF_ASSERT(count >= 3 && count <= 8);
 	BatchGeometry& g = s_push_shape_geom();
 
 	g.type = BATCH_GEOMETRY_TYPE_POLYGON;
-	CF_Aabb bb = expand(make_aabb(points, count), s_draw->aaf+chubbiness);
-	CF_V2 box[4];
-	aabb_verts(box, bb);
-	g.box[0] = box[0];
-	g.box[1] = box[1];
-	g.box[2] = box[2];
-	g.box[3] = box[3];
-	g.n = count;
-	for (int i = 0; i < count; ++i) {
-		g.shape[i] = points[i];
+	s_set_box_from_points(g, points, count, s_draw->aaf);
+	RoundedCore core = s_rounded_core(points, count, rounding);
+	if (core.count >= 3) {
+		g.n = core.count;
+		for (int i = 0; i < core.count; ++i) {
+			g.shape[i] = core.pts[i];
+		}
+	} else {
+		s_set_collapsed_core(g, core);
 	}
 
 	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
-	g.radius = chubbiness;
+	g.fill = true;
+	g.radius = core.radius;
 	g.aa = s_draw->aaf;
 	g.user_params = s_draw->user_params.last();
 }
@@ -2440,6 +2685,8 @@ CF_CustomShape cf_make_custom_shape(const char* sdf_src)
 		fprintf(stderr, "cf_make_custom_shape: requires the command renderer (compute-capable backend).\n");
 		return result;
 	}
+	// Re-registering a known snippet must not recompile every draw pipeline.
+	for (int i = 0; i < s_draw->custom_shape_srcs.count(); ++i) if (s_draw->custom_shape_srcs[i] == sdf_src) return { (uint32_t)(i + 1) };
 	s_draw->custom_shape_srcs.add(String(sdf_src));
 
 	// Stitch every registered snippet into custom_shapes.shd: rename each sdf() to
@@ -2542,10 +2789,9 @@ static void s_draw_shape_group_end(float stroke, bool fill)
 	int count = s_draw->group_geoms.count();
 	if (count == 0) return;
 
-	// Composite bounds: union of the operands' (already stroke/aa padded) boxes.
-	// Subtract/intersect only shrink the shape. Smooth blending can bulge outward by up
-	// to k/4 near where surfaces meet, and the composite's own stroke extends past the
-	// operand surfaces, so pad for both.
+	// Composite bounds: union of the operands' (already aa padded) boxes. Subtract/intersect
+	// only shrink the shape, and the composite's stroke stays inside it, but smooth blending
+	// can bulge outward by up to k/4 near where surfaces meet.
 	v2 mn = V2(FLT_MAX, FLT_MAX), mx = V2(-FLT_MAX, -FLT_MAX);
 	float max_k = 0;
 	for (int i = 0; i < count; ++i) {
@@ -2556,7 +2802,7 @@ static void s_draw_shape_group_end(float stroke, bool fill)
 		}
 		max_k = cf_max(max_k, og.csg_k);
 	}
-	float pad = stroke + s_draw->aaf + max_k * 0.25f;
+	float pad = s_draw->aaf + max_k * 0.25f;
 	mn = mn - V2(pad, pad);
 	mx = mx + V2(pad, pad);
 
@@ -2569,7 +2815,7 @@ static void s_draw_shape_group_end(float stroke, bool fill)
 	g.n = count;
 	g.color = premultiply(s_draw->colors.last());
 	g.alpha = 1.0f;
-	g.radius = 0;
+	g.radius = s_inner_stroke_radius(0, stroke, fill);
 	g.stroke = stroke;
 	g.fill = fill;
 	g.aa = s_draw->aaf;
@@ -2597,13 +2843,13 @@ void cf_draw_shape_group_end_stroked(float thickness)
 	s_draw_shape_group_end(thickness, false);
 }
 
-CF_Result cf_make_font_from_memory(void* data, int size, const char* font_name)
+static CF_Result s_make_font(void* data, const char* font_name, bool owns)
 {
 	font_name = sintern(font_name);
 	CF_Font* font = (CF_Font*)CF_NEW(CF_Font);
 	font->file_data = (uint8_t*)data;
+	font->owns_file_data = owns;
 	if (!stbtt_InitFont(&font->info, font->file_data, stbtt_GetFontOffsetForIndex(font->file_data, 0))) {
-		CF_FREE(data);
 		CF_FREE(font);
 		return result_failure("Failed to parse ttf file with stb_truetype.h.");
 	}
@@ -2657,16 +2903,20 @@ CF_Result cf_make_font(const char* path, const char* font_name)
 	if (!data) {
 		return cf_result_error("Unable to open font file.");;
 	}
-	return cf_make_font_from_memory(data, (int)size, font_name);
+	CF_Result result = s_make_font(data, font_name, true);
+	if (cf_is_error(result)) CF_FREE(data);
+	return result;
 }
 
-void cf_destroy_font(const char* font_name)
+CF_Result cf_make_font_from_memory(void* data, int size, const char* font_name)
 {
-	font_name = sintern(font_name);
-	CF_Font* font = app->fonts.get(font_name);
-	if (!font) return;
-	app->fonts.remove(font_name);
-	CF_FREE(font->file_data);
+	CF_UNUSED(size);
+	return s_make_font(data, font_name, false);
+}
+
+static void s_destroy_font(CF_Font* font)
+{
+	if (font->owns_file_data) CF_FREE(font->file_data);
 	for (int i = 0; i < font->image_ids.count(); ++i) {
 		uint64_t image_id = font->image_ids[i];
 		CF_Pixel* pixels = app->font_pixels.get(image_id);
@@ -2677,6 +2927,22 @@ void cf_destroy_font(const char* font_name)
 	}
 	font->~CF_Font();
 	CF_FREE(font);
+}
+
+void cf_destroy_font(const char* font_name)
+{
+	font_name = sintern(font_name);
+	CF_Font* font = app->fonts.get(font_name);
+	if (!font) return;
+	app->fonts.remove(font_name);
+	s_destroy_font(font);
+}
+
+void cf_destroy_all_fonts()
+{
+	CF_Font** fonts = app->fonts.items();
+	for (int i = 0; i < app->fonts.count(); ++i) s_destroy_font(fonts[i]);
+	app->fonts.clear();
 }
 
 CF_Font* cf_font_get(const char* font_name)
@@ -3261,6 +3527,10 @@ void cf_draw_list_begin(CF_DrawList list)
 	// Layers are list-local, like transforms: replay offsets the recording from this layer
 	// onto whichever layer is current then.
 	(*data)->base_layer = s_draw->layers.last();
+	(*data)->base_z = s_draw->zs.last(); // Z is list-local the same way.
+	// Render states pushed from here on are part of the recording; anything already on the
+	// stack is ambient and binds at replay.
+	s_draw->recording_render_state_base = s_draw->render_states.count();
 	// Park the live scene's layers and record into a private, empty set: the recording
 	// moves into the list wholesale at cf_draw_list_end and the live layers come back untouched.
 	CF_ASSERT(s_draw->recording_saved_layers.count() == 0);
@@ -3309,6 +3579,11 @@ void cf_draw_list_end()
 					float extra = g.aa * (c.replay_aa_scale - 1.0f);
 					g.aa *= c.replay_aa_scale;
 					if (extra > 0) s_replay_inflate_quad(&g, extra);
+					// Planes re-derive when this list replays; only z composes here.
+					if (!g.csg_operand && (g.depth.has_z || c.replay_has_z)) {
+						g.depth.has_z = true;
+						g.depth.z += c.replay_z;
+					}
 				}
 			}
 			if (copy.u.data) {
@@ -3350,6 +3625,10 @@ void cf_draw_list(CF_DrawList list)
 	// layer serves a whole group and mesh fusion can track its previous command by index
 	// within it.
 	int layer_offset = s_draw->layers.last() - data->base_layer;
+	float z_offset = s_draw->zs.last() - data->base_z;
+	bool has_z = s_draw->zs.count() > 1;
+	CF_M4x4 vp3d;
+	bool has_cam3d = cf_draw3d_depth_camera(&vp3d) != 0;
 	CF_DrawLayer* dl = NULL;
 	int prev_mesh_index = -1; // Index in dl->cmds of the last replayed mesh command.
 	for (int i = 0; i < data->cmds.count(); ++i) {
@@ -3364,13 +3643,23 @@ void cf_draw_list(CF_DrawList list)
 		c.viewport = src.viewport;
 		c.alpha_discard = src.alpha_discard;
 		c.filter_mode = src.filter_mode;
-		c.render_state = src.render_state;
+		// An ambient render state binds live: add_cmd_to already stamped the current 2d
+		// state (and whether it is still ambient, when replaying inside another recording);
+		// mesh commands resolve against the 3d stack in cf_draw3d_replay_cmd.
+		if (!src.ambient_render_state) {
+			c.render_state = src.render_state;
+			c.ambient_render_state = false;
+		}
 		c.shader = src.shader;
 		c.u = src.u;
 		c.items = src.items;
 		c.geoms_ref = &src.geoms;
 		c.replay_mvp = s_draw->mvp;
 		c.replay_aa_scale = inv_cam_scale;
+		c.replay_z = z_offset;
+		c.replay_has_z = has_z;
+		c.replay_has_cam3d = has_cam3d;
+		if (has_cam3d) c.replay_vp3d = vp3d;
 		if (src.mesh3d) {
 			c.geoms_ref = NULL;
 			// Fusion needs the previous replayed mesh command still directly underneath:
@@ -4621,8 +4910,10 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 				g.is_text = true;
 				BatchGeometry& pushed = s_push_geom();
 				CF_M3x2 mvp = pushed.mvp;
+				CF_DrawDepth depth = pushed.depth;
 				pushed = g;
 				pushed.mvp = mvp;
+				pushed.depth = depth;
 				DRAW_PUSH_ITEM(s);
 			}
 		}
@@ -4722,6 +5013,22 @@ int cf_draw_pop_layer()
 int cf_draw_peek_layer()
 {
 	return s_draw->layers.last();
+}
+
+void cf_draw_push_z(float z)
+{
+	s_draw->zs.add(z);
+}
+
+float cf_draw_pop_z()
+{
+	if (s_draw->zs.count() > 1) return s_draw->zs.pop();
+	return s_draw->zs.last();
+}
+
+float cf_draw_peek_z()
+{
+	return s_draw->zs.last();
 }
 
 void cf_draw_push_color(CF_Color c)
@@ -4902,14 +5209,82 @@ CF_Rect cf_draw_peek_scissor()
 	return s_draw->scissors.last();
 }
 
+CF_CmdRenderState::CF_CmdRenderState(const CF_RenderState& rs) : CF_CmdRenderState()
+{
+	primitive_type = rs.primitive_type;
+	cull_mode = rs.cull_mode;
+	blend = rs.blend;
+	blend_count = rs.blend_count;
+	alpha_to_coverage = rs.alpha_to_coverage;
+	depth_compare = rs.depth_compare;
+	depth_write_enabled = rs.depth_write_enabled;
+	stencil = rs.stencil;
+	depth_bias_constant_factor = rs.depth_bias_constant_factor;
+	depth_bias_clamp = rs.depth_bias_clamp;
+	depth_bias_slope_factor = rs.depth_bias_slope_factor;
+	enable_depth_bias = rs.enable_depth_bias;
+	enable_depth_clip = rs.enable_depth_clip;
+	if (rs.blend_count <= 1) return;
+	// Slots past blend_count are unused; zeroing them makes equal states intern to one set.
+	CF_BlendSet set;
+	CF_MEMSET(&set, 0, sizeof(set));
+	int used = cf_min(rs.blend_count, CF_MAX_CANVAS_TARGETS);
+	CF_MEMCPY(set.blends, rs.blends, used * sizeof(CF_BlendState));
+	for (int i = 0; i < s_draw->blend_sets.count(); ++i) {
+		if (!CF_MEMCMP(&s_draw->blend_sets[i], &set, sizeof(set))) {
+			blend_set = i;
+			return;
+		}
+	}
+	blend_set = s_draw->blend_sets.count();
+	s_draw->blend_sets.add(set);
+}
+
+CF_RenderState CF_CmdRenderState::expand() const
+{
+	CF_RenderState rs = { };
+	rs.primitive_type = primitive_type;
+	rs.cull_mode = cull_mode;
+	if (blend_set >= 0) {
+		CF_MEMCPY(rs.blends, s_draw->blend_sets[blend_set].blends, sizeof(rs.blends));
+	} else {
+		rs.blend = blend;
+	}
+	rs.blend_count = blend_count;
+	rs.alpha_to_coverage = alpha_to_coverage;
+	rs.depth_compare = depth_compare;
+	rs.depth_write_enabled = depth_write_enabled;
+	rs.stencil = stencil;
+	rs.depth_bias_constant_factor = depth_bias_constant_factor;
+	rs.depth_bias_clamp = depth_bias_clamp;
+	rs.depth_bias_slope_factor = depth_bias_slope_factor;
+	rs.enable_depth_bias = enable_depth_bias;
+	rs.enable_depth_clip = enable_depth_clip;
+	return rs;
+}
+
 void cf_draw_push_render_state(CF_RenderState render_state)
 {
 	PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(render_state);
+	// While recording a draw list, a push freezes the state into the recording even when
+	// the value matches the ambient one, so the stamp can change without the value changing.
+	if (s_draw->recording_list) s_draw->sync_current_cmd();
 }
 
 CF_RenderState cf_draw_pop_render_state()
 {
-	POP_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(render_state);
+	if (s_draw->render_states.count() > 1) {
+		CF_RenderState result = s_draw->render_states.pop();
+		if (s_draw->render_states.last() != result) {
+			CF_Command& cmd = s_draw->add_cmd();
+			cmd.render_state = s_draw->render_states.last();
+		}
+		// See cf_draw_push_render_state.
+		if (s_draw->recording_list) s_draw->sync_current_cmd();
+		return result;
+	} else {
+		return s_draw->render_states.last();
+	}
 }
 
 CF_RenderState cf_draw_peek_render_state()
@@ -5286,7 +5661,7 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 	cf_material_set_uniform_fs(s_draw->material, "u_use_smooth_uv", &use_smooth_uv, CF_UNIFORM_TYPE_INT, 1);
 
 	// Apply render state.
-	cf_material_set_render_state(s_draw->material, cmd->render_state);
+	cf_material_set_render_state(s_draw->material, cmd->render_state.expand());
 
 	// Set sampler filter based on filter mode.
 	void* sampler_override = (cmd->filter_mode == CF_DRAW_FILTER_NEAREST) ? s_draw->sampler_nearest : s_draw->sampler_linear;
@@ -5311,7 +5686,25 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 	cf_draw_elements();
 }
 
-static void s_draw_report_range(const BatchGeometry* geoms, const CF_PendingUV* uvs, int start, int end, uint64_t texture_id, int texture_w, int texture_h);
+// How a geometry meets the depth buffer: 0 not at all (no Z pushed), 1 test only, 2 test and
+// write. Only opaque geometry writes -- full color and opacity under normal blending, with no
+// glow (a glow is all fringe). Translucent geometry tests without writing, so whatever is
+// drawn behind it later still shows through.
+static int s_depth_mode(const BatchGeometry& g)
+{
+	if (!g.depth.has_z) return 0;
+	if (g.blend != CF_DRAW_BLEND_NORMAL || g.alpha < 1.0f || g.fx.glow_radius > 0) return 1;
+	if (g.is_text || g.type == BATCH_GEOMETRY_TYPE_GLYPH) {
+		for (int i = 0; i < 4; ++i) if (g.text_colors[i].a < 1.0f) return 1;
+		return 2;
+	}
+	if (g.type == BATCH_GEOMETRY_TYPE_TRI && g.use_tri_colors) {
+		for (int i = 0; i < 3; ++i) if (g.tri_colors[i].a < 1.0f) return 1;
+		return 2;
+	}
+	if (g.is_sprite) return 2; // Per-texel alpha: the shader's core/fringe cut decides coverage.
+	return g.color.a < 1.0f ? 1 : 2;
+}
 
 // Runs after every atlas_cache_flush (which filled the per-flush uv table via the
 // callbacks): render the collated stream in paint order, splitting into a new draw
@@ -5325,18 +5718,30 @@ static void s_flush_pending_geoms()
 	int start = 0;
 	uint64_t run_tex = 0;
 	int run_w = 1, run_h = 1;
+	// Z means nothing on a canvas without depth: draw exactly as if none was pushed. A custom
+	// draw shader has the last word on alpha, so geometry that looks opaque on the CPU may not
+	// be: its runs only test depth, unless the caller pushed a render state that writes it.
+	int depth_cap = 2;
+	const CF_Command* pcmd = s_draw->processing_cmd;
+	if (!cf_current_canvas_has_depth()) {
+		depth_cap = 0;
+	} else if (pcmd && pcmd->shader.id != app->draw_shader.id && !pcmd->render_state.depth_write_enabled) {
+		depth_cap = 1;
+	}
 	int run_blend = n ? geoms[0].blend : 0;
-	for (int i = 0; i < n; ++i) {
+	int run_depth = n ? cf_min(s_depth_mode(geoms[0]), depth_cap) : 0;	for (int i = 0; i < n; ++i) {
 		const BatchGeometry& g = geoms[i];
 		if (g.csg_operand) continue; // Rides with its CSG head.
-		// Blend mode changes split the stream: each run renders with its mode's exact
-		// fixed-function canvas state, and run sequencing preserves paint order.
-		if (g.blend != run_blend) {
-			s_draw_report_range(geoms, uvs, start, i, run_tex, run_w, run_h, run_blend);
+		// Blend mode and depth mode changes split the stream: each run renders with its
+		// mode's exact fixed-function canvas state, and run sequencing preserves paint order.
+		int depth = cf_min(s_depth_mode(g), depth_cap);
+		if (g.blend != run_blend || depth != run_depth) {
+			s_draw_report_range(geoms, uvs, start, i, run_tex, run_w, run_h, run_blend, run_depth);
 			start = i;
 			run_tex = 0;
 			run_w = run_h = 1;
 			run_blend = g.blend;
+			run_depth = depth;
 		}
 		if (!(g.is_sprite || g.is_text)) continue;
 		if (uvs[i].texture_id == 0) continue;
@@ -5345,14 +5750,14 @@ static void s_flush_pending_geoms()
 			run_w = uvs[i].tex_w;
 			run_h = uvs[i].tex_h;
 		} else if (uvs[i].texture_id != run_tex) {
-			s_draw_report_range(geoms, uvs, start, i, run_tex, run_w, run_h, run_blend);
+			s_draw_report_range(geoms, uvs, start, i, run_tex, run_w, run_h, run_blend, run_depth);
 			start = i;
 			run_tex = uvs[i].texture_id;
 			run_w = uvs[i].tex_w;
 			run_h = uvs[i].tex_h;
 		}
 	}
-	s_draw_report_range(geoms, uvs, start, n, run_tex, run_w, run_h, run_blend);
+	s_draw_report_range(geoms, uvs, start, n, run_tex, run_w, run_h, run_blend, run_depth);
 	s_draw->pending_geoms.clear();
 	s_draw->pending_uvs.clear();
 }
@@ -5414,6 +5819,9 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 	if (src_geoms->count()) {
 		s_draw->need_flush = true;
 		int base = s_draw->pending_geoms.count();
+		bool have_plane = false;
+		float plane_z = 0;
+		float plane[3];
 		for (int i = 0; i < src_geoms->count(); ++i) {
 			s_draw->pending_geoms.add((*src_geoms)[i]);
 			if (cmd->geoms_ref) {
@@ -5422,6 +5830,17 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 				float extra = g.aa * (cmd->replay_aa_scale - 1.0f);
 				g.aa *= cmd->replay_aa_scale;
 				if (extra > 0) s_replay_inflate_quad(&g, extra);
+				// Z is list-local and the 3d camera is live at replay: re-derive the depth plane.
+				if (!g.csg_operand && (g.depth.has_z || cmd->replay_has_z)) {
+					g.depth.has_z = true;
+					g.depth.z += cmd->replay_z;
+					if (!have_plane || plane_z != g.depth.z) {
+						s_depth_plane(cmd->replay_has_cam3d ? &cmd->replay_vp3d : NULL, g.depth.z, plane);
+						plane_z = g.depth.z;
+						have_plane = true;
+					}
+					CF_MEMCPY(g.depth.plane, plane, sizeof(plane));
+				}
 			}
 			CF_PendingUV uv = { 0 };
 			s_draw->pending_uvs.add(uv);

@@ -13,6 +13,7 @@
 
 #include "test_harness.h"
 #include "test_app_shared.h"
+#include "test_leak.h"
 
 #include <cute.h>
 #include <internal/cute_graphics_internal.h>
@@ -459,6 +460,49 @@ void main() {
 	return true;
 }
 
+// Touches the compiler's call, block, switch, struct, array and image paths so every AST
+// array and type map it allocates has to be released.
+static const char* s_leak_src = R"(
+struct Item { vec4 v; uint tag; };
+layout (std430, set = 0, binding = 0) readonly buffer Src { Item items[]; } u_src;
+layout (set = 1, binding = 0, rgba32f) uniform writeonly image2D u_out;
+layout (set = 2, binding = 0) uniform Params { vec4 u_scale[2]; int u_mode; };
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+vec4 shade(Item it, float k) { return it.v * k; }
+void main() {
+	ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	Item it = u_src.items[p.x];
+	vec4 c = shade(it, u_scale[0].x);
+	switch (u_mode) {
+	case 0: c = c.wzyx; break;
+	case 1: { c += u_scale[1]; } break;
+	default: break;
+	}
+	imageStore(u_out, p, c);
+}
+)";
+
+TEST_CASE(test_compute_make_destroy_does_not_leak)
+{
+	if (!test_make_app(64, 64)) return true;
+	AppDestroyGuard app_guard;
+	if (!test_leak_check_enabled()) return true;
+	// The first compile fills the compiler's process-wide tables and interns names.
+	CF_ComputeShader warm = cf_make_compute_shader_from_source(s_leak_src);
+	REQUIRE(warm.id);
+	cf_destroy_compute_shader(warm);
+
+	TestLeakCheck leak;
+	test_leak_begin(&leak);
+	for (int i = 0; i < 3; ++i) {
+		CF_ComputeShader cs = cf_make_compute_shader_from_source(s_leak_src);
+		REQUIRE(cs.id);
+		cf_destroy_compute_shader(cs);
+	}
+	REQUIRE(test_leak_report(&leak, "compute make/destroy") == 0);
+	return true;
+}
+
 TEST_CASE(test_compute_gles_rejects)
 {
 	if (!test_make_app(64, 64)) return true;
@@ -708,6 +752,7 @@ TEST_SUITE(test_compute)
 	RUN_TEST_CASE(test_compute_uniforms_and_texture);
 	RUN_TEST_CASE(test_compute_two_sites_and_builtins);
 	RUN_TEST_CASE(test_compute_large_partial_grid);
+	RUN_TEST_CASE(test_compute_make_destroy_does_not_leak);
 	RUN_TEST_CASE(test_compute_gles_rejects);
 	RUN_TEST_CASE(test_compute_storage_format_support);
 }

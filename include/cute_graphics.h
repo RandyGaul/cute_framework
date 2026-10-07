@@ -786,8 +786,28 @@ CF_API void CF_CALL cf_generate_mipmaps(CF_Texture texture);
  * @category graphics
  * @brief    Submits the command buffer, waits for GPU completion via fence, then reacquires.
  * @remarks  Forces GPU/CPU serialization.
+ * @related  cf_gpu_submit
  */
 CF_API void CF_CALL cf_gpu_sync(void);
+
+/**
+ * @function cf_gpu_submit
+ * @category graphics
+ * @brief    Sends the GPU work recorded so far to the GPU now, without waiting for it to finish.
+ * @remarks  This is `cf_gpu_sync` without the wait. On SDL_GPU it submits the current command buffer and continues
+ *           recording in a new one; on GLES it is `glFlush`.
+ *
+ *           It ends the current render pass. The canvas stays applied, and the next draw resumes the pass, keeping
+ *           everything drawn before the submit. Call it between draws, not between `cf_apply_shader` and its draw:
+ *           apply the shader (and any viewport or scissor) again afterwards.
+ *
+ *           Use it for scheduling, such as starting heavy compute or uploads early, or splitting a frame into
+ *           separately timed chunks for profiling. It does not speed up an ordinary frame, and calling it often can
+ *           make a frame slower. It only sends recorded GPU commands; queued `cf_draw_*` calls are recorded by
+ *           `cf_render_to` or `cf_app_draw_onto_screen`.
+ * @related  cf_gpu_sync cf_render_to cf_push_gpu_label
+ */
+CF_API void CF_CALL cf_gpu_submit(void);
 
 /**
  * @function cf_texture_handle
@@ -1362,12 +1382,33 @@ CF_INLINE const char* cf_samplecount_string(CF_SampleCount count) {
 /**
  * @function CF_MAX_CANVAS_TARGETS
  * @category graphics
- * @brief    The maximum number of color targets a single canvas may have.
- * @remarks  Four is the portable guarantee: both SDL_GPU and WebGL2/GLES 3.0 support at least
- *           four simultaneous color attachments.
- * @related  CF_CanvasParams cf_make_canvas cf_canvas_get_target2
+ * @brief    The most color targets a canvas can ever have, on any backend.
+ * @remarks  This sizes the arrays in `CF_CanvasParams` and `CF_RenderState`. The current device may
+ *           support fewer -- `cf_query_max_canvas_targets` returns the real limit. Four is the portable
+ *           guarantee.
+ * @related  CF_CanvasParams cf_make_canvas cf_canvas_get_target2 cf_query_max_canvas_targets
  */
-#define CF_MAX_CANVAS_TARGETS 4
+#define CF_MAX_CANVAS_TARGETS 8
+
+/**
+ * @function cf_query_max_canvas_targets
+ * @category graphics
+ * @brief    Returns how many color targets a canvas can have on the current device.
+ * @return   A value from 4 to `CF_MAX_CANVAS_TARGETS`.
+ * @remarks  `cf_make_canvas` fails with an assert and returns an invalid canvas when `target_count` exceeds
+ *           this. Per backend:
+ *
+ *           - D3D12 and Metal: 8.
+ *           - Vulkan: 4. Vulkan only guarantees four color attachments, and SDL_GPU doesn't expose the
+ *             device's real limit, so CF reports the guarantee.
+ *           - GLES/WebGL2: the smaller of `GL_MAX_DRAW_BUFFERS` and `GL_MAX_COLOR_ATTACHMENTS`, capped at 8.
+ *             GLES 3.0 and WebGL2 only guarantee four.
+ *
+ *           Check this before making a canvas with more than four targets, and fall back to fewer
+ *           targets (or more passes) when it comes up short. Requires a running app.
+ * @related  CF_MAX_CANVAS_TARGETS CF_CanvasParams cf_make_canvas cf_query_backend
+ */
+CF_API int CF_CALL cf_query_max_canvas_targets(void);
 
 /**
  * @struct   CF_CanvasParams
@@ -1396,7 +1437,8 @@ typedef struct CF_CanvasParams
 		CF_TextureParams targets[CF_MAX_CANVAS_TARGETS];
 	};
 
-	/* @member How many color targets this canvas has, from 1 to `CF_MAX_CANVAS_TARGETS`. Zero means
+	/* @member How many color targets this canvas has, from 1 to `cf_query_max_canvas_targets`
+	   (at most `CF_MAX_CANVAS_TARGETS`); more fails canvas creation. Zero means
 	   one, so zero-initialized params behave exactly as before this member existed. Multiple render
 	   targets may be multisampled: each target resolves into its own texture in its own format, and
 	   `cf_canvas_get_target`/`cf_canvas_get_target2`/readback all return the resolved side. The GLES
@@ -1521,6 +1563,46 @@ CF_API CF_Texture CF_CALL cf_canvas_get_target2(CF_Canvas canvas, int index);
  * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_destroy_canvas cf_apply_canvas cf_clear_color
  */
 CF_API CF_Texture CF_CALL cf_canvas_get_depth_stencil_target(CF_Canvas canvas);
+
+/**
+ * @function cf_canvas_copy_depth
+ * @category graphics
+ * @brief    Copies the whole depth (and stencil) target of one canvas into another.
+ * @param    dst     The canvas receiving the depth.
+ * @param    src     The canvas whose depth is copied.
+ * @remarks  This is how a pass samples the depth of the canvas it is still depth-testing against:
+ *           soft particles, water, decals, and SDF occlusion all want both at once, and a texture
+ *           can't be sampled while attached. Draw the scene, copy its depth, then draw the effects
+ *           into the scene canvas while they sample the copy.
+ *
+ *           ```c
+ *           CF_CanvasParams params = cf_canvas_defaults(w, h);
+ *           params.depth_stencil_enable = true;
+ *           CF_Canvas scene = cf_make_canvas(params);
+ *           params.depth_stencil_target.usage |= CF_TEXTURE_USAGE_SAMPLER_BIT;
+ *           params.depth_stencil_target.filter = CF_FILTER_NEAREST;
+ *           CF_Canvas scene_depth = cf_make_canvas(params);
+ *
+ *           // ...draw opaque geometry into `scene`...
+ *           cf_canvas_copy_depth(scene_depth, scene);
+ *           cf_material_set_texture_fs(fx, "u_depth", cf_canvas_get_depth_stencil_target(scene_depth));
+ *           cf_apply_canvas(scene, false);
+ *           // ...draw effects with depth testing on, fading against `u_depth`...
+ *           ```
+ *
+ *           Both canvases need a depth target of the same size and format, and neither may use
+ *           MSAA; anything else asserts, logs to stderr, and copies nothing. Only `dst` needs
+ *           `CF_TEXTURE_USAGE_SAMPLER_BIT`, and only to be sampled. The copy works at canvas
+ *           level because a depth target without sampler usage may not be a texture at all
+ *           (a renderbuffer on OpenGL ES). If `dst` exists only to hold the copy, make it
+ *           depth-only by attaching a depth texture with `attach_target`.
+ *
+ *           Draws submitted through the immediate-mode draw API are copied only after they reach
+ *           the canvas (`cf_render_to`). SDL_GPU's D3D12 driver copies only the depth plane, so
+ *           don't rely on a copied stencil there.
+ * @related  cf_canvas_get_depth_stencil_target CF_CanvasParams cf_make_canvas cf_apply_canvas
+ */
+CF_API void CF_CALL cf_canvas_copy_depth(CF_Canvas dst, CF_Canvas src);
 
 /**
  * @function cf_clear_canvas
@@ -2843,6 +2925,7 @@ CF_INLINE void destroy_canvas(CF_Canvas canvas) { cf_destroy_canvas(canvas); }
 CF_INLINE CF_Texture canvas_get_target(CF_Canvas canvas) { return cf_canvas_get_target(canvas); }
 CF_INLINE CF_Texture canvas_get_target2(CF_Canvas canvas, int index) { return cf_canvas_get_target2(canvas, index); }
 CF_INLINE CF_Texture canvas_get_depth_stencil_target(CF_Canvas canvas) { return cf_canvas_get_depth_stencil_target(canvas); }
+CF_INLINE void canvas_copy_depth(CF_Canvas dst, CF_Canvas src) { cf_canvas_copy_depth(dst, src); }
 CF_INLINE void clear_canvas(CF_Canvas canvas) { cf_clear_canvas(canvas); }
 CF_INLINE void canvas_set_clear_color(CF_Canvas canvas, CF_Color color) { cf_canvas_set_clear_color(canvas, color); }
 CF_INLINE void canvas_set_clear_color2(CF_Canvas canvas, int index, CF_Color color) { cf_canvas_set_clear_color2(canvas, index, color); }
@@ -2879,9 +2962,12 @@ CF_INLINE void apply_mesh(CF_Mesh mesh) { cf_apply_mesh(mesh); }
 CF_INLINE void apply_shader(CF_Shader shader, CF_Material material) { cf_apply_shader(shader, material); }
 CF_INLINE void draw_elements() { cf_draw_elements(); }
 CF_INLINE bool query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op) { return cf_query_pixel_format(format, op); }
+CF_INLINE int query_max_canvas_targets() { return cf_query_max_canvas_targets(); }
 CF_INLINE void texture_update_mip(CF_Texture texture, void* data, int size, int mip_level) { cf_texture_update_mip(texture, data, size, mip_level); }
 CF_INLINE void texture_update_layer(CF_Texture texture, void* data, int size, int layer) { cf_texture_update_layer(texture, data, size, layer); }
 CF_INLINE void generate_mipmaps(CF_Texture texture) { cf_generate_mipmaps(texture); }
+CF_INLINE void gpu_sync() { cf_gpu_sync(); }
+CF_INLINE void gpu_submit() { cf_gpu_submit(); }
 CF_INLINE uint64_t texture_handle(CF_Texture texture) { return cf_texture_handle(texture); }
 CF_INLINE uint64_t texture_binding_handle(CF_Texture texture) { return cf_texture_binding_handle(texture); }
 CF_INLINE void mesh_set_index_buffer(CF_Mesh mesh, int index_buffer_size_in_bytes, int index_bit_count) { cf_mesh_set_index_buffer(mesh, index_buffer_size_in_bytes, index_bit_count); }

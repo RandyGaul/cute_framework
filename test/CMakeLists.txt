@@ -19,19 +19,23 @@ set(CF_TEST_SRCS
 	test_json.cpp
 	test_markups.cpp
 	test_draw_tiled.cpp
+	test_draw_z.cpp
 	test_atlas_uvs.cpp
 	test_graphics_3d.cpp
 	test_shader_reload.cpp
 	test_shader_directory.cpp
 	test_canvas_clear.cpp
+	test_gpu_submit.cpp
 	test_compute.cpp
 	test_mrt.cpp
 	test_texture_types.cpp
 	test_shadow_sampling.cpp
+	test_canvas_copy_depth.cpp
 	test_instancing.cpp
 	test_buffer_updates.cpp
 	test_draw3d.cpp
 	test_uniform_arrays.cpp
+	test_gles.cpp
 	test_math.cpp
 	test_math.c
 	test_math3d.cpp
@@ -48,10 +52,11 @@ set(CF_TEST_SRCS
 	test_device_loss.cpp
 	test_app_shared.cpp
 )
-set(CF_TEST_HDRS test_harness.h test_app_shared.h jpg_test_vectors.h)
+set(CF_TEST_HDRS test_harness.h test_app_shared.h test_leak.h jpg_test_vectors.h)
 
 add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
 target_link_libraries(tests PRIVATE cute)
+cf_copy_sdl_dll(tests)
 # test_crash drives the crashme sample as a child process; test_sym reads the tests binary's own debug info.
 if (CF_CUTE_SYM AND NOT EMSCRIPTEN AND NOT CMAKE_CROSSCOMPILING)
 	cf_symbols(tests FILE)

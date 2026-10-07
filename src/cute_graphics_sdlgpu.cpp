@@ -226,6 +226,11 @@ static struct
 	SDL_GPURenderPass* active_pass;
 } g_ctx = { };
 
+// Names of the debug groups open on g_ctx.cmd, reopened when a mid-frame submit swaps command
+// buffers. Owned copies that live only while the group is open: labels are often dynamic
+// (frame or entity IDs), so interning them would grow the intern table without bound.
+static Array<String> s_gpu_labels;
+
 static inline void s_end_active_pass() {
 	if (g_ctx.active_pass) {
 		SDL_EndGPURenderPass(g_ctx.active_pass);
@@ -851,6 +856,9 @@ static void* cf_fxc_compile(const char* hlsl, size_t hlsl_size, const char* targ
 static void s_silence_d3d12_clear_value_warning(SDL_GPUDevice* gpu_device)
 {
 	if (SDL_strcmp(SDL_GetGPUDeviceDriver(gpu_device), "direct3d12") != 0) return;
+#ifdef D3D12_LAYOUT_SDL_VERSION
+	if (SDL_GetVersion() != D3D12_LAYOUT_SDL_VERSION) return;
+#endif
 
 	// SDL_GPUDevice (SDL_sysgpu.h): N function pointer slots, then driverData, then backend.
 	void** device_slots = (void**)gpu_device;
@@ -926,6 +934,7 @@ void cf_sdlgpu_cleanup()
 		g_ctx.cmd = NULL;
 	}
 	SDL_WaitForGPUIdle(g_ctx.device);
+	s_gpu_labels = Array<String>();
 	SDL_ReleaseWindowFromGPUDevice(g_ctx.device, g_ctx.window);
 	SDL_DestroyGPUDevice(g_ctx.device);
 }
@@ -970,15 +979,34 @@ void cf_sdlgpu_flush()
 	}
 }
 
-void cf_sdlgpu_gpu_sync()
+// Submits the frame's command buffer mid-frame and continues in a fresh one. The canvas stays
+// applied and keeps its pending clear flag, so the next draw reopens the pass with LOAD.
+static void s_submit_and_reacquire(bool wait)
 {
 	s_end_active_pass();
-	if (g_ctx.cmd) {
-		SDL_GPUFence *fence = SDL_SubmitGPUCommandBufferAndAcquireFence(g_ctx.cmd);
+	if (!g_ctx.cmd) return;
+	// Debug groups must balance within a command buffer (Metal, PIX): close the open ones here
+	// and reopen them in the next buffer.
+	for (int i = 0; i < s_gpu_labels.count(); ++i) SDL_PopGPUDebugGroup(g_ctx.cmd);
+	if (wait) {
+		SDL_GPUFence* fence = SDL_SubmitGPUCommandBufferAndAcquireFence(g_ctx.cmd);
 		SDL_WaitForGPUFences(g_ctx.device, true, &fence, 1);
 		SDL_ReleaseGPUFence(g_ctx.device, fence);
-		g_ctx.cmd = SDL_AcquireGPUCommandBuffer(g_ctx.device);
+	} else {
+		SDL_SubmitGPUCommandBuffer(g_ctx.cmd);
 	}
+	g_ctx.cmd = SDL_AcquireGPUCommandBuffer(g_ctx.device);
+	for (int i = 0; i < s_gpu_labels.count(); ++i) SDL_PushGPUDebugGroup(g_ctx.cmd, s_gpu_labels[i].c_str());
+}
+
+void cf_sdlgpu_gpu_sync()
+{
+	s_submit_and_reacquire(true);
+}
+
+void cf_sdlgpu_gpu_submit()
+{
+	s_submit_and_reacquire(false);
 }
 
 bool cf_sdlgpu_set_present_mode(CF_PresentMode mode)
@@ -1011,6 +1039,7 @@ void cf_sdlgpu_begin_frame()
 		g_ctx.canvas = NULL;
 		g_ctx.swapchain_tex = NULL;
 	}
+	s_gpu_labels.clear();
 	g_ctx.cmd = SDL_AcquireGPUCommandBuffer(g_ctx.device);
 	g_ctx.skip_drawing = false;
 }
@@ -1061,6 +1090,7 @@ void cf_sdlgpu_end_frame()
 	g_ctx.cmd = NULL;
 	g_ctx.canvas = NULL;
 	g_ctx.swapchain_tex = NULL;
+	s_gpu_labels.clear();
 }
 
 bool cf_sdlgpu_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage)
@@ -1393,8 +1423,18 @@ static bool s_sdl_format_is_depth(SDL_GPUTextureFormat format)
 	}
 }
 
+int cf_sdlgpu_query_max_canvas_targets()
+{
+	// SDL_GPU exposes no color attachment limit. D3D12 and Metal guarantee eight. Vulkan only
+	// guarantees four (maxColorAttachments), and SDL doesn't surface the device's real value.
+	CF_BackendType backend = s_query_backend();
+	if (backend == CF_BACKEND_TYPE_D3D12 || backend == CF_BACKEND_TYPE_METAL) return CF_MAX_CANVAS_TARGETS;
+	return 4;
+}
+
 CF_Canvas cf_sdlgpu_make_canvas(CF_CanvasParams params)
 {
+	if (!cf_canvas_target_count_supported(params.target_count > 1 ? params.target_count : 1)) return CF_Canvas{};
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)CF_CALLOC(sizeof(CF_CanvasInternal));
 	if (params.attach_target.id) {
 		// Render into one face/layer of an existing texture; the canvas owns nothing color-side.
@@ -1492,7 +1532,6 @@ CF_Canvas cf_sdlgpu_make_canvas(CF_CanvasParams params)
 		// Additional MRT color targets. These may be multisampled like target 0; each one
 		// gets its own resolve destination below.
 		canvas->target_count = params.target_count > 1 ? params.target_count : 1;
-		if (canvas->target_count > CF_MAX_CANVAS_TARGETS) canvas->target_count = CF_MAX_CANVAS_TARGETS;
 		for (int i = 1; i < canvas->target_count; ++i) {
 			canvas->cf_textures_mrt[i] = s_make_texture(params.targets[i], params.sample_count);
 			if (canvas->cf_textures_mrt[i].id) {
@@ -1617,6 +1656,49 @@ CF_Texture cf_sdlgpu_canvas_get_depth_stencil_target(CF_Canvas canvas_handle)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
 	return canvas->cf_depth_stencil;
+}
+
+static CF_CanvasDepthDesc s_canvas_depth_desc(CF_CanvasInternal* canvas)
+{
+	CF_CanvasDepthDesc desc = { };
+	if (!canvas) return desc;
+	desc.valid = true;
+	desc.has_depth = canvas->depth_stencil != NULL;
+	desc.w = canvas->w;
+	desc.h = canvas->h;
+	desc.format = desc.has_depth ? (uint32_t)((CF_TextureInternal*)canvas->cf_depth_stencil.id)->format : 0;
+	desc.sample_count = 1 << (int)canvas->sample_count;
+	return desc;
+}
+
+void cf_sdlgpu_canvas_copy_depth(CF_Canvas dst_handle, CF_Canvas src_handle)
+{
+	CF_CanvasInternal* dst = (CF_CanvasInternal*)dst_handle.id;
+	CF_CanvasInternal* src = (CF_CanvasInternal*)src_handle.id;
+	if (!cf_canvas_copy_depth_check(s_canvas_depth_desc(dst), s_canvas_depth_desc(src), dst && dst == src)) return;
+
+	// Clears requested by cf_apply_canvas are deferred to the next pass on that canvas. Run them
+	// now so the copy lands in the same order GLES gives: src reads cleared depth, and a later
+	// pass on dst loads the copy instead of clearing it away.
+	if (src->clear) cf_sdlgpu_clear_canvas(src_handle);
+	if (dst->clear) cf_sdlgpu_clear_canvas(dst_handle);
+
+	// Whole-subresource only: D3D12 rejects partial copies of depth-stencil resources. Its
+	// SDL_GPU driver also copies only the depth plane, so stencil is not carried over there.
+	s_end_active_pass();
+	SDL_GPUCommandBuffer* cmd = g_ctx.cmd ? g_ctx.cmd : SDL_AcquireGPUCommandBuffer(g_ctx.device);
+	SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(cmd);
+	SDL_GPUTextureLocation from = { };
+	from.texture = src->depth_stencil;
+	from.mip_level = (Uint32)(src->attached_depth ? src->attach_mip : 0);
+	from.layer = (Uint32)(src->attached_depth ? src->attach_layer : 0);
+	SDL_GPUTextureLocation to = { };
+	to.texture = dst->depth_stencil;
+	to.mip_level = (Uint32)(dst->attached_depth ? dst->attach_mip : 0);
+	to.layer = (Uint32)(dst->attached_depth ? dst->attach_layer : 0);
+	SDL_CopyGPUTextureToTexture(pass, &from, &to, (Uint32)src->w, (Uint32)src->h, 1, false);
+	SDL_EndGPUCopyPass(pass);
+	if (!g_ctx.cmd) SDL_SubmitGPUCommandBuffer(cmd);
 }
 
 CF_Readback cf_sdlgpu_canvas_readback2(CF_Canvas canvas_handle, int index)
@@ -2503,12 +2585,16 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 
 void cf_sdlgpu_push_gpu_label(const char* name)
 {
-	if (g_ctx.cmd) SDL_PushGPUDebugGroup(g_ctx.cmd, name);
+	if (!g_ctx.cmd) return;
+	SDL_PushGPUDebugGroup(g_ctx.cmd, name);
+	s_gpu_labels.add(String(name));
 }
 
 void cf_sdlgpu_pop_gpu_label()
 {
-	if (g_ctx.cmd) SDL_PopGPUDebugGroup(g_ctx.cmd);
+	if (!g_ctx.cmd) return;
+	SDL_PopGPUDebugGroup(g_ctx.cmd);
+	if (s_gpu_labels.count()) s_gpu_labels.pop();
 }
 
 void cf_sdlgpu_current_canvas_size(int* w, int* h)
@@ -2516,6 +2602,11 @@ void cf_sdlgpu_current_canvas_size(int* w, int* h)
 	CF_ASSERT(g_ctx.canvas);
 	*w = g_ctx.canvas->w;
 	*h = g_ctx.canvas->h;
+}
+
+bool cf_sdlgpu_current_canvas_has_depth()
+{
+	return g_ctx.canvas && g_ctx.canvas->depth_stencil;
 }
 
 void cf_sdlgpu_draw_elements()
@@ -2748,6 +2839,7 @@ void cf_sdlgpu_destroy_compute_shader(CF_ComputeShader shader)
 	CF_ComputeShaderInternal* cs = (CF_ComputeShaderInternal*)shader.id;
 	if (!cs) return;
 	SDL_ReleaseGPUComputePipeline(g_ctx.device, cs->pipeline);
+	cs->~CF_ComputeShaderInternal();
 	CF_FREE(cs);
 }
 

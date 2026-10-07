@@ -23,7 +23,14 @@ The shape renderer in CF has a few extra features that nearly all shapes take ad
 
 - Customizeable antialiasing
 - Border stroke vs fill style
-- Edge rounding (chubbiness)
+- Corner rounding
+- Outlines and glows ([`cf_draw_push_outline`](../draw/function/cf_draw_push_outline.md), [`cf_draw_push_glow`](../draw/function/cf_draw_push_glow.md))
+
+Shapes keep the size you ask for. Nothing CF draws for a shape goes past its extent, except a glow, which is light spilling outside:
+
+- **Rounding** is a corner radius in world units. A 100x40 box with rounding 8 stays 100x40, just with rounded corners. Rounding is clamped to what the shape can hold (half the shortest side of a box, the inscribed circle of a triangle or convex polygon), so at the max a square becomes a circle.
+- **Strokes** of closed shapes (boxes, circles, triangles, shape groups) run inward from the edge: a stroke of thickness 4 covers the 4 units just inside the shape. A line's thickness is its width, centered on the line. Capsule and custom-shape strokes straddle the surface (a custom sdf may have no inside).
+- **Outlines** are a band just inside the edge, drawn over the fill like a CSS border over its background.
 
 For circles, use [`cf_draw_circle`](../draw/function/cf_draw_circle.md), for boxes/rectangles use [`cf_draw_quad`](../draw/function/cf_draw_quad.md), for lines use [`cf_draw_line`](../draw/function/cf_draw_line.md) or [`cf_draw_polyline`](../draw/function/cf_draw_polyline.md), and so on.
 
@@ -90,15 +97,15 @@ float params[] = { x, y, 50.0f, 20.0f };
 cf_draw_custom_shape_fill(star, cf_make_aabb(cf_v2(x-50, y-50), cf_v2(x+50, y+50)), params, 4);
 ```
 
-The snippet must define `float sdf(vec2 p, ShapeParams s)` returning the distance in world units from point `p` to the shape's surface (negative inside). `ShapeParams` carries the up-to-16 floats you pass at draw time as eight `vec2`s named `a` through `h`, plus a `vec4 attributes` from [`cf_draw_push_vertex_attributes`](../draw/function/cf_draw_push_vertex_attributes.md). The builtin distance helpers are all callable from your snippet (`distance_box`, `distance_segment`, `distance_triangle`, `distance_polygon`, `distance_arrow`), so most shapes are just a few `min`/`max` combinators over them. Antialiasing, stroked outlines, colors, layers, and every other draw setting apply to custom shapes automatically, and all registered shapes render in the same batch as builtins — no extra draw calls or pipeline switches.
+The snippet must define `float sdf(vec2 p, ShapeParams s)` returning a signed field at world-space point `p`: negative inside, zero on the shape's surface, positive outside (usually the distance in world units). `ShapeParams` carries the up-to-16 floats you pass at draw time as eight `vec2`s named `a` through `h`, plus a `vec4 attributes` from [`cf_draw_push_vertex_attributes`](../draw/function/cf_draw_push_vertex_attributes.md). The builtin distance helpers are all callable from your snippet (`distance_box`, `distance_segment`, `distance_triangle`, `distance_polygon`, `distance_arrow`), so most shapes are just a few `min`/`max` combinators over them. Antialiasing, stroked outlines, colors, layers, and every other draw setting apply to custom shapes automatically, and all registered shapes render in the same batch as builtins — no extra draw calls or pipeline switches.
 
 There are a few important caveats:
 
-- **Your function must be a true signed distance function** (Lipschitz constant ≤ 1 — it may never underestimate distance). The renderer trusts it unconditionally for tile binning and occlusion culling, so an invalid "distance-ish" function (for example `abs(p.x) + abs(p.y) - r`, which overestimates by up to √2) will drop pixels. If you build your shape by combining the builtin helpers with `min`/`max`, translations, and rotations, it stays a valid SDF.
+- **Your function need not be a true distance.** Any field whose zero crossing is the shape works: warped or rippled outlines, ellipses made by scaling `p`, smooth blends, metaballs. The edge is antialiased from the field's local slope, so it stays one antialias width wide whatever the field's scale. A true distance is still the cheapest way to get exact thick strokes, outlines, and glows far from the edge.
 - **Register shapes once at init time.** Each call to `cf_make_custom_shape` recompiles the renderer's internal shaders. That's fine during startup, but causes a hitch if done mid-game.
 - **Register shapes *before* creating any custom draw shaders.** Shaders made with [`cf_make_draw_shader`](../draw/function/cf_make_draw_shader.md) bake in the set of custom shapes that existed when they were compiled; shapes registered afterwards will render invisibly under an older custom draw shader.
 - **Runtime shader compilation is required.** Custom shapes are unavailable when CF is built with `CF_RUNTIME_SHADER_COMPILATION=OFF` (precompiled-bytecode-only builds); `cf_make_custom_shape` returns a zero id in that case. All backends are supported, including GLES3/WebGL2.
-- **The bounds you pass at draw time must conservatively contain the shape** (the renderer pads them for stroke and antialias). Pixels outside the bounds are never evaluated.
+- **The bounds you pass at draw time must contain the whole shape** (the renderer pads them for stroke and antialias). They are the only culling the renderer does for a custom shape; pixels outside them are never evaluated.
 
 ## Shape Groups (Boolean Ops)
 
@@ -145,7 +152,7 @@ The draw API has some settings that can be pushed and popped. Pushing and poppin
 - color
 - shape antialias (0 = off, non-zero = on at that scale, default 1.5)
 - layer
-- chubbiness
+- outline and glow
 - shader
 - blend mode (normal/add/multiply/screen, per draw call — see [Blend Modes](#blend-modes))
 - render state (custom blending/stencil)
@@ -155,6 +162,30 @@ Whenever a setting is pushed it will be used by subsequent drawing functions. Fo
 ## Draw Layer
 
 The layer controls the order things are drawn. You can set what layer to draw upon with [`cf_draw_push_layer`](../draw/function/cf_draw_push_layer.md). When done, restore the previously used layer with [`cf_draw_pop_layer`](../draw/function/cf_draw_pop_layer.md).
+
+## Depth (Z)
+
+Layers order whole draws. For 2.5D, where sprites and 3D props must occlude each other pixel by pixel, push a Z with [`cf_draw_push_z`](../draw/function/cf_draw_push_z.md). Z is the third axis of the 2D world, in world units like positions: a sprite drawn at (x, y) with Z pushed sits at world point (x, y, z), and higher Z is nearer the viewer, just as higher layers draw on top. The 2D world is the 3D world's xy plane, so a sprite at z = 3 and a mesh at z = 3 are at the same depth.
+
+```cpp
+// A 3D camera looking down -z at the xy plane.
+draw3d_push_projection(perspective(fov, aspect, 0.1f, 100.0f));
+draw3d_push_view(look_at(V3(cam.x, cam.y, 20), V3(cam.x, cam.y, 0), V3(0, 1, 0)));
+
+// 3D props: a pillar standing at z = 3.
+draw3d_push(); draw3d_translate(V3(pillar.x, pillar.y, 3)); draw3d_mesh(pillar_mesh); draw3d_pop();
+
+// 2D sprites at their own depths. The hero at z = 2 passes behind the pillar, the bird at z = 4 in front of it.
+draw_push_z(2); draw_sprite(&hero); draw_pop_z();
+draw_push_z(4); draw_sprite(&bird); draw_pop_z();
+```
+
+Z never moves or resizes a 2D draw -- the 2D camera places it on screen exactly as before -- it only sets the depth the draw tests and writes, taken from the 3D camera live at the time of the draw (so keep the 3D camera pushed while drawing 2D with Z). Without a 3D camera, Z maps onto a default range of ±10,000 world units and still orders 2D against 2D. A few rules:
+
+- Without any Z pushed, 2D drawing ignores depth completely, exactly as it always has.
+- Depth needs a canvas with `depth_stencil_enable` (the app's own canvas has one). On canvases without depth, Z does nothing.
+- Opaque draws write depth where they're at least half covered (sprites cut at half alpha, shapes drop the outer half of their anti-aliased edge), so edges never punch halos into whatever is drawn behind them later. Translucent draws test depth without writing it and keep their submission order, so draw them back to front.
+- Layers still order draws as usual; depth decides occlusion among draws with Z. Draw lists record Z relative to the Z at `draw_list_begin` and add the Z current at replay, like layers.
 
 ## Blend Modes
 
@@ -183,7 +214,7 @@ draw_list_end();
 draw_list(level); // Replays under the current camera.
 ```
 
-Recording happens in list-local space, so a replay composes whatever the current camera is on top — record your level once, then fly the camera around it forever. Replays are extremely cheap (a ~30k-drawable scene replays in about 0.001 milliseconds versus ~1.75 milliseconds to re-record it), sprites and text inside lists keep working with the texture atlas automatically, and dynamic immediate-mode drawing mixes freely with replayed content. Layers are list-local as well: a recording replays relative to the current layer, so wrapping `draw_list` in `draw_push_layer`/`draw_pop_layer` sends the same list to a different layer (handy when layer ranges act as render passes via `cf_render_layers_to`). The night city below is five parallax layers, each its own draw list, with a live moon and orbiters drawn on top — see the [draw lists sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/draw_lists.cpp):
+Recording happens in list-local space, so a replay composes whatever the current camera is on top — record your level once, then fly the camera around it forever. Replays are extremely cheap (a ~30k-drawable scene replays in about 0.001 milliseconds versus ~1.75 milliseconds to re-record it), sprites and text inside lists keep working with the texture atlas automatically, and dynamic immediate-mode drawing mixes freely with replayed content. Layers are list-local as well: a recording replays relative to the current layer, so wrapping `draw_list` in `draw_push_layer`/`draw_pop_layer` sends the same list to a different layer (handy when layer ranges act as render passes via `cf_render_layers_to`). The render state works like a closure too: push one *inside* the recording and it is frozen into the list; record without one and each replay uses whatever `draw_push_render_state` has pushed at that moment. The night city below is five parallax layers, each its own draw list, with a live moon and orbiters drawn on top — see the [draw lists sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/draw_lists.cpp):
 
 <p align="center">
 <video src="../../assets/city_night.mp4" autoplay loop muted playsinline controls width="960" style="max-width:100%"></video>

@@ -245,6 +245,10 @@ void cf_shader_watch();
 void cf_shader_swap_contents(CF_Shader a, CF_Shader b);
 void cf_compute_shader_swap_contents(CF_ComputeShader a, CF_ComputeShader b);
 
+// Backends call this first in make_canvas: logs and asserts when `target_count` exceeds
+// cf_query_max_canvas_targets, so the caller gets an invalid canvas instead of fewer targets.
+bool cf_canvas_target_count_supported(int target_count);
+
 #ifndef CF_EMSCRIPTEN
 
 CF_Result cf_sdlgpu_init(const char* device_name, bool debug, CF_BackendType* backend_type);
@@ -261,6 +265,7 @@ void cf_sdlgpu_attach(SDL_Window* window);
 bool cf_sdlgpu_supports_msaa(int sample_count);
 void cf_sdlgpu_flush();
 void cf_sdlgpu_gpu_sync();
+void cf_sdlgpu_gpu_submit();
 bool cf_sdlgpu_set_present_mode(CF_PresentMode mode);
 void cf_sdlgpu_begin_frame();
 void cf_sdlgpu_blit_canvas(CF_Canvas canvas);
@@ -301,11 +306,22 @@ void cf_gles_attach(SDL_Window* window);
 bool cf_gles_supports_msaa(int sample_count);
 void cf_gles_flush();
 void cf_gles_gpu_sync();
+void cf_gles_gpu_submit();
 bool cf_gles_set_present_mode(CF_PresentMode mode);
 void cf_gles_begin_frame();
 void cf_gles_blit_canvas(CF_Canvas canvas);
 void cf_gles_end_frame();
 void cf_gles_cleanup();
+// Test hook: how many times a full streaming ring has made the CPU wait on a GPU fence.
+CF_API int CF_CALL cf_gles_fence_wait_count();
+// Test hook: the ring slot a streamed texture's latest upload went to.
+CF_API int CF_CALL cf_gles_texture_active_slot(CF_Texture texture);
+// Test hook: a full ring reuses its busy head slot without a fence wait, as on the web.
+// No effect on the web, where it is always on.
+CF_API void CF_CALL cf_gles_reuse_busy_ring_slots(bool reuse);
+// Test hook: canvas readback acts as if the driver accepts only the (format, type) pair GLES
+// guarantees for each buffer class, as many mobile and WebGL drivers do.
+CF_API void CF_CALL cf_gles_only_guaranteed_read_pairs(bool only);
 
 // Draw system sampler override API.
 // Used by the draw system to dynamically switch between nearest/linear filtering.
@@ -317,6 +333,8 @@ void cf_set_sampler_override(void* sampler);
 // cf_apply_vs/fs_storage_buffers, cf_push/pop_gpu_label, and cf_draw_elements_instanced
 // used to be declared here as internal-only; they are public in cute_graphics.h now.
 void cf_current_canvas_size(int* w, int* h);
+// Whether the applied canvas has a depth buffer (2d Z only depth tests on those).
+bool cf_current_canvas_has_depth();
 
 // Region-granular texture ops used by the draw layer's atlas cache to rebuild atlas pages
 // GPU-side (repacks become texture->texture copies instead of CPU pixel re-fetch + upload).
@@ -356,5 +374,19 @@ void cf_destroy_instance_buffer(uint64_t handle);
 // `offset_bytes` positions the binding within the buffer, so many commands can share one
 // per-flush staging buffer (each binds its own slice). Must be a multiple of the stride.
 void cf_apply_instance_buffer_override(uint64_t handle, int count, int offset_bytes);
+
+// What cf_canvas_copy_depth needs to know about each side; backends fill these in and share the
+// misuse reporting. `format` is backend-native (an SDL or GL enum), compared only for equality.
+struct CF_CanvasDepthDesc
+{
+	bool valid;
+	bool has_depth;
+	int w, h;
+	uint32_t format;
+	int sample_count;
+};
+
+// Asserts and logs on misuse, returning false; the copy must then be skipped.
+bool cf_canvas_copy_depth_check(CF_CanvasDepthDesc dst, CF_CanvasDepthDesc src, bool same_canvas);
 
 #endif // CF_GRAPHICS_INTERNAL_H

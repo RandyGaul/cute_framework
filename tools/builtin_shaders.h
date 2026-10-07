@@ -362,9 +362,10 @@ float dash_segment(vec2 p, vec2 a, vec2 b, float d, float r, vec3 dash)
 
 // Default custom-shape include: no shapes registered. cf_make_custom_shape() swaps in a
 // generated version stitching every registered `float sdf(vec2 p, ShapeParams s)` snippet
-// plus a per-command dispatcher. User snippets must be true signed distance functions
-// (Lipschitz <= 1): the binning compute shaders trust them for tile culling and
-// opaque-cover occlusion.
+// plus a per-command dispatcher. User snippets need not be true distances: commands carrying
+// one are flagged (type bit 32), bin by their bounds alone, never claim opaque cover, and
+// take their AA edge from the field's local slope (field_distance; group operands are
+// rescaled inside csg_distance, before any smoothing).
 static const char* s_custom_shapes_stub = R"(
 struct ShapeParams
 {
@@ -390,7 +391,8 @@ float csg_smin(float a, float b, float k)
 	return mix(b, a, h) - k * h * (1.0 - h);
 }
 
-float csg_distance(uint po, int n, vec2 p, vec4 attributes)
+// h: world-space finite-difference step for custom operands' slope, about one pixel.
+float csg_distance(uint po, int n, vec2 p, vec4 attributes, float h)
 {
 	// Payload: po+0 = pre-padded bounds (used by the vertex stage), then six vec4s per
 	// operand: (prim, aux, op, k), (radius, 0, 0, 0), and 8 vec2s of shape params.
@@ -420,6 +422,10 @@ float csg_distance(uint po, int n, vec2 p, vec4 attributes)
 			sp.e = q2.xy; sp.f = q2.zw; sp.g = q3.xy; sp.h = q3.zw;
 			sp.attributes = attributes;
 			di = custom_sdf(int(h4.y), p, sp);
+			// Rescale the user field by its world-space slope (forward differences, step h)
+			// so smoothing k and the k/4 bounds padding stay in world units.
+			vec2 g = vec2(custom_sdf(int(h4.y), p + vec2(h, 0.0), sp) - di, custom_sdf(int(h4.y), p + vec2(0.0, h), sp) - di) / h;
+			di /= max(length(g), 1.0e-6);
 		} else {
 			cpts[0] = q0.xy; cpts[1] = q0.zw; cpts[2] = q1.xy; cpts[3] = q1.zw;
 			cpts[4] = q2.xy; cpts[5] = q2.zw; cpts[6] = q3.xy; cpts[7] = q3.zw;
@@ -445,36 +451,48 @@ float sdf_stroke(float d)
 }
 
 // Shape effects (cf_draw_push_outline / cf_draw_push_glow), applied to a shape's premultiplied
-// result using the signed distance it already produced -- an outline is a band just outside the
-// surface, a glow a falloff past it. Both are exact and cost one smoothstep each: no second
-// pass, no blur kernel, no extra geometry. Globals are set per command by the tile walk and from
-// varyings in the instanced path; a zero width/radius disables that effect.
+// result using the signed distance of what it drew -- an outline is a band just inside the edge,
+// over the shape like a border over its background; a glow is a falloff past the edge, under
+// it. Shapes keep their extent: only the glow ever leaves it. Both are exact and cost one
+// smoothstep each: no second pass, no blur kernel, no extra geometry. Globals are set per
+// command by the tile walk and from varyings in the instanced path; a zero width/radius
+// disables that effect.
 vec4 sdf_effects(vec4 shape_color, float d)
 {
 	if (v_outline_width <= 0.0 && v_glow_radius <= 0.0) return shape_color;
 	float aa = max(v_aa, 1.0e-6);
-	vec4 under = vec4(0.0);
-	// Glow first (furthest back): a falloff from the surface outward, squared so it reads like
-	// light rather than a flat halo.
+	vec4 c = shape_color;
+	if (v_outline_width > 0.0) {
+		// The outer edge reuses the shape's own coverage ramp, so the band never leaves it.
+		float cov = (1.0 - smoothstep(0.0, aa, d)) * smoothstep(-v_outline_width - aa, -v_outline_width, d);
+		// `edge`, not `line` -- the latter is a reserved word in HLSL.
+		vec4 edge = v_outline * cov;
+		c = edge + c * (1.0 - edge.a);
+	}
+	// Glow underneath everything: squared so it reads like light rather than a flat halo.
 	if (v_glow_radius > 0.0) {
 		float t = clamp(1.0 - max(d, 0.0) / v_glow_radius, 0.0, 1.0);
-		under = v_glow * (t * t);
+		c = c + v_glow * (t * t) * (1.0 - c.a);
 	}
-	// Outline over glow: everything within `width` of the surface, inside included, so it stays
-	// solid under a translucent fill.
-	if (v_outline_width > 0.0) {
-		// `edge`, not `line` -- the latter is a reserved word in HLSL.
-		float cov = 1.0 - smoothstep(v_outline_width - aa, v_outline_width, d);
-		vec4 edge = v_outline * cov;
-		under = edge + under * (1.0 - edge.a);
-	}
-	// Finally the shape itself over both.
-	return shape_color + under * (1.0 - shape_color.a);
+	return c;
 }
 
 float dd(float d)
 {
 	return length(vec2(dFdx(d), dFdy(d)));
+}
+
+// Custom fields need not be true distances (warps, scaled fields, blends). Dividing by the
+// field's local world-space slope turns one into a first-order distance near its zero
+// crossing, so the AA ramp, stroke, and effects keep their world-unit widths for any field.
+// s: the field's change per screen pixel along x and y. jx, jy: the world-space step of
+// one screen pixel along x and y. s = J^T g with J = [jx jy], so g = J^-T s.
+float field_distance(float d, vec2 s, vec2 jx, vec2 jy)
+{
+	float det = jx.x * jy.y - jx.y * jy.x;
+	if (det == 0.0) return d;
+	vec2 g = vec2(jy.y * s.x - jx.y * s.y, jx.x * s.y - jy.x * s.x) / det;
+	return d / max(length(g), 1.0e-6);
 }
 
 // Given two colors a and b, and a distance to the isosurface of a shape,
@@ -492,7 +510,8 @@ vec4 sdf(vec4 a, vec4 b, float d)
 	vec4 fill = mix(fill_no_aa, fill_aa, v_aa > 0.0 ? 1.0 : 0.0);
 
 	result = mix(stroke, fill, v_fill);
-	result = sdf_effects(result, d);
+	// Effects follow what was drawn: a stroke's own band, or the filled shape.
+	result = sdf_effects(result, v_fill > 0.5 ? d : wire_d);
 	return result;
 }
 )";
@@ -833,8 +852,14 @@ void main()
 		sp_custom.attributes = v_user;
 		d = custom_sdf(v_n, v_pos, sp_custom);
 	} else if (is_csg) {
-		d = csg_distance(uint(v_po), v_n, v_pos, v_user);
-	} else if (is_glyph) {
+		d = csg_distance(uint(v_po), v_n, v_pos, v_user, length(dFdx(v_pos)));
+	}
+	// Custom fields take their edge from the local slope (group operands already did, inside
+	// csg_distance). The branch is primitive-uniform, so the derivatives are well-defined.
+	if (is_custom) {
+		d = field_distance(d, vec2(dFdx(d), dFdy(d)), dFdx(v_pos), dFdy(v_pos));
+	}
+	if (is_glyph) {
 		// Curve glyph: winding coverage from the outline's quadratics. Derivatives are
 		// taken before any pixel-divergent math and the branch is primitive-uniform
 		// (one instance per command), so they stay well-defined.
@@ -874,6 +899,9 @@ void main()
 	sp.attributes = v_user;
 	c = shader(c, sp);
 	if (u_alpha_discard != 0 && c.a == 0) discard;
+	// Depth-writing 2d (cf_draw_push_z) keeps only its solid core, like 3d depth-writing strokes:
+	// letting the anti-aliased fringe own depth would punch halos into whatever draws behind it later.
+	if (v_fx_params.z > 0.5 && c.a < 0.5) discard;
 
 	// D3D12 links VS->PS by hardware register per semantic: the PS input signature must
 	// mirror the VS output registers, but the compiler packs PS inputs by *consumed*
@@ -933,7 +961,7 @@ struct Cmd
 	vec4 shape;   // radius, stroke (pre-halved), aa, alpha.
 	vec4 misc;    // x: fill (0 or 1), y: polygon vert count, z: opaque, w: packHalf2x16(color.ba) bits.
 	vec4 user;    // User params (ShaderParams.attributes).
-	vec4 fx;      // x: effect-block payload offset (float bits, 0 = none). y: extra extent. zw reserved.
+	vec4 fx;      // x: effect-block payload offset (float bits, 0 = none). y: glow reach past the shape. zw reserved.
 };
 
 layout (std430, set = 2, binding = 1) readonly buffer cmd_buffer { Cmd cmds[]; };
@@ -983,6 +1011,21 @@ vec4 cf_payload(uint i) { return payload[i]; }
 #define CMD_TYPE_GLYPH    11u
 
 vec2 pts[8];
+
+// A custom shape's field at world point p.
+float tile_custom_field(Cmd cmd, vec2 p)
+{
+	uint po = cmd.meta.z;
+	vec4 P0 = payload[po];
+	vec4 P1 = payload[po + 1u];
+	vec4 P2 = payload[po + 2u];
+	vec4 P3 = payload[po + 3u];
+	ShapeParams sp;
+	sp.a = P0.xy; sp.b = P0.zw; sp.c = P1.xy; sp.d = P1.zw;
+	sp.e = P2.xy; sp.f = P2.zw; sp.g = P3.xy; sp.h = P3.zw;
+	sp.attributes = cmd.user;
+	return custom_sdf(int(cmd.misc.y), p, sp);
+}
 
 void main()
 {
@@ -1164,15 +1207,17 @@ void main()
 			} else if (type == CMD_TYPE_ARROW) {
 				d = distance_arrow(p, P0.xy, P0.zw, P1.x, P1.y);
 			} else if (type == CMD_TYPE_CUSTOM) {
-				vec4 P2 = payload[po + 2u];
-				vec4 P3 = payload[po + 3u];
-				ShapeParams sp;
-				sp.a = P0.xy; sp.b = P0.zw; sp.c = P1.xy; sp.d = P1.zw;
-				sp.e = P2.xy; sp.f = P2.zw; sp.g = P3.xy; sp.h = P3.zw;
-				sp.attributes = cmd.user;
-				d = custom_sdf(int(cmd.misc.y), p, sp);
+				// No derivatives inside the tile walk (divergent skips above, and FXC
+				// forbids gradients in the dynamic loop): one-pixel forward differences
+				// stand in for dFdx/dFdy. Central ones cost two more field evaluations
+				// for no visible gain.
+				d = tile_custom_field(cmd, p);
+				vec2 jx = im0.xy * (2.0 / u_canvas_wh.x);
+				vec2 jy = im0.zw * (-2.0 / u_canvas_wh.y);
+				vec2 s = vec2(tile_custom_field(cmd, p + jx) - d, tile_custom_field(cmd, p + jy) - d);
+				d = field_distance(d, s, jx, jy);
 			} else if (type == CMD_TYPE_CSG) {
-				d = csg_distance(po, int(cmd.misc.y), p, cmd.user);
+				d = csg_distance(po, int(cmd.misc.y), p, cmd.user, length(im0.xy) * (2.0 / u_canvas_wh.x));
 			} else {
 				vec4 P2 = payload[po + 2u];
 				vec4 P3 = payload[po + 3u];
@@ -1296,7 +1341,7 @@ void main()
 	vec4 P1 = cf_payload(po + 1u);
 
 	// Conservative coverage inflation: radius + full stroke + aa (shape.y is the
-	// pre-halved stroke), plus however far an outline or glow reaches past the shape.
+	// pre-halved stroke), plus however far a glow reaches past the shape.
 	float pad = cmd.shape.x + cmd.shape.y * 2.0 + cmd.shape.z + cmd.fx.y;
 
 	// Shape effects ride a trailing payload block, flagged by a non-zero offset.
@@ -1381,14 +1426,15 @@ void main()
 	} else if (type == 9u) {
 		// Custom shape: CPU-supplied pre-padded bounds ride in the payload; the 16
 		// shape params pass through untouched via ab/cd/ef/gh.
-		vec4 P4 = cf_payload(po + 4u);
+		vec4 P4 = cf_payload(po + 4u) + vec4(-cmd.fx.y, -cmd.fx.y, cmd.fx.y, cmd.fx.y);
 		pos = vec2(mix(P4.x, P4.z, cx), mix(P4.y, P4.w, cy));
 		ef = cf_payload(po + 2u);
 		gh = cf_payload(po + 3u);
 	} else if (type == 10u) {
 		// CSG shape group: pre-padded composite bounds are the payload's first vec4;
 		// the fragment stage reads the operand list from the payload directly.
-		pos = vec2(mix(P0.x, P0.z, cx), mix(P0.y, P0.w, cy));
+		vec4 bb = P0 + vec4(-cmd.fx.y, -cmd.fx.y, cmd.fx.y, cmd.fx.y);
+		pos = vec2(mix(bb.x, bb.z, cx), mix(bb.y, bb.w, cy));
 	} else if (type == 11u) {
 		// Curve glyph: outline-box parallelogram (BL origin + x/y edges), inflated by
 		// stroke + aa along the edge directions.
@@ -1425,6 +1471,16 @@ void main()
 	vec4 f1 = cf_payload(cmd.meta.w + 1u);
 	vec2 posH = f0.xy * pos.x + f0.zw * pos.y + f1.xy;
 
+	// 2d depth (cf_draw_push_z): an ndc depth plane over the quad, plus whether this run writes
+	// depth -- the fragment stage then drops the AA fringe (rides fx_params.z).
+	float depth = 0.0;
+	uint depth_off = floatBitsToUint(cmd.fx.z);
+	if (depth_off != 0u) {
+		vec4 dp = cf_payload(depth_off);
+		depth = clamp(dp.x * posH.x + dp.y * posH.y + dp.z, 0.0, 1.0);
+		fx_params.z = dp.w;
+	}
+
 	v_pos_uv = vec4(pos, uv);
 	v_n = int(cmd.misc.y);
 	v_ab = ab;
@@ -1440,7 +1496,7 @@ void main()
 	v_fx_outline = fx_outline;
 	v_fx_glow = fx_glow;
 	v_fx_params = fx_params;
-	gl_Position = vec4(posH, 0, 1);
+	gl_Position = vec4(posH, depth, 1);
 }
 )";
 
@@ -1453,8 +1509,9 @@ void main()
 //
 // Five dispatches per batch: zero -> count -> scan -> scatter -> sort. The CPU only
 // uploads compact commands + payload; the GPU walks each command's pixel AABB at tile
-// granularity, with an SDF distance cull at tile centers for shape types (this is where
-// the old CPU-side tight OBB fitting effectively moved to). The sort pass restores
+// granularity, with an SDF distance cull at tile centers for built-in shape types (this is
+// where the old CPU-side tight OBB fitting effectively moved to; custom fields are untrusted
+// and bin by their bounds alone). The sort pass restores
 // painter's order within each tile (atomic scatter is nondeterministic, but typically
 // nearly-sorted, where insertion sort is ~linear) and then applies opaque-cover culling:
 // the latest opaque command whose interior covers the whole tile becomes the tile's new
@@ -1519,7 +1576,7 @@ void main()
 "		sp.attributes = cmd.user;\n" \
 "		d = custom_sdf(int(cmd.misc.y), p, sp);\n" \
 "	} else if (type == 10u) {\n" \
-"		d = csg_distance(po, int(cmd.misc.y), p, cmd.user);\n" \
+"		d = csg_distance(po, int(cmd.misc.y), p, cmd.user, length(dwx));\n" \
 "	} else {\n" \
 "		vec4 P2 = payload[po + 2u];\n" \
 "		vec4 P3 = payload[po + 3u];\n" \
@@ -1533,9 +1590,10 @@ void main()
 "{\n" \
 "	uint type = cmd.meta.x & 15u;\n" \
 "	if (type <= 1u || type == 4u || type == 11u) return true; /* Sprites/text/tris/glyphs: AABB only. */\n" \
+"	if ((cmd.meta.x & 32u) != 0u) return true; /* Custom fields may overestimate distance: their bounds are the only safe cull. */\n" \
 "	float r_tile;\n" \
 "	float d = cmd_distance_at(cmd, tx, ty, r_tile);\n" \
-"	/* cmd.fx.y is how far an outline or glow reaches past the shape itself. */\n" \
+"	/* cmd.fx.y is how far a glow reaches past the shape itself. */\n" \
 "	return d - cmd.shape.x - cmd.shape.y - cmd.shape.z - cmd.fx.y - r_tile <= 0.0;\n" \
 "}\n"
 

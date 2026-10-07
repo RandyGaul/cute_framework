@@ -383,6 +383,93 @@ static void s_scene_additive()
 	cf_draw_pop_render_state();
 }
 
+// Draw list closure semantics for the render state: untouched inside the recording it is
+// ambient and replay binds whatever is pushed then; pushed inside (even with the same
+// value) it is frozen. A nested replay stays ambient unless the outer recording pushed.
+static CF_DrawList s_rs_list;
+static bool s_rs_list_push_additive;
+
+static void s_record_overlap_quads()
+{
+	cf_draw_push_color(cf_make_color_rgba_f(1, 0, 0, 1));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-80, -40), cf_v2(20, 40)), 0);
+	cf_draw_pop_color();
+	cf_draw_push_color(cf_make_color_rgba_f(0, 1, 0, 1));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-20, -40), cf_v2(80, 40)), 0);
+	cf_draw_pop_color();
+}
+
+static void s_scene_rs_list()
+{
+	CF_RenderState add = cf_render_state_defaults();
+	add.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
+	add.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE;
+	add.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
+	add.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE;
+	if (s_rs_list_push_additive) cf_draw_push_render_state(add);
+	cf_draw_list(s_rs_list);
+	if (s_rs_list_push_additive) cf_draw_pop_render_state();
+}
+
+TEST_CASE(test_draw_list_ambient_render_state)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	CF_DrawList ambient_list = cf_make_draw_list();
+	cf_draw_list_begin(ambient_list);
+	s_record_overlap_quads();
+	cf_draw_list_end();
+
+	CF_DrawList frozen_list = cf_make_draw_list();
+	cf_draw_list_begin(frozen_list);
+	cf_draw_push_render_state(cf_draw_peek_render_state());
+	s_record_overlap_quads();
+	cf_draw_pop_render_state();
+	cf_draw_list_end();
+
+	CF_DrawList nested_ambient_list = cf_make_draw_list();
+	cf_draw_list_begin(nested_ambient_list);
+	cf_draw_list(ambient_list);
+	cf_draw_list_end();
+
+	CF_DrawList nested_frozen_list = cf_make_draw_list();
+	cf_draw_list_begin(nested_frozen_list);
+	cf_draw_push_render_state(cf_draw_peek_render_state());
+	cf_draw_list(ambient_list);
+	cf_draw_pop_render_state();
+	cf_draw_list_end();
+
+	struct { CF_DrawList list; bool push; bool expect_additive; } cases[] = {
+		{ ambient_list, false, false },       // Nothing pushed: renders as recorded.
+		{ ambient_list, true, true },         // The free variable binds the replay state.
+		{ frozen_list, true, false },         // Frozen ignores the replay push.
+		{ nested_ambient_list, false, false },
+		{ nested_ambient_list, true, true },
+		{ nested_frozen_list, true, false },
+	};
+	int w = 640, h = 480;
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	for (int i = 0; i < (int)(sizeof(cases) / sizeof(cases[0])); ++i) {
+		for (int mode = 0; mode <= 1; ++mode) {
+			s_rs_list = cases[i].list;
+			s_rs_list_push_additive = cases[i].push;
+			REQUIRE(s_readback(s_scene_rs_list, mode, w, h, px));
+			REQUIRE(s_px_near(s_probe(px, w, h, -50), 255, 0, 0, 255, 3));
+			// The overlap: red + green when additive, green over red otherwise.
+			REQUIRE(s_px_near(s_probe(px, w, h, 0), cases[i].expect_additive ? 255 : 0, 255, 0, 255, 3));
+			REQUIRE(s_px_near(s_probe(px, w, h, 50), 0, 255, 0, 255, 3));
+		}
+	}
+
+	cf_free(px);
+	cf_destroy_draw_list(ambient_list);
+	cf_destroy_draw_list(frozen_list);
+	cf_destroy_draw_list(nested_ambient_list);
+	cf_destroy_draw_list(nested_frozen_list);
+	test_destroy_app();
+	return true;
+}
+
 TEST_CASE(test_draw_render_states)
 {
 	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
@@ -1021,8 +1108,8 @@ TEST_CASE(test_draw_degenerate_quad_finite)
 }
 
 // -------------------------------------------------------------------------------------------------
-// Shape effects (cf_draw_push_outline / cf_draw_push_glow): an outline band hugs the shape's
-// edge, a glow falls off past it, and both come from the shape's own signed distance -- so they
+// Shape effects (cf_draw_push_outline / cf_draw_push_glow): an outline band runs inside the
+// shape's edge, a glow falls off past it, and both come from the shape's own signed distance -- so they
 // must land identically on the instanced and tiled paths.
 
 static void s_scene_effects()
@@ -1052,11 +1139,11 @@ TEST_CASE(test_draw_shape_effects)
 	CF_Pixel* px[2] = { a, b };
 	for (int mode = 0; mode <= 1; ++mode) {
 		REQUIRE(s_readback(s_scene_effects, mode, w, h, px[mode]));
-		// Disc interior is green; the band just past its edge is the red outline; past that,
-		// nothing. Radius 60, outline 20 -> outline covers 60..80 from center.
+		// Disc interior is green; the band just inside its edge is the red outline; past the
+		// edge, nothing. Radius 60, outline 20 -> outline covers 40..60 from center.
 		REQUIRE(s_px_near(s_probe(px[mode], w, h, -150), 0, 255, 0, 255, 3));  // Center: fill.
-		REQUIRE(s_px_near(s_probe(px[mode], w, h, -80), 255, 0, 0, 255, 3));   // 70 out: outline.
-		REQUIRE(s_px_near(s_probe(px[mode], w, h, -60), 0, 0, 0, 0, 0));       // 90 out: clear.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -100), 255, 0, 0, 255, 3));  // 50 out: outline.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -80), 0, 0, 0, 0, 0));       // 70 out: clear.
 
 		// Glow: blue at the center, magenta fading outward, gone past the radius. The falloff
 		// is squared, so at half the glow radius coverage is 25%.
@@ -1070,6 +1157,322 @@ TEST_CASE(test_draw_shape_effects)
 
 	cf_free(a);
 	cf_free(b);
+	test_destroy_app();
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Shapes keep the extent they're given. Rounding cuts corners without growing the shape, an
+// outline is a band inside the edge drawn over the fill, and strokes run inward from the edge.
+// Every scene is symmetric about y = 0, so probes off the x-axis don't care which way readback
+// rows run.
+
+static CF_Pixel s_probe_xy(const CF_Pixel* px, int w, int h, int x_world, int y_world)
+{
+	return px[(h / 2 + y_world) * w + (w / 2 + x_world)];
+}
+
+static bool s_covered(CF_Pixel p) { if (p.colors.a != 255) printf("alpha %d, expected covered\n", p.colors.a); return p.colors.a == 255; }
+static bool s_clear(CF_Pixel p) { if (p.colors.a != 0) printf("alpha %d, expected clear\n", p.colors.a); return p.colors.a == 0; }
+
+static float s_extent_rounding;
+static float s_extent_outline;
+
+// Box [-280,-200]x[-60,60]; triangle (-120,+-70) to (0,0); regular hexagon of radius 70 at (150,0).
+static const CF_V2 s_extent_hex[6] = {
+	{ 220, 0 }, { 185, 60.62f }, { 115, 60.62f }, { 80, 0 }, { 115, -60.62f }, { 185, -60.62f },
+};
+
+static void s_scene_extent()
+{
+	cf_draw_push_color(cf_make_color_rgb_f(0, 1, 0));
+	if (s_extent_outline > 0) cf_draw_push_outline(cf_make_color_rgb_f(1, 0, 0), s_extent_outline);
+	cf_draw_box_fill(cf_make_aabb(cf_v2(-280, -60), cf_v2(-200, 60)), s_extent_rounding);
+	cf_draw_tri_fill(cf_v2(-120, -70), cf_v2(-120, 70), cf_v2(0, 0), s_extent_rounding);
+	cf_draw_polygon_fill(s_extent_hex, 6, s_extent_rounding);
+	if (s_extent_outline > 0) cf_draw_pop_outline();
+	cf_draw_pop_color();
+}
+
+TEST_CASE(test_draw_shape_extent)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* px[2] = { a, b };
+	const float roundings[3] = { 0, 12, 25 };
+	const float outlines[2] = { 0, 6 };
+	for (int ri = 0; ri < 3; ++ri) for (int oi = 0; oi < 2; ++oi) {
+		s_extent_rounding = roundings[ri];
+		s_extent_outline = outlines[oi];
+		for (int mode = 0; mode <= 1; ++mode) {
+			REQUIRE(s_readback(s_scene_extent, mode, w, h, px[mode]));
+			const CF_Pixel* p = px[mode];
+
+			// Box: just inside each edge is covered, just outside is not.
+			REQUIRE(s_covered(s_probe_xy(p, w, h, -278, 0)));
+			REQUIRE(s_covered(s_probe_xy(p, w, h, -203, 0)));
+			REQUIRE(s_covered(s_probe_xy(p, w, h, -240, 57)));
+			REQUIRE(s_clear(s_probe_xy(p, w, h, -283, 0)));
+			REQUIRE(s_clear(s_probe_xy(p, w, h, -198, 0)));
+			REQUIRE(s_clear(s_probe_xy(p, w, h, -240, 62)));
+			// Triangle: the vertical edge at x = -120.
+			REQUIRE(s_covered(s_probe_xy(p, w, h, -118, 0)));
+			REQUIRE(s_clear(s_probe_xy(p, w, h, -123, 0)));
+			// Hexagon: the flat top edge at y = 60.62.
+			REQUIRE(s_covered(s_probe_xy(p, w, h, 150, 58)));
+			REQUIRE(s_clear(s_probe_xy(p, w, h, 150, 63)));
+			REQUIRE(s_clear(s_probe_xy(p, w, h, 77, 0)));
+
+			// Corners: sharp without rounding, cut with it.
+			CF_Pixel box_corner = s_probe_xy(p, w, h, -279, 58);
+			CF_Pixel tri_corner = s_probe_xy(p, w, h, -119, 66);
+			CF_Pixel hex_corner = s_probe_xy(p, w, h, 80, 0);
+			if (s_extent_rounding == 0) {
+				REQUIRE(s_covered(box_corner));
+				REQUIRE(s_covered(tri_corner));
+				REQUIRE(s_covered(hex_corner));
+			} else {
+				REQUIRE(s_clear(box_corner));
+				REQUIRE(s_clear(tri_corner));
+				// A 120-degree corner only loses r * (1 / sin(60) - 1) along its bisector.
+				if (s_extent_rounding >= 25) REQUIRE(s_clear(hex_corner));
+			}
+
+			// Outline: red in the band just inside each edge, green fill deeper in.
+			if (s_extent_outline > 0) {
+				REQUIRE(s_px_near(s_probe_xy(p, w, h, -277, 0), 255, 0, 0, 255, 3));
+				REQUIRE(s_px_near(s_probe_xy(p, w, h, -117, 0), 255, 0, 0, 255, 3));
+				REQUIRE(s_px_near(s_probe_xy(p, w, h, 150, 57), 255, 0, 0, 255, 3));
+			}
+			REQUIRE(s_px_near(s_probe_xy(p, w, h, -260, 0), 0, 255, 0, 255, 3));
+			REQUIRE(s_px_near(s_probe_xy(p, w, h, -100, 0), 0, 255, 0, 255, 3));
+			REQUIRE(s_px_near(s_probe_xy(p, w, h, 150, 40), 0, 255, 0, 255, 3));
+		}
+		REQUIRE(s_diff_ok(a, b, w * h, "shape-extent tiled-vs-mesh"));
+	}
+
+	cf_free(a);
+	cf_free(b);
+	test_destroy_app();
+	return true;
+}
+
+// A translucent outline layers over the fill like a CSS border over its background.
+static void s_scene_outline_layering()
+{
+	cf_draw_push_color(cf_make_color_rgb_f(0, 0, 1));
+	cf_draw_push_outline(cf_make_color_rgba_f(1, 0, 0, 0.5f), 10.0f);
+	cf_draw_box_fill(cf_make_aabb(cf_v2(-100, -50), cf_v2(100, 50)), 0);
+	cf_draw_pop_outline();
+	cf_draw_pop_color();
+}
+
+TEST_CASE(test_draw_outline_layering)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* px[2] = { a, b };
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_outline_layering, mode, w, h, px[mode]));
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, -95), 128, 0, 128, 255, 3)); // Half red over blue.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 95), 128, 0, 128, 255, 3));
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 0), 0, 0, 255, 255, 3));    // Fill.
+		REQUIRE(s_clear(s_probe(px[mode], w, h, -103)));                       // Outside: nothing grew.
+	}
+	REQUIRE(s_diff_ok(a, b, w * h, "outline-layering tiled-vs-mesh"));
+
+	cf_free(a);
+	cf_free(b);
+	test_destroy_app();
+	return true;
+}
+
+// Strokes run inward from the edge: thickness 6 fills [edge - 6, edge] and the rest stays hollow.
+static void s_scene_strokes_inside()
+{
+	cf_draw_push_color(cf_make_color_rgb_f(1, 1, 1));
+	cf_draw_box(cf_make_aabb(cf_v2(-280, -60), cf_v2(-200, 60)), 6.0f, 0);
+	cf_draw_box(cf_make_aabb(cf_v2(-180, -60), cf_v2(-100, 60)), 6.0f, 15.0f);
+	cf_draw_circle2(cf_v2(0, 0), 60, 6.0f);
+	cf_draw_tri(cf_v2(100, -70), cf_v2(100, 70), cf_v2(220, 0), 6.0f, 0);
+	cf_draw_pop_color();
+}
+
+TEST_CASE(test_draw_strokes_inside)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* px[2] = { a, b };
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_strokes_inside, mode, w, h, px[mode]));
+		const CF_Pixel* p = px[mode];
+		// Sharp box: the line's outer edge is the box's edge, the corner stays square.
+		REQUIRE(s_clear(s_probe_xy(p, w, h, -283, 0)));
+		REQUIRE(s_covered(s_probe_xy(p, w, h, -279, 0)));
+		REQUIRE(s_covered(s_probe_xy(p, w, h, -276, 0)));
+		REQUIRE(s_clear(s_probe_xy(p, w, h, -270, 0)));
+		REQUIRE(s_clear(s_probe_xy(p, w, h, -198, 0)));
+		REQUIRE(s_covered(s_probe_xy(p, w, h, -202, 0)));
+		REQUIRE(s_covered(s_probe_xy(p, w, h, -279, 58)));
+		REQUIRE(s_clear(s_probe_xy(p, w, h, -240, 63)));
+		// Rounded box: same extent, the corner is cut.
+		REQUIRE(s_clear(s_probe_xy(p, w, h, -183, 0)));
+		REQUIRE(s_covered(s_probe_xy(p, w, h, -178, 0)));
+		REQUIRE(s_clear(s_probe_xy(p, w, h, -179, 58)));
+		// Circle: the ring runs 54..60 from the center.
+		REQUIRE(s_clear(s_probe_xy(p, w, h, -63, 0)));
+		REQUIRE(s_covered(s_probe_xy(p, w, h, -58, 0)));
+		REQUIRE(s_clear(s_probe_xy(p, w, h, -50, 0)));
+		REQUIRE(s_covered(s_probe_xy(p, w, h, 57, 0)));
+		REQUIRE(s_clear(s_probe_xy(p, w, h, 61, 0)));
+		// Triangle: the vertical edge at x = 100.
+		REQUIRE(s_clear(s_probe_xy(p, w, h, 97, 0)));
+		REQUIRE(s_covered(s_probe_xy(p, w, h, 102, 0)));
+		REQUIRE(s_clear(s_probe_xy(p, w, h, 110, 0)));
+	}
+	REQUIRE(s_diff_ok(a, b, w * h, "strokes-inside tiled-vs-mesh"));
+
+	cf_free(a);
+	cf_free(b);
+	test_destroy_app();
+	return true;
+}
+
+// Rounding clamps to what the shape can hold: a huge value turns a square into its inscribed
+// circle and a triangle into its incircle, and nothing ever grows.
+static void s_scene_rounding_clamp()
+{
+	cf_draw_push_color(cf_make_color_rgb_f(1, 1, 1));
+	cf_draw_box_fill(cf_make_aabb(cf_v2(-250, -50), cf_v2(-150, 50)), 1000.0f);
+	cf_draw_tri_fill(cf_v2(-60, -60), cf_v2(-60, 60), cf_v2(60, 0), 1000.0f);
+	CF_V2 sq[4] = { cf_v2(150, -50), cf_v2(250, -50), cf_v2(250, 50), cf_v2(150, 50) };
+	cf_draw_polygon_fill(sq, 4, 1000.0f);
+	cf_draw_pop_color();
+}
+
+TEST_CASE(test_draw_rounding_clamp)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* px[2] = { a, b };
+	// The triangle's incircle: center (r - 60, 0) with r = 2 * area / perimeter.
+	float tri_r = 2.0f * 7200.0f / (120.0f + 2.0f * sqrtf(120.0f * 120.0f + 60.0f * 60.0f));
+	int tri_right = (int)(2.0f * tri_r - 60.0f);
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_rounding_clamp, mode, w, h, px[mode]));
+		const CF_Pixel* p = px[mode];
+		for (int s = 0; s < 2; ++s) {
+			int cx = s == 0 ? -200 : 200;
+			// Edge midpoints of the square stay put...
+			REQUIRE(s_covered(s_probe_xy(p, w, h, cx - 48, 0)));
+			REQUIRE(s_covered(s_probe_xy(p, w, h, cx + 47, 0)));
+			REQUIRE(s_covered(s_probe_xy(p, w, h, cx, 47)));
+			REQUIRE(s_clear(s_probe_xy(p, w, h, cx - 53, 0)));
+			REQUIRE(s_clear(s_probe_xy(p, w, h, cx + 52, 0)));
+			// ...while the diagonal follows the radius-50 circle, not the corner.
+			REQUIRE(s_covered(s_probe_xy(p, w, h, cx + 32, 32)));
+			REQUIRE(s_clear(s_probe_xy(p, w, h, cx + 37, 37)));
+			REQUIRE(s_clear(s_probe_xy(p, w, h, cx - 48, 47)));
+		}
+		// Triangle: its incircle.
+		REQUIRE(s_covered(s_probe_xy(p, w, h, -58, 0)));
+		REQUIRE(s_clear(s_probe_xy(p, w, h, -63, 0)));
+		REQUIRE(s_covered(s_probe_xy(p, w, h, tri_right - 2, 0)));
+		REQUIRE(s_clear(s_probe_xy(p, w, h, tri_right + 2, 0)));
+		REQUIRE(s_clear(s_probe_xy(p, w, h, -58, 56)));
+	}
+	REQUIRE(s_diff_ok(a, b, w * h, "rounding-clamp tiled-vs-mesh"));
+
+	cf_free(a);
+	cf_free(b);
+	test_destroy_app();
+	return true;
+}
+
+// Concave polygons round their outward corners and keep the inward-pointing (reflex) one sharp.
+static void s_scene_concave_rounding()
+{
+	CF_V2 notch[5] = { cf_v2(-50, -60), cf_v2(50, -60), cf_v2(50, 60), cf_v2(-50, 60), cf_v2(-10, 0) };
+	cf_draw_push_color(cf_make_color_rgb_f(1, 1, 1));
+	cf_draw_polygon_fill(notch, 5, 10.0f);
+	cf_draw_pop_color();
+}
+
+TEST_CASE(test_draw_concave_rounding)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* px[2] = { a, b };
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_concave_rounding, mode, w, h, px[mode]));
+		const CF_Pixel* p = px[mode];
+		REQUIRE(s_covered(s_probe_xy(p, w, h, 47, 0)));   // Extent kept.
+		REQUIRE(s_clear(s_probe_xy(p, w, h, 52, 0)));
+		REQUIRE(s_covered(s_probe_xy(p, w, h, 0, 57)));
+		REQUIRE(s_clear(s_probe_xy(p, w, h, 0, 62)));
+		REQUIRE(s_clear(s_probe_xy(p, w, h, 49, 58)));   // Outward corner rounded.
+		REQUIRE(s_clear(s_probe_xy(p, w, h, -14, 0)));   // Reflex corner sharp: the notch stays open...
+		REQUIRE(s_covered(s_probe_xy(p, w, h, -7, 0)));  // ...right up to the vertex.
+	}
+	REQUIRE(s_diff_ok(a, b, w * h, "concave-rounding tiled-vs-mesh"));
+
+	cf_free(a);
+	cf_free(b);
+	test_destroy_app();
+	return true;
+}
+
+// The physics debug draw shows a rounded polygon as the collider really is: the core grown by
+// Box2D's radius, rounded by the same radius.
+static b2WorldId s_rounded_world;
+
+static void s_scene_physics_rounded()
+{
+	cf_physics_draw(s_rounded_world, 1.0f);
+}
+
+TEST_CASE(test_draw_physics_rounded_polygon)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	b2WorldDef def = b2DefaultWorldDef();
+	s_rounded_world = b2CreateWorld(&def);
+	b2BodyDef body_def = b2DefaultBodyDef();
+	b2BodyId body = b2CreateBody(s_rounded_world, &body_def);
+	b2ShapeDef shape_def = b2DefaultShapeDef();
+	b2Polygon box = b2MakeRoundedBox(80.0f, 40.0f, 20.0f); // Collider spans +-100 x +-60.
+	b2CreatePolygonShape(body, &shape_def, &box);
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	REQUIRE(s_readback(s_scene_physics_rounded, 0, w, h, a));
+	REQUIRE(s_covered(s_probe_xy(a, w, h, -98, 0)));
+	REQUIRE(s_covered(s_probe_xy(a, w, h, 97, 0)));
+	REQUIRE(s_covered(s_probe_xy(a, w, h, 0, 57)));
+	REQUIRE(s_clear(s_probe_xy(a, w, h, -103, 0)));
+	REQUIRE(s_clear(s_probe_xy(a, w, h, 102, 0)));
+	REQUIRE(s_clear(s_probe_xy(a, w, h, 0, 62)));
+	// Corner: the collider's arc is centered on the core corner (80, 40) with radius 20.
+	REQUIRE(s_covered(s_probe_xy(a, w, h, 92, 52)));
+	REQUIRE(s_clear(s_probe_xy(a, w, h, 96, 56)));
+
+	b2DestroyWorld(s_rounded_world);
+	cf_free(a);
 	test_destroy_app();
 	return true;
 }
@@ -1108,7 +1511,7 @@ TEST_CASE(test_draw_dashed_strokes)
 		REQUIRE(s_px_near(s_probe(px[mode], w, h, -175), 0, 0, 0, 0, 0));     // Line: first gap.
 		REQUIRE(s_px_near(s_probe(px[mode], w, h, -125), 255, 0, 0, 255, 3)); // Line: second dash.
 		REQUIRE(s_px_near(s_probe(px[mode], w, h, -75), 0, 0, 0, 0, 0));      // Line: second gap.
-		REQUIRE(s_px_near(s_probe(px[mode], w, h, 250), 255, 0, 0, 255, 3));  // Ring: dash at right crossing.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 245), 255, 0, 0, 255, 3));  // Ring: dash at right crossing (the stroke runs 90..100 from center).
 		REQUIRE(s_px_near(s_probe(px[mode], w, h, 50), 0, 0, 0, 0, 0));       // Ring: gap at left crossing.
 	}
 	REQUIRE(s_diff_ok(a, b, w * h, "dashed-strokes tiled-vs-mesh"));
@@ -1199,8 +1602,7 @@ TEST_CASE(test_draw_arrow_no_overdraw)
 
 // -------------------------------------------------------------------------------------------------
 // User-registered custom SDF shapes: registry dispatch, exact match against the builtin
-// circle SDF, stroked variant, and both renderer paths (including SDF-based tile culling
-// which trusts the user's distance function).
+// circle SDF, stroked variant, and both renderer paths.
 
 static const char* s_circle_sdf_src = R"(
 // params: a = center, b.x = radius
@@ -1297,7 +1699,7 @@ TEST_CASE(test_draw_custom_shapes)
 
 // -------------------------------------------------------------------------------------------------
 // Deeper custom-shape coverage: attributes plumbing into ShapeParams, camera transforms,
-// opaque-cover occlusion through a user SDF, failed-registration recovery, and
+// occlusion by an opaque user shape, failed-registration recovery, and
 // invalid-handle draws.
 
 static const char* s_attr_circle_sdf_src = R"(
@@ -1357,8 +1759,8 @@ static void s_scene_custom_occlusion()
 		cf_draw_circle_fill2(cf_v2(-140.0f + 40.0f * i, (i & 1) ? 40.0f : -40.0f), 50);
 		cf_draw_pop_color();
 	}
-	// ...hidden by a big opaque custom shape (covers well over 64 tiles: the tiled
-	// path's opaque-cover cull must engage through the user sdf without artifacts)...
+	// ...hidden by a big opaque custom shape (well over 64 tiles; custom fields never claim
+	// opaque cover, so the tiled path must composite the clutter beneath it away)...
 	float params[3] = { 0, 0, 200 };
 	cf_draw_push_color(cf_make_color_rgba_f(0.15f, 0.15f, 0.3f, 1));
 	cf_draw_custom_shape_fill(s_plain_circle_shape, cf_make_aabb(cf_v2(-200, -200), cf_v2(200, 200)), params, 3);
@@ -1419,8 +1821,8 @@ TEST_CASE(test_draw_custom_shapes_advanced)
 	REQUIRE(s_readback(s_scene_xform_custom, 1, w, h, a));
 	REQUIRE(s_diff_ok(a, b, w * h, "xform custom tiled-vs-mesh"));
 
-	// Opaque-cover occlusion driven by a user sdf: both paths must composite
-	// identically, and the covered interior must be exactly the opaque color.
+	// Occlusion by an opaque custom shape: both paths must composite identically, and
+	// the covered interior must be exactly the opaque color.
 	for (int mode = 0; mode <= 1; ++mode) {
 		REQUIRE(s_readback(s_scene_custom_occlusion, mode, w, h, px[mode]));
 		REQUIRE(s_px_near(s_probe(px[mode], w, h, -150), 38, 38, 77, 255, 3)); // Only the opaque cover: (0.15, 0.15, 0.3).
@@ -1431,6 +1833,242 @@ TEST_CASE(test_draw_custom_shapes_advanced)
 	REQUIRE(s_readback(s_scene_invalid_handles, 0, w, h, a));
 	REQUIRE(s_px_near(s_probe(a, w, h, 0), 0, 0, 0, 0, 0));
 	REQUIRE(s_px_near(s_probe(a, w, h, -50), 0, 0, 0, 0, 0));
+
+	cf_free(a);
+	cf_free(b);
+	test_destroy_app();
+	return true;
+}
+
+static const char* s_dedupe_circle_sdf_src = R"(
+// dedupe test: a = center, b.x = radius
+float sdf(vec2 p, ShapeParams s)
+{
+	return length(p - s.a) - s.b.x;
+}
+)";
+
+static const char* s_dedupe_box_sdf_src = R"(
+// dedupe test: a = center, b = half extents
+float sdf(vec2 p, ShapeParams s)
+{
+	vec2 d = abs(p - s.a) - s.b;
+	return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+}
+)";
+
+static CF_CustomShape s_dedupe_shape;
+
+static void s_scene_dedupe_shape()
+{
+	float params[3] = { 0, 0, 40 };
+	cf_draw_push_color(cf_make_color_rgba_f(1, 0, 0, 1));
+	cf_draw_custom_shape_fill(s_dedupe_shape, cf_make_aabb(cf_v2(-40, -40), cf_v2(40, 40)), params, 3);
+	cf_draw_pop_color();
+}
+
+TEST_CASE(test_draw_custom_shape_dedupe)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	CF_CustomShape first = cf_make_custom_shape(s_dedupe_circle_sdf_src);
+	REQUIRE(first.id);
+	CF_Shader draw_shader = app->draw_shader;
+
+	// The same source again is the same shape, with no pipeline rebuild.
+	CF_CustomShape again = cf_make_custom_shape(s_dedupe_circle_sdf_src);
+	REQUIRE(again.id == first.id);
+	REQUIRE(app->draw_shader.id == draw_shader.id);
+
+	CF_CustomShape box = cf_make_custom_shape(s_dedupe_box_sdf_src);
+	REQUIRE(box.id);
+	REQUIRE(box.id != first.id);
+
+	s_dedupe_shape = again;
+	int w = 640, h = 480;
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_dedupe_shape, mode, w, h, px));
+		REQUIRE(s_px_near(s_probe(px, w, h, 0), 255, 0, 0, 255, 3));  // Circle interior.
+		REQUIRE(s_px_near(s_probe(px, w, h, 60), 0, 0, 0, 0, 0));     // Outside the circle.
+	}
+	cf_free(px);
+	test_destroy_app();
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Custom fields that aren't true distances. A rippled circle overestimates distance by
+// close to 3x, which once made the tiled path's SDF tile cull drop pixels and its
+// opaque-cover cull erase the background. A scaled-field ellipse has a slope near 1/100,
+// which once smeared its AA edge across ~100 pixels.
+
+static const char* s_ripple_sdf_src = R"(
+// params: a = center, b.x = radius, b.y = ripple amplitude, c.x = lobe count
+float sdf(vec2 p, ShapeParams s)
+{
+	vec2 q = p - s.a;
+	return length(q) - s.b.x - s.b.y * cos(s.c.x * atan(q.y, q.x));
+}
+)";
+
+static const char* s_ellipse_sdf_src = R"(
+// params: a = center, b = radii
+float sdf(vec2 p, ShapeParams s)
+{
+	return length((p - s.a) / s.b) - 1.0;
+}
+)";
+
+static CF_CustomShape s_ripple_shape;
+static CF_CustomShape s_ellipse_shape;
+
+// Left ripple: r 110, amp 45, 8 lobes. Right: a group of a smaller ripple unioned with a
+// circle. Both are symmetric about y = 0, so readback row order doesn't matter.
+static float s_ripple_field(float x, float y, float cx, float r, float amp, float k)
+{
+	float qx = x - cx;
+	return sqrtf(qx * qx + y * y) - r - amp * cosf(k * atan2f(y, qx));
+}
+
+static float s_ripple_scene_field(float x, float y)
+{
+	float left = s_ripple_field(x, y, -150, 110, 45, 8);
+	float group = cf_min(s_ripple_field(x, y, 160, 80, 30, 6), sqrtf((x - 250) * (x - 250) + y * y) - 40);
+	return cf_min(left, group);
+}
+
+static void s_scene_ripple()
+{
+	cf_draw_push_color(cf_make_color_rgba_f(0, 0, 1, 1));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-320, -240), cf_v2(320, 240)), 0);
+	cf_draw_pop_color();
+	cf_draw_push_color(cf_make_color_rgba_f(1, 0, 0, 1));
+	float left[5] = { -150, 0, 110, 45, 8 };
+	cf_draw_custom_shape_fill(s_ripple_shape, cf_make_aabb(cf_v2(-305, -155), cf_v2(5, 155)), left, 5);
+	cf_draw_shape_group_begin();
+	float right[5] = { 160, 0, 80, 30, 6 };
+	cf_draw_custom_shape_fill(s_ripple_shape, cf_make_aabb(cf_v2(50, -110), cf_v2(270, 110)), right, 5);
+	cf_draw_circle_fill2(cf_v2(250, 0), 40);
+	cf_draw_shape_group_end();
+	cf_draw_pop_color();
+}
+
+static const char* s_scaled_circle_sdf_src = R"(
+// params: a = center, b.x = radius, b.y = field scale
+float sdf(vec2 p, ShapeParams s)
+{
+	return (length(p - s.a) - s.b.x) * s.b.y;
+}
+)";
+
+static CF_CustomShape s_scaled_circle_shape;
+static float s_smooth_group_scale;
+
+// A smooth union of a custom circle field and a built-in circle. The smoothing is in world
+// units whatever the field's scale, so a field scaled by 0.01 must render exactly like the
+// unscaled one -- and stay inside the group's k/4 bounds padding.
+static void s_scene_smooth_group()
+{
+	cf_draw_push_color(cf_make_color_rgba_f(1, 1, 1, 1));
+	cf_draw_shape_group_begin();
+	float params[4] = { -60, 0, 50, s_smooth_group_scale };
+	cf_draw_custom_shape_fill(s_scaled_circle_shape, cf_make_aabb(cf_v2(-110, -50), cf_v2(-10, 50)), params, 4);
+	cf_draw_shape_group_op(CF_SHAPE_OP_UNION, 60);
+	cf_draw_circle_fill2(cf_v2(60, 0), 50);
+	cf_draw_shape_group_end();
+	cf_draw_pop_color();
+}
+
+static void s_scene_ellipse()
+{
+	cf_draw_push_color(cf_make_color_rgba_f(1, 1, 1, 1));
+	float params[4] = { -150, 0, 120, 60 };
+	cf_draw_custom_shape_fill(s_ellipse_shape, cf_make_aabb(cf_v2(-270, -60), cf_v2(-30, 60)), params, 4);
+	cf_draw_circle_fill2(cf_v2(150, 0), 60);
+	cf_draw_pop_color();
+}
+
+// AA transition width in pixels along a run of alpha samples: a linear ramp of width w
+// sums to about w / 2 here.
+static float s_edge_width(const CF_Pixel* px, int start, int stride, int count)
+{
+	float sum = 0;
+	for (int i = 0; i < count; ++i) {
+		float c = px[start + i * stride].colors.a / 255.0f;
+		sum += 2.0f * cf_min(c, 1.0f - c);
+	}
+	return sum;
+}
+
+TEST_CASE(test_draw_custom_shape_warped_fields)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	s_ripple_shape = cf_make_custom_shape(s_ripple_sdf_src);
+	REQUIRE(s_ripple_shape.id);
+	s_ellipse_shape = cf_make_custom_shape(s_ellipse_sdf_src);
+	REQUIRE(s_ellipse_shape.id);
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* px[2] = { a, b };
+
+	// Every pixel more than 2 px (first-order, from the CPU field's own slope) from the zero
+	// crossing must be shape inside and untouched background outside, in both paths.
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_ripple, mode, w, h, px[mode]));
+		int missing = 0, erased = 0;
+		for (int iy = 0; iy < h; ++iy) {
+			for (int ix = 0; ix < w; ++ix) {
+				float x = ix + 0.5f - w * 0.5f;
+				float y = h * 0.5f - (iy + 0.5f);
+				float f = s_ripple_scene_field(x, y);
+				float gx = (s_ripple_scene_field(x + 0.5f, y) - s_ripple_scene_field(x - 0.5f, y));
+				float gy = (s_ripple_scene_field(x, y + 0.5f) - s_ripple_scene_field(x, y - 0.5f));
+				float d = f / cf_max(sqrtf(gx * gx + gy * gy), 1.0e-6f);
+				CF_Pixel p = px[mode][iy * w + ix];
+				if (d < -2.0f && !(p.colors.r >= 250 && p.colors.b <= 5 && p.colors.a == 255)) ++missing;
+				if (d > 2.0f && !(p.colors.r <= 2 && p.colors.b >= 253 && p.colors.a == 255)) ++erased;
+			}
+		}
+		if (missing || erased) printf("ripple mode %d: %d inside pixels missing, %d background pixels erased\n", mode, missing, erased);
+		REQUIRE(missing == 0);
+		REQUIRE(erased == 0);
+	}
+	REQUIRE(s_diff_ok(a, b, w * h, "ripple tiled-vs-mesh"));
+
+	// The ellipse's AA edge must be as wide as a true circle's, along both axes, in both
+	// paths. Row/column through each center; the windows straddle one edge each.
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_ellipse, mode, w, h, px[mode]));
+		const CF_Pixel* p = px[mode];
+		int row = (h / 2) * w;
+		float circle_x = s_edge_width(p, row + w / 2 + 150 + 50, 1, 20);         // x = 200..220 straddles r = 60.
+		float circle_y = s_edge_width(p, (h / 2 - 70) * w + w / 2 + 150, w, 20); // y = 70..50 straddles r = 60.
+		float ellipse_x = s_edge_width(p, row + w / 2 - 150 + 110, 1, 20);       // x = -40..-20 straddles a = 120.
+		float ellipse_y = s_edge_width(p, (h / 2 - 70) * w + w / 2 - 150, w, 20); // y = 70..50 straddles b = 60.
+		printf("edge widths mode %d: circle %.2f/%.2f, ellipse %.2f/%.2f\n", mode, circle_x, circle_y, ellipse_x, ellipse_y);
+		REQUIRE(circle_x > 0.1f && circle_y > 0.1f);
+		REQUIRE(ellipse_x > circle_x * 0.6f && ellipse_x < circle_x * 1.6f);
+		REQUIRE(ellipse_y > circle_y * 0.6f && ellipse_y < circle_y * 1.6f);
+	}
+	REQUIRE(s_diff_ok(a, b, w * h, "ellipse tiled-vs-mesh"));
+
+	// Smooth group over a scaled field: matches the unscaled reference in both paths.
+	s_scaled_circle_shape = cf_make_custom_shape(s_scaled_circle_sdf_src);
+	REQUIRE(s_scaled_circle_shape.id);
+	CF_Pixel* ref = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	s_smooth_group_scale = 1.0f;
+	REQUIRE(s_readback(s_scene_smooth_group, 0, w, h, ref));
+	REQUIRE(s_px_near(s_probe(ref, w, h, 0), 255, 255, 255, 255, 3)); // The blend bridges the gap.
+	s_smooth_group_scale = 0.01f;
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_smooth_group, mode, w, h, px[mode]));
+		REQUIRE(s_diff_ok(ref, px[mode], w * h, mode ? "scaled smooth group (tiled)" : "scaled smooth group (instanced)"));
+	}
+	cf_free(ref);
 
 	cf_free(a);
 	cf_free(b);
@@ -1573,9 +2211,10 @@ TEST_CASE(test_draw_shape_groups)
 		// Crescent: body away from the bite is filled, inside the bite is carved out.
 		REQUIRE(s_px_near(s_probe(px[mode], w, h, -150), 255, 0, 0, 255, 3));
 		REQUIRE(s_px_near(s_probe(px[mode], w, h, -200), 0, 0, 0, 0, 0));
-		// Stroked composite: on the body's boundary (far from the bite) the outline lands;
-		// the interior stays hollow.
-		REQUIRE(s_px_near(s_probe(px[mode], w, h, 20), 0, 255, 0, 255, 3));
+		// Stroked composite: just inside the body's boundary (far from the bite) the stroke
+		// lands; the interior stays hollow.
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 17), 0, 255, 0, 255, 3));
+		REQUIRE(s_px_near(s_probe(px[mode], w, h, 22), 0, 0, 0, 0, 0));
 		REQUIRE(s_px_near(s_probe(px[mode], w, h, -10), 0, 0, 0, 0, 0));
 		// Smooth union: the midpoint between the circles is bridged by k=40 (a hard union
 		// leaves it empty -- both circles are 5 units away).
@@ -2452,15 +3091,24 @@ TEST_SUITE(test_draw_tiled)
 	RUN_TEST_CASE_IF(test_draw_render_layers_partial);
 	RUN_TEST_CASE_IF(test_draw_layers_cross_layer_batch);
 	RUN_TEST_CASE_IF(test_draw_list_replay_layers);
+	RUN_TEST_CASE_IF(test_draw_list_ambient_render_state);
 	RUN_TEST_CASE_IF(test_draw_layers_frame_end_prune);
 	RUN_TEST_CASE_IF(test_draw_polyline_segments);
 	RUN_TEST_CASE_IF(test_draw_degenerate_quad_finite);
 	RUN_TEST_CASE_IF(test_draw_shape_effects);
+	RUN_TEST_CASE_IF(test_draw_shape_extent);
+	RUN_TEST_CASE_IF(test_draw_outline_layering);
+	RUN_TEST_CASE_IF(test_draw_strokes_inside);
+	RUN_TEST_CASE_IF(test_draw_rounding_clamp);
+	RUN_TEST_CASE_IF(test_draw_concave_rounding);
+	RUN_TEST_CASE_IF(test_draw_physics_rounded_polygon);
 	RUN_TEST_CASE_IF(test_draw_dashed_strokes);
 	RUN_TEST_CASE_IF(test_draw_dashed_polyline_flow);
 	RUN_TEST_CASE_IF(test_draw_arrow_no_overdraw);
 	RUN_TEST_CASE_IF(test_draw_custom_shapes);
 	RUN_TEST_CASE_IF(test_draw_custom_shapes_advanced);
+	RUN_TEST_CASE_IF(test_draw_custom_shape_dedupe);
+	RUN_TEST_CASE_IF(test_draw_custom_shape_warped_fields);
 	RUN_TEST_CASE_IF(test_draw_shape_groups);
 	RUN_TEST_CASE_IF(test_draw_tiled_budget_fallback);
 	RUN_TEST_CASE_IF(test_draw_text_curves);

@@ -862,8 +862,8 @@ CF_Material cf_make_material()
 void cf_destroy_material(CF_Material material_handle)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
-	cf_arena_reset(&material->uniform_arena);
-	cf_arena_reset(&material->block_arena);
+	cf_destroy_arena(&material->uniform_arena);
+	cf_destroy_arena(&material->block_arena);
 	material->~CF_MaterialInternal();
 	CF_FREE(material);
 }
@@ -1142,6 +1142,16 @@ bool cf_compute_shader_reload(CF_ComputeShader* shader)
 
 CF_DISPATCH_SHIM(bool, texture_supports_format, (CF_PixelFormat format, CF_TextureUsageBits usage), format, usage)
 CF_DISPATCH_SHIM(bool, query_pixel_format, (CF_PixelFormat format, CF_PixelFormatOp op), format, op)
+CF_DISPATCH_SHIM(int, query_max_canvas_targets, (void))
+
+bool cf_canvas_target_count_supported(int target_count)
+{
+	int max_targets = cf_query_max_canvas_targets();
+	if (target_count <= max_targets) return true;
+	fprintf(stderr, "cf_make_canvas: %d color targets requested, but this device supports %d (see cf_query_max_canvas_targets).\n", target_count, max_targets);
+	CF_ASSERT(!"Canvas target_count exceeds cf_query_max_canvas_targets.");
+	return false;
+}
 
 CF_DISPATCH_SHIM(CF_Texture, make_texture, (CF_TextureParams params), params)
 CF_DISPATCH_SHIM_VOID(destroy_texture, (CF_Texture texture_handle), texture_handle)
@@ -1236,11 +1246,28 @@ CF_Texture cf_make_texture_from_dds(const char* virtual_path)
 	return texture;
 }
 
+bool cf_canvas_copy_depth_check(CF_CanvasDepthDesc dst, CF_CanvasDepthDesc src, bool same_canvas)
+{
+	const char* error = NULL;
+	if (!dst.valid || !src.valid) error = "a canvas handle is invalid";
+	else if (same_canvas) error = "source and destination are the same canvas";
+	else if (!src.has_depth) error = "the source canvas has no depth target";
+	else if (!dst.has_depth) error = "the destination canvas has no depth target";
+	else if (src.w != dst.w || src.h != dst.h) error = "the canvases differ in size";
+	else if (src.format != dst.format) error = "the canvases' depth formats differ";
+	else if (src.sample_count > 1 || dst.sample_count > 1) error = "a canvas is multisampled";
+	if (!error) return true;
+	fprintf(stderr, "cf_canvas_copy_depth: %s (dst %dx%d, src %dx%d); nothing was copied.\n", error, dst.w, dst.h, src.w, src.h);
+	CF_ASSERT(!"cf_canvas_copy_depth misuse, see stderr.");
+	return false;
+}
+
 CF_DISPATCH_SHIM(CF_Canvas, make_canvas, (CF_CanvasParams params), params)
 CF_DISPATCH_SHIM_VOID(destroy_canvas, (CF_Canvas canvas_handle), canvas_handle)
 CF_DISPATCH_SHIM(CF_Texture, canvas_get_target, (CF_Canvas canvas_handle), canvas_handle)
 CF_DISPATCH_SHIM(CF_Texture, canvas_get_target2, (CF_Canvas canvas_handle, int index), canvas_handle, index)
 CF_DISPATCH_SHIM(CF_Texture, canvas_get_depth_stencil_target, (CF_Canvas canvas_handle), canvas_handle)
+CF_DISPATCH_SHIM_VOID(canvas_copy_depth, (CF_Canvas dst, CF_Canvas src), dst, src)
 CF_DISPATCH_SHIM_VOID(canvas_get_size, (CF_Canvas canvas_handle, int* w, int* h), canvas_handle, w, h)
 CF_DISPATCH_SHIM_VOID(clear_canvas, (CF_Canvas canvas_handle), canvas_handle)
 CF_DISPATCH_SHIM_VOID(canvas_set_clear_color, (CF_Canvas canvas_handle, CF_Color color), canvas_handle, color)
@@ -1311,9 +1338,11 @@ CF_DISPATCH_SHIM_VOID(set_sampler_override, (void* sampler), sampler)
 CF_DISPATCH_SHIM_VOID(apply_fs_storage_buffers, (CF_StorageBuffer* buffers, int count), buffers, count)
 CF_DISPATCH_SHIM_VOID(apply_vs_storage_buffers, (CF_StorageBuffer* buffers, int count), buffers, count)
 CF_DISPATCH_SHIM_VOID(current_canvas_size, (int* w, int* h), w, h)
+CF_DISPATCH_SHIM(bool, current_canvas_has_depth, (), )
 CF_DISPATCH_SHIM_VOID(push_gpu_label, (const char* name), name)
 CF_DISPATCH_SHIM_VOID(pop_gpu_label, (), )
 CF_DISPATCH_SHIM_VOID(draw_elements_instanced, (int instance_count), instance_count)
 CF_DISPATCH_SHIM_VOID(draw_elements_range, (int first_element, int element_count, int instance_count), first_element, element_count, instance_count)
 CF_DISPATCH_SHIM_VOID(draw_elements_indirect, (CF_StorageBuffer args, int offset, int draw_count), args, offset, draw_count)
 CF_DISPATCH_SHIM_VOID(gpu_sync, (), )
+CF_DISPATCH_SHIM_VOID(gpu_submit, (), )

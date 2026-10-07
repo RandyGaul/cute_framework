@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 		draw_box(V2(0, 0), 10, 10);
 
 		draw_push_color(color_green());
-		draw_box_rounded(make_aabb(V2(0, 0), 50, 50), 1, 3);
+		draw_box(make_aabb(V2(0, 0), 50, 50), 1, 3);
 
 		draw_push_color(color_orange());
 		draw_capsule(V2(0, -20), V2(0, 20), 8, 1);

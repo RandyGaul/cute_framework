@@ -101,9 +101,19 @@ static void s_draw_solid_polygon(b2Transform xf, const b2Vec2* vertices, int cou
 	CF_UNUSED(context);
 	CF_V2 points[B2_MAX_POLYGON_VERTICES];
 	for (int i = 0; i < count; ++i) points[i] = cf_b2_to_v2(b2TransformPoint(xf, vertices[i]));
+	// Box2D's rounded polygon is its core inflated by the radius, while draw rounding keeps the
+	// extent it's given. Push each (CCW) edge out by the radius and meet neighbors at the miter:
+	// rounding that back by the same radius lands exactly on the collider.
+	CF_V2 outer[B2_MAX_POLYGON_VERTICES];
+	for (int i = 0; i < count; ++i) {
+		CF_V2 p = points[i];
+		CF_V2 n0 = cf_cw90(cf_safe_norm(cf_sub(p, points[(i + count - 1) % count])));
+		CF_V2 n1 = cf_cw90(cf_safe_norm(cf_sub(points[(i + 1) % count], p)));
+		float k = radius / cf_max(1.0f + cf_dot(n0, n1), 1.0e-4f);
+		outer[i] = cf_add(p, cf_mul_v2_f(cf_add(n0, n1), k));
+	}
 	cf_draw_push_color(s_color(color, 1.0f));
-	// Box2D's rounding radius maps straight onto the draw API's chubbiness.
-	cf_draw_polygon_fill(points, count, radius);
+	cf_draw_polygon_fill(outer, count, radius);
 	cf_draw_pop_color();
 }
 

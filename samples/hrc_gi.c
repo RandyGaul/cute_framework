@@ -821,7 +821,7 @@ static void scene_shapes(int channel, float W, float H)
 		if (channel == 1) {
 			float fog = getenv("HRC_TXT_FOG") ? (float)atof(getenv("HRC_TXT_FOG")) : 0.005f;
 			cf_draw_push_color(cf_make_color_rgb_f(fog, fog, fog * 1.15f));
-			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2(-W * 0.5f, -H * 0.5f), cf_v2(W * 0.5f, H * 0.5f)), 0);
+			cf_draw_box_fill(cf_make_aabb(cf_v2(-W * 0.5f, -H * 0.5f), cf_v2(W * 0.5f, H * 0.5f)), 0);
 			cf_draw_pop_color();
 		}
 		// Borders. Solid to light transport, with an albedo so the bounce pass lights
@@ -841,10 +841,10 @@ static void scene_shapes(int channel, float W, float H)
 			                            : cf_make_color_rgb_f(a, a, a);
 			if (channel == 1 || channel == 2) {
 				cf_draw_push_color(c);
-				cf_draw_box_rounded_fill(cf_make_aabb(cf_v2(-W*0.5f, H*0.5f - t), cf_v2(W*0.5f, H*0.5f)), 0);
-				cf_draw_box_rounded_fill(cf_make_aabb(cf_v2(-W*0.5f, -H*0.5f), cf_v2(W*0.5f, -H*0.5f + t)), 0);
-				cf_draw_box_rounded_fill(cf_make_aabb(cf_v2(-W*0.5f, -H*0.5f), cf_v2(-W*0.5f + t, H*0.5f)), 0);
-				cf_draw_box_rounded_fill(cf_make_aabb(cf_v2(W*0.5f - t, -H*0.5f), cf_v2(W*0.5f, H*0.5f)), 0);
+				cf_draw_box_fill(cf_make_aabb(cf_v2(-W*0.5f, H*0.5f - t), cf_v2(W*0.5f, H*0.5f)), 0);
+				cf_draw_box_fill(cf_make_aabb(cf_v2(-W*0.5f, -H*0.5f), cf_v2(W*0.5f, -H*0.5f + t)), 0);
+				cf_draw_box_fill(cf_make_aabb(cf_v2(-W*0.5f, -H*0.5f), cf_v2(-W*0.5f + t, H*0.5f)), 0);
+				cf_draw_box_fill(cf_make_aabb(cf_v2(W*0.5f - t, -H*0.5f), cf_v2(W*0.5f, H*0.5f)), 0);
 				cf_draw_pop_color();
 			}
 		}
@@ -877,9 +877,9 @@ static void scene_shapes(int channel, float W, float H)
 	// pure occluders whose job is a light-tight seal, so they stay SOLID.
 	const float DIFF_ABS = 0.5f;
 	float wall_abs = pinhole ? SOLID : DIFF_ABS;
-	#define WALL(cx, cy, hw, hh) do { 		if (channel == 1) { cf_draw_push_color(cf_make_color_rgb_f(wall_abs, wall_abs, wall_abs)); 			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2((cx)-(hw), (cy)-(hh)), cf_v2((cx)+(hw), (cy)+(hh))), 0); 			cf_draw_pop_color(); } 		else if (channel == 2) { cf_draw_push_color(cf_make_color_rgb_f(WALL_ALB, WALL_ALB, WALL_ALB)); 			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2((cx)-(hw), (cy)-(hh)), cf_v2((cx)+(hw), (cy)+(hh))), 0); 			cf_draw_pop_color(); } } while (0)
-	#define LIGHT(cx, cy, hw, hh, r, g, b) do { 		if (channel > 1) break; 		cf_draw_push_color(emis ? cf_make_color_rgb_f(r, g, b) : cf_make_color_rgb_f(EMIT_ABS, EMIT_ABS, EMIT_ABS)); 		cf_draw_box_rounded_fill(cf_make_aabb(cf_v2((cx)-(hw), (cy)-(hh)), cf_v2((cx)+(hw), (cy)+(hh))), 0); 		cf_draw_pop_color(); } while (0)
-	#define FOG(cx, cy, hw, hh, d) do { 		if (channel == 1) { cf_draw_push_color(cf_make_color_rgb_f(d, d, (d) * 1.15f)); 			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2((cx)-(hw), (cy)-(hh)), cf_v2((cx)+(hw), (cy)+(hh))), 0); 			cf_draw_pop_color(); } } while (0)
+	#define WALL(cx, cy, hw, hh) do { 		if (channel == 1) { cf_draw_push_color(cf_make_color_rgb_f(wall_abs, wall_abs, wall_abs)); 			cf_draw_box_fill(cf_make_aabb(cf_v2((cx)-(hw), (cy)-(hh)), cf_v2((cx)+(hw), (cy)+(hh))), 0); 			cf_draw_pop_color(); } 		else if (channel == 2) { cf_draw_push_color(cf_make_color_rgb_f(WALL_ALB, WALL_ALB, WALL_ALB)); 			cf_draw_box_fill(cf_make_aabb(cf_v2((cx)-(hw), (cy)-(hh)), cf_v2((cx)+(hw), (cy)+(hh))), 0); 			cf_draw_pop_color(); } } while (0)
+	#define LIGHT(cx, cy, hw, hh, r, g, b) do { 		if (channel > 1) break; 		cf_draw_push_color(emis ? cf_make_color_rgb_f(r, g, b) : cf_make_color_rgb_f(EMIT_ABS, EMIT_ABS, EMIT_ABS)); 		cf_draw_box_fill(cf_make_aabb(cf_v2((cx)-(hw), (cy)-(hh)), cf_v2((cx)+(hw), (cy)+(hh))), 0); 		cf_draw_pop_color(); } while (0)
+	#define FOG(cx, cy, hw, hh, d) do { 		if (channel == 1) { cf_draw_push_color(cf_make_color_rgb_f(d, d, (d) * 1.15f)); 			cf_draw_box_fill(cf_make_aabb(cf_v2((cx)-(hw), (cy)-(hh)), cf_v2((cx)+(hw), (cy)+(hh))), 0); 			cf_draw_pop_color(); } } while (0)
 
 	// Room shell shared by the enclosed scenes.
 	if (cornell || glass || rectroom) {
@@ -956,14 +956,14 @@ static void scene_shapes(int channel, float W, float H)
 			// converges to 1/(1-albedo), so values near unity pile up over the
 			// settle frames and wash the room out.
 			cf_draw_push_color(cf_make_color_rgb_f(0.75f, 0.13f, 0.08f));
-			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2(-W*0.5f, -H*0.5f), cf_v2(-W*0.5f + 26, H*0.5f)), 0);
+			cf_draw_box_fill(cf_make_aabb(cf_v2(-W*0.5f, -H*0.5f), cf_v2(-W*0.5f + 26, H*0.5f)), 0);
 			cf_draw_pop_color();
 			cf_draw_push_color(cf_make_color_rgb_f(0.08f, 0.20f, 0.75f));
-			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2(W*0.5f - 26, -H*0.5f), cf_v2(W*0.5f, H*0.5f)), 0);
+			cf_draw_box_fill(cf_make_aabb(cf_v2(W*0.5f - 26, -H*0.5f), cf_v2(W*0.5f, H*0.5f)), 0);
 			cf_draw_pop_color();
 			cf_draw_push_color(cf_make_color_rgb_f(0.68f, 0.68f, 0.66f));
-			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2(-W*0.5f, H*0.5f - 26), cf_v2(W*0.5f, H*0.5f)), 0);
-			cf_draw_box_rounded_fill(cf_make_aabb(cf_v2(-W*0.5f, -H*0.5f), cf_v2(W*0.5f, -H*0.5f + 26)), 0);
+			cf_draw_box_fill(cf_make_aabb(cf_v2(-W*0.5f, H*0.5f - 26), cf_v2(W*0.5f, H*0.5f)), 0);
+			cf_draw_box_fill(cf_make_aabb(cf_v2(-W*0.5f, -H*0.5f), cf_v2(W*0.5f, -H*0.5f + 26)), 0);
 			cf_draw_pop_color();
 		}
 		// Pillars sit INSIDE the orbit radius so the light never travels through them

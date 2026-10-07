@@ -319,7 +319,7 @@ static inline Block make_block_left_slope(CF_V2 position)
     return block;
 }
 
-static inline void draw_star(CF_V2 position, CF_V2 size, float chubbiness)
+static inline void draw_star(CF_V2 position, CF_V2 size)
 {
     //           p0
     //
@@ -842,7 +842,7 @@ void render_stars(Game *game)
         CF_V2 position = cf_lerp(star->prev_transform.p, star->transform.p, CF_DELTA_TIME_INTERPOLANT);
         CF_Aabb star_walkable_aabb = aabb_set_center(star->player_walkable_aabb, position);
         
-        draw_star(position, cf_v2(CREATURE_BLOCK_HALF_WIDTH * 2, CREATURE_BLOCK_HALF_HEIGHT * 2), 0.0f);
+        draw_star(position, cf_v2(CREATURE_BLOCK_HALF_WIDTH * 2, CREATURE_BLOCK_HALF_HEIGHT * 2));
         //cf_draw_box(star_walkable_aabb, 0.0f, 0.0f);
     }
     cf_draw_pop_color();
@@ -1271,7 +1271,7 @@ void render_players(Game *game)
             CF_V2 star_position = cf_v2(0.0f, CREATURE_BLOCK_HALF_HEIGHT);
             star_position = cf_add(position, star_position);
             cf_draw_push_color(cf_color_yellow());
-            draw_star(star_position, star_size, 0.0f);
+            draw_star(star_position, star_size);
             cf_draw_pop_color();
         }
     }
@@ -1321,7 +1321,7 @@ void render_star_particles(Game *game)
         CF_V2 size = cf_lerp(particle->prev_size, particle->size, CF_DELTA_TIME_INTERPOLANT);
         
         cf_draw_push_color(particle->color);
-        draw_star(position, size, 0.0f);
+        draw_star(position, size);
         cf_draw_pop_color();
     }
 }
