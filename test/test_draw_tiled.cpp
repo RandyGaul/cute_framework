@@ -1515,8 +1515,7 @@ TEST_CASE(test_draw_arrow_no_overdraw)
 
 // -------------------------------------------------------------------------------------------------
 // User-registered custom SDF shapes: registry dispatch, exact match against the builtin
-// circle SDF, stroked variant, and both renderer paths (including SDF-based tile culling
-// which trusts the user's distance function).
+// circle SDF, stroked variant, and both renderer paths.
 
 static const char* s_circle_sdf_src = R"(
 // params: a = center, b.x = radius
@@ -1613,7 +1612,7 @@ TEST_CASE(test_draw_custom_shapes)
 
 // -------------------------------------------------------------------------------------------------
 // Deeper custom-shape coverage: attributes plumbing into ShapeParams, camera transforms,
-// opaque-cover occlusion through a user SDF, failed-registration recovery, and
+// occlusion by an opaque user shape, failed-registration recovery, and
 // invalid-handle draws.
 
 static const char* s_attr_circle_sdf_src = R"(
@@ -1673,8 +1672,8 @@ static void s_scene_custom_occlusion()
 		cf_draw_circle_fill2(cf_v2(-140.0f + 40.0f * i, (i & 1) ? 40.0f : -40.0f), 50);
 		cf_draw_pop_color();
 	}
-	// ...hidden by a big opaque custom shape (covers well over 64 tiles: the tiled
-	// path's opaque-cover cull must engage through the user sdf without artifacts)...
+	// ...hidden by a big opaque custom shape (well over 64 tiles; custom fields never claim
+	// opaque cover, so the tiled path must composite the clutter beneath it away)...
 	float params[3] = { 0, 0, 200 };
 	cf_draw_push_color(cf_make_color_rgba_f(0.15f, 0.15f, 0.3f, 1));
 	cf_draw_custom_shape_fill(s_plain_circle_shape, cf_make_aabb(cf_v2(-200, -200), cf_v2(200, 200)), params, 3);
@@ -1735,8 +1734,8 @@ TEST_CASE(test_draw_custom_shapes_advanced)
 	REQUIRE(s_readback(s_scene_xform_custom, 1, w, h, a));
 	REQUIRE(s_diff_ok(a, b, w * h, "xform custom tiled-vs-mesh"));
 
-	// Opaque-cover occlusion driven by a user sdf: both paths must composite
-	// identically, and the covered interior must be exactly the opaque color.
+	// Occlusion by an opaque custom shape: both paths must composite identically, and
+	// the covered interior must be exactly the opaque color.
 	for (int mode = 0; mode <= 1; ++mode) {
 		REQUIRE(s_readback(s_scene_custom_occlusion, mode, w, h, px[mode]));
 		REQUIRE(s_px_near(s_probe(px[mode], w, h, -150), 38, 38, 77, 255, 3)); // Only the opaque cover: (0.15, 0.15, 0.3).
@@ -1807,6 +1806,185 @@ TEST_CASE(test_draw_custom_shape_dedupe)
 		REQUIRE(s_px_near(s_probe(px, w, h, 60), 0, 0, 0, 0, 0));     // Outside the circle.
 	}
 	cf_free(px);
+	test_destroy_app();
+	return true;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Custom fields that aren't true distances. A rippled circle overestimates distance by
+// close to 3x, which once made the tiled path's SDF tile cull drop pixels and its
+// opaque-cover cull erase the background. A scaled-field ellipse has a slope near 1/100,
+// which once smeared its AA edge across ~100 pixels.
+
+static const char* s_ripple_sdf_src = R"(
+// params: a = center, b.x = radius, b.y = ripple amplitude, c.x = lobe count
+float sdf(vec2 p, ShapeParams s)
+{
+	vec2 q = p - s.a;
+	return length(q) - s.b.x - s.b.y * cos(s.c.x * atan(q.y, q.x));
+}
+)";
+
+static const char* s_ellipse_sdf_src = R"(
+// params: a = center, b = radii
+float sdf(vec2 p, ShapeParams s)
+{
+	return length((p - s.a) / s.b) - 1.0;
+}
+)";
+
+static CF_CustomShape s_ripple_shape;
+static CF_CustomShape s_ellipse_shape;
+
+// Left ripple: r 110, amp 45, 8 lobes. Right: a group of a smaller ripple unioned with a
+// circle. Both are symmetric about y = 0, so readback row order doesn't matter.
+static float s_ripple_field(float x, float y, float cx, float r, float amp, float k)
+{
+	float qx = x - cx;
+	return sqrtf(qx * qx + y * y) - r - amp * cosf(k * atan2f(y, qx));
+}
+
+static float s_ripple_scene_field(float x, float y)
+{
+	float left = s_ripple_field(x, y, -150, 110, 45, 8);
+	float group = cf_min(s_ripple_field(x, y, 160, 80, 30, 6), sqrtf((x - 250) * (x - 250) + y * y) - 40);
+	return cf_min(left, group);
+}
+
+static void s_scene_ripple()
+{
+	cf_draw_push_color(cf_make_color_rgba_f(0, 0, 1, 1));
+	cf_draw_quad_fill(cf_make_aabb(cf_v2(-320, -240), cf_v2(320, 240)), 0);
+	cf_draw_pop_color();
+	cf_draw_push_color(cf_make_color_rgba_f(1, 0, 0, 1));
+	float left[5] = { -150, 0, 110, 45, 8 };
+	cf_draw_custom_shape_fill(s_ripple_shape, cf_make_aabb(cf_v2(-305, -155), cf_v2(5, 155)), left, 5);
+	cf_draw_shape_group_begin();
+	float right[5] = { 160, 0, 80, 30, 6 };
+	cf_draw_custom_shape_fill(s_ripple_shape, cf_make_aabb(cf_v2(50, -110), cf_v2(270, 110)), right, 5);
+	cf_draw_circle_fill2(cf_v2(250, 0), 40);
+	cf_draw_shape_group_end();
+	cf_draw_pop_color();
+}
+
+static const char* s_scaled_circle_sdf_src = R"(
+// params: a = center, b.x = radius, b.y = field scale
+float sdf(vec2 p, ShapeParams s)
+{
+	return (length(p - s.a) - s.b.x) * s.b.y;
+}
+)";
+
+static CF_CustomShape s_scaled_circle_shape;
+static float s_smooth_group_scale;
+
+// A smooth union of a custom circle field and a built-in circle. The smoothing is in world
+// units whatever the field's scale, so a field scaled by 0.01 must render exactly like the
+// unscaled one -- and stay inside the group's k/4 bounds padding.
+static void s_scene_smooth_group()
+{
+	cf_draw_push_color(cf_make_color_rgba_f(1, 1, 1, 1));
+	cf_draw_shape_group_begin();
+	float params[4] = { -60, 0, 50, s_smooth_group_scale };
+	cf_draw_custom_shape_fill(s_scaled_circle_shape, cf_make_aabb(cf_v2(-110, -50), cf_v2(-10, 50)), params, 4);
+	cf_draw_shape_group_op(CF_SHAPE_OP_UNION, 60);
+	cf_draw_circle_fill2(cf_v2(60, 0), 50);
+	cf_draw_shape_group_end();
+	cf_draw_pop_color();
+}
+
+static void s_scene_ellipse()
+{
+	cf_draw_push_color(cf_make_color_rgba_f(1, 1, 1, 1));
+	float params[4] = { -150, 0, 120, 60 };
+	cf_draw_custom_shape_fill(s_ellipse_shape, cf_make_aabb(cf_v2(-270, -60), cf_v2(-30, 60)), params, 4);
+	cf_draw_circle_fill2(cf_v2(150, 0), 60);
+	cf_draw_pop_color();
+}
+
+// AA transition width in pixels along a run of alpha samples: a linear ramp of width w
+// sums to about w / 2 here.
+static float s_edge_width(const CF_Pixel* px, int start, int stride, int count)
+{
+	float sum = 0;
+	for (int i = 0; i < count; ++i) {
+		float c = px[start + i * stride].colors.a / 255.0f;
+		sum += 2.0f * cf_min(c, 1.0f - c);
+	}
+	return sum;
+}
+
+TEST_CASE(test_draw_custom_shape_warped_fields)
+{
+	if (!test_make_app(640, 480)) return true; // Headless CI: no display/GPU.
+
+	s_ripple_shape = cf_make_custom_shape(s_ripple_sdf_src);
+	REQUIRE(s_ripple_shape.id);
+	s_ellipse_shape = cf_make_custom_shape(s_ellipse_sdf_src);
+	REQUIRE(s_ellipse_shape.id);
+
+	int w = 640, h = 480;
+	CF_Pixel* a = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* b = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	CF_Pixel* px[2] = { a, b };
+
+	// Every pixel more than 2 px (first-order, from the CPU field's own slope) from the zero
+	// crossing must be shape inside and untouched background outside, in both paths.
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_ripple, mode, w, h, px[mode]));
+		int missing = 0, erased = 0;
+		for (int iy = 0; iy < h; ++iy) {
+			for (int ix = 0; ix < w; ++ix) {
+				float x = ix + 0.5f - w * 0.5f;
+				float y = h * 0.5f - (iy + 0.5f);
+				float f = s_ripple_scene_field(x, y);
+				float gx = (s_ripple_scene_field(x + 0.5f, y) - s_ripple_scene_field(x - 0.5f, y));
+				float gy = (s_ripple_scene_field(x, y + 0.5f) - s_ripple_scene_field(x, y - 0.5f));
+				float d = f / cf_max(sqrtf(gx * gx + gy * gy), 1.0e-6f);
+				CF_Pixel p = px[mode][iy * w + ix];
+				if (d < -2.0f && !(p.colors.r >= 250 && p.colors.b <= 5 && p.colors.a == 255)) ++missing;
+				if (d > 2.0f && !(p.colors.r <= 2 && p.colors.b >= 253 && p.colors.a == 255)) ++erased;
+			}
+		}
+		if (missing || erased) printf("ripple mode %d: %d inside pixels missing, %d background pixels erased\n", mode, missing, erased);
+		REQUIRE(missing == 0);
+		REQUIRE(erased == 0);
+	}
+	REQUIRE(s_diff_ok(a, b, w * h, "ripple tiled-vs-mesh"));
+
+	// The ellipse's AA edge must be as wide as a true circle's, along both axes, in both
+	// paths. Row/column through each center; the windows straddle one edge each.
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_ellipse, mode, w, h, px[mode]));
+		const CF_Pixel* p = px[mode];
+		int row = (h / 2) * w;
+		float circle_x = s_edge_width(p, row + w / 2 + 150 + 50, 1, 20);         // x = 200..220 straddles r = 60.
+		float circle_y = s_edge_width(p, (h / 2 - 70) * w + w / 2 + 150, w, 20); // y = 70..50 straddles r = 60.
+		float ellipse_x = s_edge_width(p, row + w / 2 - 150 + 110, 1, 20);       // x = -40..-20 straddles a = 120.
+		float ellipse_y = s_edge_width(p, (h / 2 - 70) * w + w / 2 - 150, w, 20); // y = 70..50 straddles b = 60.
+		printf("edge widths mode %d: circle %.2f/%.2f, ellipse %.2f/%.2f\n", mode, circle_x, circle_y, ellipse_x, ellipse_y);
+		REQUIRE(circle_x > 0.1f && circle_y > 0.1f);
+		REQUIRE(ellipse_x > circle_x * 0.6f && ellipse_x < circle_x * 1.6f);
+		REQUIRE(ellipse_y > circle_y * 0.6f && ellipse_y < circle_y * 1.6f);
+	}
+	REQUIRE(s_diff_ok(a, b, w * h, "ellipse tiled-vs-mesh"));
+
+	// Smooth group over a scaled field: matches the unscaled reference in both paths.
+	s_scaled_circle_shape = cf_make_custom_shape(s_scaled_circle_sdf_src);
+	REQUIRE(s_scaled_circle_shape.id);
+	CF_Pixel* ref = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	s_smooth_group_scale = 1.0f;
+	REQUIRE(s_readback(s_scene_smooth_group, 0, w, h, ref));
+	REQUIRE(s_px_near(s_probe(ref, w, h, 0), 255, 255, 255, 255, 3)); // The blend bridges the gap.
+	s_smooth_group_scale = 0.01f;
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_smooth_group, mode, w, h, px[mode]));
+		REQUIRE(s_diff_ok(ref, px[mode], w * h, mode ? "scaled smooth group (tiled)" : "scaled smooth group (instanced)"));
+	}
+	cf_free(ref);
+
+	cf_free(a);
+	cf_free(b);
 	test_destroy_app();
 	return true;
 }
@@ -2842,6 +3020,7 @@ TEST_SUITE(test_draw_tiled)
 	RUN_TEST_CASE_IF(test_draw_custom_shapes);
 	RUN_TEST_CASE_IF(test_draw_custom_shapes_advanced);
 	RUN_TEST_CASE_IF(test_draw_custom_shape_dedupe);
+	RUN_TEST_CASE_IF(test_draw_custom_shape_warped_fields);
 	RUN_TEST_CASE_IF(test_draw_shape_groups);
 	RUN_TEST_CASE_IF(test_draw_tiled_budget_fallback);
 	RUN_TEST_CASE_IF(test_draw_text_curves);

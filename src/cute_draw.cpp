@@ -324,6 +324,12 @@ static CF_TiledBatchStats s_tiled_batch_stats(const BatchGeometry* geoms, int st
 		case BATCH_GEOMETRY_TYPE_SPRITE: src = geom.shape; src_world = true; is_sdf = false; break;
 		case BATCH_GEOMETRY_TYPE_TRI:    src = geom.shape; src_world = true; nverts = 3; is_sdf = false; break;
 		case BATCH_GEOMETRY_TYPE_GLYPH:  is_sdf = false; break; // Winding coverage, not a cull-capable SDF.
+		case BATCH_GEOMETRY_TYPE_CUSTOM: is_sdf = false; break; // User fields never claim cover.
+		case BATCH_GEOMETRY_TYPE_CSG:
+			for (int oi = 0; oi < geom.n && i + 1 + oi < end; ++oi) {
+				if (geoms[i + 1 + oi].type == BATCH_GEOMETRY_TYPE_CUSTOM) is_sdf = false;
+			}
+			break;
 		default: break;
 		}
 		float min_x = FLT_MAX, min_y = FLT_MAX, max_x = -FLT_MAX, max_y = -FLT_MAX;
@@ -527,6 +533,7 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		tc.user[3] = geom.user_params.a;
 
 		bool is_sdf = false;
+		bool field = geom.type == BATCH_GEOMETRY_TYPE_CUSTOM; // User field: not a trusted distance.
 		switch (geom.type) {
 		case BATCH_GEOMETRY_TYPE_SPRITE:
 		{
@@ -679,7 +686,7 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 					case BATCH_GEOMETRY_TYPE_TRI_SDF: prim = 5; break;
 					case BATCH_GEOMETRY_TYPE_POLYGON: prim = 6; aux = (float)og.n; break;
 					case BATCH_GEOMETRY_TYPE_ARROW: prim = 8; break;
-					case BATCH_GEOMETRY_TYPE_CUSTOM: prim = 9; aux = (float)og.n; break;
+					case BATCH_GEOMETRY_TYPE_CUSTOM: prim = 9; aux = (float)og.n; field = true; break;
 					default: prim = 3; break; // Circle/capsule/segment.
 					}
 					pay.add({ prim, aux, (float)og.csg_op, og.csg_k });
@@ -726,9 +733,13 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		// Dashed strokes never claim opaque cover: their gaps don't hide what's beneath.
 		// Effects don't matter here: the cull only fires on tiles wholly inside the fill, where
 		// an outline (src-over an opaque fill) and a glow (under it) both leave alpha at 1.
-		if (is_sdf && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.a >= 1.0f && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED && blend == CF_DRAW_BLEND_NORMAL && !(tc.type & 16u)) {
+		// User fields (custom shapes, groups holding one) can overestimate distance, so they
+		// never claim cover either.
+		if (is_sdf && !field && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.a >= 1.0f && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED && blend == CF_DRAW_BLEND_NORMAL && !(tc.type & 16u)) {
 			tc.opaque = 1.0f;
 		}
+		// Field flag: bin by bounds only.
+		if (field) tc.type |= 32u;
 
 		if (instanced) {
 			// Rasterizer coverage: the instanced VS derives quads from the params, so
