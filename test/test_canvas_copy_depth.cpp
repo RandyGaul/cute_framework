@@ -189,6 +189,55 @@ TEST_CASE(test_copy_depth_then_sample)
 	return true;
 }
 
+// A depth-only copy target: a depth texture attached with attach_target. The getter must hand
+// back that texture so the copy can be sampled through it like any other canvas depth.
+TEST_CASE(test_copy_depth_into_attached_depth)
+{
+	if (!test_make_app(W, H)) return true;
+
+	DepthCopyScene s;
+	s_scene_begin(&s);
+	REQUIRE(s.scene.id && s.copy.id && s.scene_shader.id && s.sample_shader.id);
+
+	CF_TextureParams depth_params = cf_canvas_defaults(W, H).depth_stencil_target;
+	depth_params.usage = CF_TEXTURE_USAGE_DEPTH_STENCIL_TARGET_BIT | CF_TEXTURE_USAGE_SAMPLER_BIT;
+	depth_params.filter = CF_FILTER_NEAREST;
+	CF_Texture depth_tex = cf_make_texture(depth_params);
+	CF_CanvasParams attach_params = cf_canvas_defaults(0, 0);
+	attach_params.attach_target = depth_tex;
+	CF_Canvas depth_only = cf_make_canvas(attach_params);
+	REQUIRE(depth_tex.id && depth_only.id);
+	CF_Texture got = cf_canvas_get_depth_stencil_target(depth_only);
+	REQUIRE(got.id == depth_tex.id);
+
+	cf_canvas_set_clear_depth_stencil(depth_only, 0.0f, 0);
+	cf_clear_canvas(depth_only);
+	cf_canvas_copy_depth(depth_only, s.scene);
+
+	CF_Canvas out = cf_make_canvas(cf_canvas_defaults(W, H));
+	s_bind_copy(&s, 0.0f, false);
+	cf_material_set_texture_fs(s.sample_material, "u_depth", got);
+	cf_apply_canvas(out, true);
+	cf_apply_mesh(s.full_quad);
+	cf_apply_shader(s.sample_shader, s.sample_material);
+	cf_draw_elements();
+	cf_app_draw_onto_screen(false);
+
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	s_readback(out, px);
+	CF_Pixel l = s_left(px), r = s_right(px);
+	cf_free(px);
+	cf_destroy_canvas(out);
+	cf_destroy_canvas(depth_only);
+	cf_destroy_texture(depth_tex);
+	s_scene_end(&s);
+	test_destroy_app();
+
+	REQUIRE(s_near(l.colors.r, SCENE_Z));
+	REQUIRE(s_near(r.colors.r, 1.0f));
+	return true;
+}
+
 // Soft particles / water / decals: the effect samples the copy while the original depth
 // still occludes it. The left half (scene in front of the effect) must keep the scene color;
 // the right half shows the effect, carrying the copied depth it sampled.
@@ -299,6 +348,7 @@ TEST_CASE(test_copy_depth_misuse)
 TEST_SUITE(test_canvas_copy_depth)
 {
 	RUN_TEST_CASE(test_copy_depth_then_sample);
+	RUN_TEST_CASE(test_copy_depth_into_attached_depth);
 	RUN_TEST_CASE(test_copy_depth_effect_pass);
 	RUN_TEST_CASE(test_copy_depth_misuse);
 }

@@ -203,7 +203,8 @@ struct CF_GL_Canvas
 
 	// Depth as a sampleable texture instead of a renderbuffer, used when the canvas's
 	// depth target requests SAMPLER usage (shadow maps). Zero id when the renderbuffer
-	// path is in use.
+	// path is in use. For attached_depth it is the borrowed attach target: not owned, and
+	// already attached at its face/layer/mip.
 	CF_Texture cf_depth;
 
 	// Additional color targets for MRT ([0] unused -- `color`/`cf_color` are target 0).
@@ -1463,9 +1464,13 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 			c->has_stencil = true;
 			break;
 		default:
+			break;
+		}
+		if (c->attached_depth) {
+			c->cf_depth = params.attach_target;
+		} else {
 			c->cf_color = params.attach_target;
 			c->color = attach->id;
-			break;
 		}
 	} else {
 	c->w = params.target.width;
@@ -1566,7 +1571,7 @@ CF_Canvas cf_gles_make_canvas(CF_CanvasParams params)
 	if (c->depth) {
 		GLenum attachment = c->has_stencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, c->depth);
-	} else if (c->cf_depth.id) {
+	} else if (c->cf_depth.id && !c->attached_depth) {
 		GLenum attachment = c->has_stencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
 		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, ((CF_GL_Texture*)(uintptr_t)c->cf_depth.id)->id, 0);
 	}
@@ -1581,7 +1586,7 @@ void cf_gles_destroy_canvas(CF_Canvas ch)
 	if (!ch.id) return;
 	CF_GL_Canvas* c = (CF_GL_Canvas*)(uintptr_t)ch.id;
 	if (c->depth) glDeleteRenderbuffers(1, &c->depth);
-	if (c->cf_depth.id) cf_gles_destroy_texture(c->cf_depth);
+	if (c->cf_depth.id && !c->attached_depth) cf_gles_destroy_texture(c->cf_depth);
 	if (c->fbo) {
 		// Deleting the currently bound framebuffer reverts GL's binding to zero; the
 		// bind cache must follow, or a new FBO that reuses this id is never truly
