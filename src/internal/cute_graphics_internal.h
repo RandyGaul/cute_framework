@@ -339,9 +339,10 @@ bool cf_current_canvas_has_depth();
 // Region-granular texture ops used by the draw layer's atlas cache to rebuild atlas pages
 // GPU-side (repacks become texture->texture copies instead of CPU pixel re-fetch + upload).
 // Dispatch shims live in cute_graphics.cpp, implemented in both backends. 2D textures only.
-// Coordinates are in pixels, row 0 being the first row of uploaded pixel data.
-void cf_texture_update_region(CF_Texture texture, int x, int y, int w, int h, void* pixels);
-void cf_texture_copy_region(CF_Texture dst, int dst_x, int dst_y, CF_Texture src, int src_x, int src_y, int w, int h);
+// Coordinates are in pixels, row 0 being the first row of uploaded pixel data. Exported for the
+// tests in shared builds.
+CF_API void CF_CALL cf_texture_update_region(CF_Texture texture, int x, int y, int w, int h, void* pixels);
+CF_API void CF_CALL cf_texture_copy_region(CF_Texture dst, int dst_x, int dst_y, CF_Texture src, int src_x, int src_y, int w, int h);
 
 // Mesh introspection for the draw3d layer (cute_draw3d.cpp): whether an attribute with this
 // name exists (used to detect its reserved instance attributes), and the mesh's instance
