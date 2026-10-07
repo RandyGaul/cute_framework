@@ -14,6 +14,7 @@
 #include "test_app_shared.h"
 
 #include <cute.h>
+#include <internal/cute_graphics_internal.h>
 
 using namespace Cute;
 
@@ -242,6 +243,117 @@ static const char* s_quad_vs =
 static const char* s_red_fs =
 "layout (location = 0) out vec4 result;\n"
 "void main() { result = vec4(1.0, 0.0, 0.0, 1.0); }\n";
+
+// A canvas on one slice of a 3D texture: cleared, then read back from that slice.
+TEST_CASE(test_render_to_3d_slice)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	CF_BackendType backend = cf_query_backend();
+	// SDL_GPU's canvas readback reads slice 0 of a 3D attachment, whichever slice was drawn.
+	if (backend != CF_BACKEND_TYPE_WEBGPU && backend != CF_BACKEND_TYPE_GLES3) { test_destroy_app(); return true; }
+
+	CF_TextureParams tp = cf_texture_defaults(16, 16);
+	tp.texture_type = CF_TEXTURE_TYPE_3D;
+	tp.layer_count = 4;
+	tp.usage |= CF_TEXTURE_USAGE_COLOR_TARGET_BIT;
+	CF_Texture volume = cf_make_texture(tp);
+	REQUIRE(volume.id);
+	CF_CanvasParams params = cf_canvas_defaults(16, 16);
+	params.attach_target = volume;
+	params.attach_layer = 2;
+	CF_Canvas canvas = cf_make_canvas(params);
+	REQUIRE(canvas.id);
+
+	cf_app_update(NULL);
+	cf_canvas_set_clear_color(canvas, cf_make_color_rgb_f(0, 1.0f, 0));
+	cf_clear_canvas(canvas);
+	cf_app_draw_onto_screen(false);
+	CF_Pixel px[16 * 16];
+	CF_Readback rb = cf_canvas_readback(canvas);
+	REQUIRE(rb.id);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, (int)sizeof(px));
+	cf_destroy_readback(rb);
+	CF_Pixel c = px[8 * 16 + 8];
+
+	cf_destroy_canvas(canvas);
+	cf_destroy_texture(volume);
+	test_destroy_app();
+	REQUIRE(c.colors.g > 200 && c.colors.r < 60 && c.colors.b < 60);
+	return true;
+}
+
+static int s_backend_error_count()
+{
+#ifdef CF_WEBGPU
+	if (cf_query_backend() == CF_BACKEND_TYPE_WEBGPU) return cf_webgpu_error_count();
+#endif
+	return 0;
+}
+
+static bool s_frame_still_renders()
+{
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(16, 16));
+	cf_app_update(NULL);
+	cf_canvas_set_clear_color(canvas, cf_make_color_rgb_f(0, 0, 1.0f));
+	cf_clear_canvas(canvas);
+	cf_app_draw_onto_screen(false);
+	CF_Pixel px[16 * 16];
+	CF_Readback rb = cf_canvas_readback(canvas);
+	while (!cf_readback_ready(rb)) {}
+	cf_readback_data(rb, px, (int)sizeof(px));
+	cf_destroy_readback(rb);
+	cf_destroy_canvas(canvas);
+	return px[8 * 16 + 8].colors.b > 200 && px[8 * 16 + 8].colors.r < 60;
+}
+
+// Region copies and uploads that reach past a texture are skipped, rather than taking the frame
+// (or, on wgpu-native, the process) down with them.
+TEST_CASE(test_texture_region_out_of_bounds)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	CF_Texture a = cf_make_texture(cf_texture_defaults(16, 16));
+	CF_Texture b = cf_make_texture(cf_texture_defaults(16, 16));
+	CF_Pixel pixels[16 * 16] = { };
+
+	int errors = s_backend_error_count();
+	cf_app_update(NULL);
+	cf_texture_copy_region(b, 8, 8, a, 0, 0, 16, 16);
+	cf_texture_update_region(a, 4, 4, 16, 16, pixels);
+	cf_app_draw_onto_screen(false);
+	bool renders = s_frame_still_renders();
+	int new_errors = s_backend_error_count() - errors;
+
+	cf_destroy_texture(a);
+	cf_destroy_texture(b);
+	test_destroy_app();
+	REQUIRE(renders);
+	REQUIRE(new_errors == 0);
+	return true;
+}
+
+// Any command WebGPU rejects (here a copy between formats) invalidates its whole submission.
+// The submission is dropped and later frames render.
+TEST_CASE(test_webgpu_invalid_submission_dropped)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	if (cf_query_backend() != CF_BACKEND_TYPE_WEBGPU) { test_destroy_app(); return true; }
+	CF_Texture a = cf_make_texture(cf_texture_defaults(16, 16));
+	CF_TextureParams tp = cf_texture_defaults(16, 16);
+	tp.pixel_format = CF_PIXEL_FORMAT_R8_UNORM;
+	CF_Texture b = cf_make_texture(tp);
+
+	cf_app_update(NULL);
+	cf_texture_copy_region(b, 0, 0, a, 0, 0, 16, 16);
+	cf_app_draw_onto_screen(false);
+	bool renders = s_frame_still_renders();
+
+	cf_destroy_texture(a);
+	cf_destroy_texture(b);
+	test_destroy_app();
+	REQUIRE(renders);
+	return true;
+}
 
 // Pins the cube-face T-axis convention that samples/point_light.c relies on: a face camera
 // built with cf_look_at + a Y-mirrored cf_perspective (see that sample's face_projection
@@ -853,6 +965,9 @@ TEST_SUITE(test_texture_types)
 	RUN_TEST_CASE(test_cube_map_sample);
 	RUN_TEST_CASE(test_texture_array_sample);
 	RUN_TEST_CASE(test_render_to_cube_face);
+	RUN_TEST_CASE(test_render_to_3d_slice);
+	RUN_TEST_CASE(test_texture_region_out_of_bounds);
+	RUN_TEST_CASE(test_webgpu_invalid_submission_dropped);
 	RUN_TEST_CASE(test_cube_face_orientation);
 	RUN_TEST_CASE(test_depth_attach);
 	RUN_TEST_CASE(test_attach_mip);

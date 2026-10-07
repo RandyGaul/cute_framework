@@ -275,9 +275,110 @@ TEST_CASE(test_large_mesh_updated_between_passes)
 	return true;
 }
 
+// A full-canvas quad of color c as two triangles in verts[0..5]; later vertices stay as they are.
+static void s_full_quad(Vertex* verts, CF_Color c)
+{
+	s_column_quad(verts, 0, 1, c);
+	verts[4] = verts[0];
+	verts[5] = verts[2];
+	Vertex t = verts[3]; verts[3] = verts[4]; verts[4] = verts[5]; verts[5] = t;
+}
+
+enum MixedUpdateOrder
+{
+	MIXED_SMALL_THEN_LARGE,          // Small update, then a large one, no pass open.
+	MIXED_SMALL_THEN_SMALL_IN_PASS,  // Small update, then a small one with another mesh's pass open.
+	MIXED_LARGE_AFTER_DRAW_THEN_SMALL, // A draw reads the mesh, then a large update, then a small one.
+};
+
+// Two updates of one buffer in a frame, made the ways a backend may route differently (an
+// in-order copy, a write ahead of the submission, a copy deferred to the pass end). The draw after
+// them must see the second.
+static bool s_mixed_updates(MixedUpdateOrder order)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+
+	const int count = 4096; // 96 KiB of vertices, past the backend's large-upload threshold.
+	CF_Mesh mesh = s_make_color_mesh(count);
+	CF_Mesh other = s_make_color_mesh(6);
+	Vertex nothing[6] = { }; // Degenerate: draws no pixels.
+	cf_mesh_update_vertex_data(other, nothing, 6);
+	CF_Shader shader = cf_make_shader_from_source(s_color_vs, s_color_fs);
+	REQUIRE(shader.id);
+	CF_Material material = cf_make_material();
+	CF_Canvas first = cf_make_canvas(cf_canvas_defaults(W, H));
+	CF_Canvas canvas = cf_make_canvas(cf_canvas_defaults(W, H));
+	Vertex* old_verts = (Vertex*)cf_calloc(count * (int)sizeof(Vertex), 1);
+	Vertex* new_verts = (Vertex*)cf_calloc(count * (int)sizeof(Vertex), 1);
+	s_full_quad(old_verts, s_colors[0]);
+	s_full_quad(new_verts, s_colors[1]);
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+
+	cf_app_update(NULL);
+	if (order == MIXED_SMALL_THEN_LARGE) {
+		cf_mesh_update_vertex_data(mesh, old_verts, 6);
+		cf_mesh_update_vertex_data(mesh, new_verts, count);
+		cf_apply_canvas(canvas, true);
+	} else if (order == MIXED_SMALL_THEN_SMALL_IN_PASS) {
+		// Another mesh opens the pass, so nothing in it has read this one yet.
+		cf_mesh_update_vertex_data(mesh, old_verts, 6);
+		cf_apply_canvas(canvas, true);
+		cf_apply_mesh(other);
+		cf_apply_shader(shader, material);
+		cf_draw_elements();
+		cf_mesh_update_vertex_data(mesh, new_verts, 6);
+	} else {
+		cf_mesh_update_vertex_data(mesh, new_verts, 6);
+		cf_apply_canvas(first, true);
+		cf_apply_mesh(mesh);
+		cf_apply_shader(shader, material);
+		cf_draw_elements();
+		cf_apply_canvas(canvas, true);
+		cf_mesh_update_vertex_data(mesh, old_verts, count);
+		cf_mesh_update_vertex_data(mesh, new_verts, 6);
+	}
+	cf_apply_mesh(mesh);
+	cf_apply_shader(shader, material);
+	cf_draw_elements();
+	cf_app_draw_onto_screen(false);
+	s_read(canvas, px);
+	bool ok = s_column_is(px, 0, 1, s_colors[1]);
+
+	cf_free(px);
+	cf_free(old_verts);
+	cf_free(new_verts);
+	cf_destroy_canvas(first);
+	cf_destroy_canvas(canvas);
+	cf_destroy_material(material);
+	cf_destroy_shader(shader);
+	cf_destroy_mesh(mesh);
+	cf_destroy_mesh(other);
+	test_destroy_app();
+	REQUIRE(ok);
+	return true;
+}
+
+TEST_CASE(test_small_then_large_update)
+{
+	return s_mixed_updates(MIXED_SMALL_THEN_LARGE);
+}
+
+TEST_CASE(test_small_then_in_pass_update)
+{
+	return s_mixed_updates(MIXED_SMALL_THEN_SMALL_IN_PASS);
+}
+
+TEST_CASE(test_large_then_small_update_after_draw)
+{
+	return s_mixed_updates(MIXED_LARGE_AFTER_DRAW_THEN_SMALL);
+}
+
 TEST_SUITE(test_buffer_updates)
 {
 	RUN_TEST_CASE(test_mesh_updated_between_draws);
 	RUN_TEST_CASE(test_storage_updated_between_draws);
 	RUN_TEST_CASE(test_large_mesh_updated_between_passes);
+	RUN_TEST_CASE(test_small_then_large_update);
+	RUN_TEST_CASE(test_small_then_in_pass_update);
+	RUN_TEST_CASE(test_large_then_small_update_after_draw);
 }

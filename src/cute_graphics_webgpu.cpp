@@ -1316,9 +1316,16 @@ static void s_submit()
 	if (g_ctx.encoder) {
 		s_sync_encoder_labels(true);
 		WGPUCommandBufferDescriptor cdesc = WGPU_COMMAND_BUFFER_DESCRIPTOR_INIT;
+		int errors = g_ctx.error_count;
 		WGPUCommandBuffer cmd = wgpuCommandEncoderFinish(g_ctx.encoder, &cdesc);
-		wgpuQueueSubmit(g_ctx.queue, 1, &cmd);
-		g_ctx.submit_count++;
+		// wgpu-native reports an invalid encoder from Finish, then aborts the process when the
+		// command buffer is submitted. Dropping it loses one submission's work, not the app.
+		if (g_ctx.error_count != errors) {
+			CF_WGPU_WARN_ONCE("WebGPU: a submission held an invalid command (see the error above) and was dropped.\n");
+		} else {
+			wgpuQueueSubmit(g_ctx.queue, 1, &cmd);
+			g_ctx.submit_count++;
+		}
 		wgpuCommandBufferRelease(cmd);
 		wgpuCommandEncoderRelease(g_ctx.encoder);
 		g_ctx.encoder = NULL;
@@ -1485,7 +1492,17 @@ static void s_write_buffer(CF_WBuffer* b, const void* data, int size, bool stora
 		if (!src || g_ctx.device_lost) return;
 		CF_MEMCPY(p, data, size);
 		if (pd != size) CF_MEMSET(p + size, 0, pd - size);
+		// An arena copy waiting for the pass end would land after this one. Nothing has read it:
+		// no pass is open, and dispatches flush the arena.
+		if (b->in_arena) {
+			for (int i = 0; i < g_ctx.arena_buffers.count(); ++i) {
+				if (g_ctx.arena_buffers[i] == b) { g_ctx.arena_buffers.unordered_remove(i); break; }
+			}
+			b->in_arena = false;
+		}
 		wgpuCommandEncoderCopyBufferToBuffer(s_encoder(), src, off, b->buffer, 0, (uint64_t)pd);
+		// A later queue write would land before this copy.
+		b->used_serial = g_ctx.serial;
 		return;
 	}
 	int padded = s_align(size, 4);
@@ -2312,18 +2329,29 @@ void cf_webgpu_texture_update_mip(CF_Texture texture_handle, void* data, int siz
 	s_upload_texture(t, data, size, 0, 0, 0, cf_max(t->w >> mip_level, 1), cf_max(t->h >> mip_level, 1), mip_level);
 }
 
+// A region past the texture makes the whole submission invalid on WebGPU, not just the copy.
+static bool s_region_inside(const char* fn, CF_TextureInternal* t, int x, int y, int w, int h)
+{
+	if (x >= 0 && y >= 0 && w >= 0 && h >= 0 && x + w <= t->w && y + h <= t->h) return true;
+	fprintf(stderr, "%s: region (%d, %d) %dx%d is outside the %dx%d texture; skipped.\n", fn, x, y, w, h, t->w, t->h);
+	return false;
+}
+
 void cf_webgpu_texture_update_region(CF_Texture texture_handle, int x, int y, int w, int h, void* pixels)
 {
 	CF_TextureInternal* t = (CF_TextureInternal*)texture_handle.id;
+	if (!s_region_inside("cf_texture_update_region", t, x, y, w, h)) return;
 	CF_WFormatInfo fi = s_format_info(t->format);
 	s_upload_texture(t, pixels, w * h * fi.block_bytes, x, y, 0, w, h, 0);
 }
 
 void cf_webgpu_texture_copy_region(CF_Texture dst_handle, int dst_x, int dst_y, CF_Texture src_handle, int src_x, int src_y, int w, int h)
 {
-	s_end_active_pass();
 	CF_TextureInternal* dst = (CF_TextureInternal*)dst_handle.id;
 	CF_TextureInternal* src = (CF_TextureInternal*)src_handle.id;
+	if (!s_region_inside("cf_texture_copy_region (source)", src, src_x, src_y, w, h)) return;
+	if (!s_region_inside("cf_texture_copy_region (destination)", dst, dst_x, dst_y, w, h)) return;
+	s_end_active_pass();
 	WGPUTexelCopyTextureInfo s = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
 	s.texture = src->tex;
 	s.origin = { (uint32_t)src_x, (uint32_t)src_y, 0 };
@@ -2416,8 +2444,10 @@ static WGPUTextureView s_storage_view(CF_TextureInternal* t)
 static WGPUTextureView s_target_view(CF_TextureInternal* t, int layer, int mip)
 {
 	WGPUTextureViewDescriptor vd = WGPU_TEXTURE_VIEW_DESCRIPTOR_INIT;
-	vd.dimension = WGPUTextureViewDimension_2D;
-	vd.baseArrayLayer = (uint32_t)layer;
+	// A 3D texture only takes a 3D view of a whole mip; the pass picks the slice (depthSlice).
+	bool is_3d = t->type == CF_TEXTURE_TYPE_3D;
+	vd.dimension = is_3d ? WGPUTextureViewDimension_3D : WGPUTextureViewDimension_2D;
+	vd.baseArrayLayer = is_3d ? 0 : (uint32_t)layer;
 	vd.arrayLayerCount = 1;
 	vd.baseMipLevel = (uint32_t)mip;
 	vd.mipLevelCount = 1;
@@ -2609,6 +2639,7 @@ static void s_begin_pass(CF_CanvasInternal* c, bool clear)
 		ca[i] = WGPU_RENDER_PASS_COLOR_ATTACHMENT_INIT;
 		ca[i].view = c->color_views[i];
 		ca[i].resolveTarget = c->resolve_views[i];
+		if (c->attached && ((CF_TextureInternal*)c->cf_texture.id)->type == CF_TEXTURE_TYPE_3D) ca[i].depthSlice = (uint32_t)c->attach_layer;
 		ca[i].loadOp = clear ? WGPULoadOp_Clear : WGPULoadOp_Load;
 		ca[i].storeOp = WGPUStoreOp_Store;
 		CF_Color cc = s_clear_color2(c, i);
