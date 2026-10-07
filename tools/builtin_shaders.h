@@ -899,6 +899,9 @@ void main()
 	sp.attributes = v_user;
 	c = shader(c, sp);
 	if (u_alpha_discard != 0 && c.a == 0) discard;
+	// Depth-writing 2d (cf_draw_push_z) keeps only its solid core, like 3d depth-writing strokes:
+	// letting the anti-aliased fringe own depth would punch halos into whatever draws behind it later.
+	if (v_fx_params.z > 0.5 && c.a < 0.5) discard;
 
 	// D3D12 links VS->PS by hardware register per semantic: the PS input signature must
 	// mirror the VS output registers, but the compiler packs PS inputs by *consumed*
@@ -1468,6 +1471,16 @@ void main()
 	vec4 f1 = cf_payload(cmd.meta.w + 1u);
 	vec2 posH = f0.xy * pos.x + f0.zw * pos.y + f1.xy;
 
+	// 2d depth (cf_draw_push_z): an ndc depth plane over the quad, plus whether this run writes
+	// depth -- the fragment stage then drops the AA fringe (rides fx_params.z).
+	float depth = 0.0;
+	uint depth_off = floatBitsToUint(cmd.fx.z);
+	if (depth_off != 0u) {
+		vec4 dp = cf_payload(depth_off);
+		depth = clamp(dp.x * posH.x + dp.y * posH.y + dp.z, 0.0, 1.0);
+		fx_params.z = dp.w;
+	}
+
 	v_pos_uv = vec4(pos, uv);
 	v_n = int(cmd.misc.y);
 	v_ab = ab;
@@ -1483,7 +1496,7 @@ void main()
 	v_fx_outline = fx_outline;
 	v_fx_glow = fx_glow;
 	v_fx_params = fx_params;
-	gl_Position = vec4(posH, 0, 1);
+	gl_Position = vec4(posH, depth, 1);
 }
 )";
 

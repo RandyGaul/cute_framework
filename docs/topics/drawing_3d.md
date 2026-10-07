@@ -190,6 +190,7 @@ Shared -- these cute_draw.h calls apply to mesh submissions too:
 | Call | Effect on meshes |
 | --- | --- |
 | `cf_draw_push_layer` | Orders meshes against 2D drawing and each other |
+| `cf_draw_push_z` | Not a mesh setting, but the reverse crossover: puts 2D draws at a world z in the meshes' depth buffer (see [Depth (Z)](drawing.md#depth-z)) |
 | `cf_draw_push_scissor` / `cf_draw_push_viewport` | Captured per submission |
 | `cf_make_draw_list` / `cf_draw_list_begin` / `end` / `cf_draw_list` | Records and bakes meshes |
 | `cf_render_to` / `cf_render_layers_to` / `cf_app_draw_onto_screen` | The flush |

@@ -595,6 +595,27 @@ static CF_Command* s_coalesce_candidate()
 	return under.mesh3d ? &under : NULL;
 }
 
+// Recompose the camera only when a camera stack actually moved, and bump the change id only
+// when the recomposed bytes differ -- pop-then-push of the same camera coalesces.
+static void s_refresh_vp()
+{
+	if (!s_draw3d->vp_dirty) return;
+	CF_M4x4 vp = cf_mul_m4(s_draw3d->projections.last(), s_draw3d->views.last());
+	if (CF_MEMCMP(&vp, &s_draw3d->vp_cached, sizeof(vp))) {
+		s_draw3d->vp_cached = vp;
+		s_draw3d->vp_id++;
+	}
+	s_draw3d->vp_dirty = false;
+}
+
+uint64_t cf_draw3d_depth_camera(CF_M4x4* vp)
+{
+	if (s_draw3d->projections.count() <= 1) return 0;
+	s_refresh_vp();
+	*vp = s_draw3d->vp_cached;
+	return s_draw3d->vp_id;
+}
+
 // The shared submission tail behind cf_draw3d_mesh and the built-in shapes: coalesce or open
 // a new command carrying `inst` (already built -- from the transform stack for user meshes,
 // raw shape lanes for strokes). `shape` marks submissions from the built-in shape pipeline,
@@ -618,16 +639,7 @@ static void s_submit(CF_Mesh mesh, const CF_MeshInstance3d& inst, bool escape, c
 	                                 // in cute_draw3d.h). Recordings may defer the push to replay time.
 	if (!shader.id && !ambient) return;
 
-	// Recompose the camera only when a camera stack actually moved, and bump the change id
-	// only when the recomposed bytes differ -- pop-then-push of the same camera coalesces.
-	if (s_draw3d->vp_dirty) {
-		CF_M4x4 vp = cf_mul_m4(s_draw3d->projections.last(), s_draw3d->views.last());
-		if (CF_MEMCMP(&vp, &s_draw3d->vp_cached, sizeof(vp))) {
-			s_draw3d->vp_cached = vp;
-			s_draw3d->vp_id++;
-		}
-		s_draw3d->vp_dirty = false;
-	}
+	s_refresh_vp();
 	uint64_t state_hash = s_draw3d->user_hash ^ (shape ? s_draw3d->shape_hash : 0);
 	CF_RenderState rs = s_draw3d->render_states.last();
 	bool sprite_textured = sprite && !escape;
