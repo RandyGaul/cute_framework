@@ -851,6 +851,9 @@ static void* cf_fxc_compile(const char* hlsl, size_t hlsl_size, const char* targ
 static void s_silence_d3d12_clear_value_warning(SDL_GPUDevice* gpu_device)
 {
 	if (SDL_strcmp(SDL_GetGPUDeviceDriver(gpu_device), "direct3d12") != 0) return;
+#ifdef D3D12_LAYOUT_SDL_VERSION
+	if (SDL_GetVersion() != D3D12_LAYOUT_SDL_VERSION) return;
+#endif
 
 	// SDL_GPUDevice (SDL_sysgpu.h): N function pointer slots, then driverData, then backend.
 	void** device_slots = (void**)gpu_device;

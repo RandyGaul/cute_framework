@@ -10,6 +10,7 @@ endif ()
 function(add_sample TARGET_NAME SOURCE_FILE)
 	add_executable(${TARGET_NAME} ${SOURCE_FILE})
 	target_link_libraries(${TARGET_NAME} PRIVATE cute)
+	cf_copy_sdl_dll(${TARGET_NAME})
 	if (APPLE)
 		set_target_properties(${TARGET_NAME} PROPERTIES
 			MACOSX_BUNDLE_GUI_IDENTIFIER "com.cuteframework.${TARGET_NAME}"

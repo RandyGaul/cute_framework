@@ -23,6 +23,7 @@ option(CF_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
 option(CF_CUTE_SHADERC "Build cute-shaderc, an offline shader compiler." ON)
 option(CF_CUTE_SYM "Build cute-sym, the crash reporter's symbol table tool (cf_symbols needs it)." ON)
 option(CF_FRAMEWORK_APPLE_FRAMEWORK "Build CF libraries as Apple Framework" OFF)
+option(CF_USE_SYSTEM_SDL "Use an installed SDL3 package (found via CMAKE_PREFIX_PATH or SDL3_DIR) instead of downloading and building SDL3." OFF)
 
 # Make sure all libraries are placed into the same output folder.
 if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
@@ -425,7 +426,53 @@ endif()
 function(target_dxc_copy TARGET)
 endfunction()
 
-if(NOT EMSCRIPTEN) # Emscripten provides it's own SDL3.
+if(EMSCRIPTEN AND CF_USE_SYSTEM_SDL)
+	message(STATUS "CF_USE_SYSTEM_SDL has no effect on Emscripten: SDL3 always comes from Emscripten's port (-sUSE_SDL=3).")
+endif()
+
+if(NOT EMSCRIPTEN AND CF_USE_SYSTEM_SDL)
+	set(SDL_REQUIRED_VERSION 3.4.0)
+	# SDL3 keeps API and ABI stable across 3.x, so any later 3.x release works. SDL's own version
+	# file accepts any newer version, so the range is what keeps SDL 4 out. GLOBAL makes the SDL3::
+	# targets visible project-wide, as they are with the FetchContent build.
+	find_package(SDL3 ${SDL_REQUIRED_VERSION}...<4.0.0 CONFIG GLOBAL)
+	if(NOT SDL3_FOUND OR NOT TARGET SDL3::SDL3)
+		set(CF_SDL_CONSIDERED "")
+		if(SDL3_CONSIDERED_CONFIGS)
+			set(CF_SDL_CONSIDERED " Rejected: ${SDL3_CONSIDERED_CONFIGS} (versions ${SDL3_CONSIDERED_VERSIONS}).")
+		endif()
+		message(FATAL_ERROR
+			"CF_USE_SYSTEM_SDL is ON but no usable SDL3 package was found. CF needs SDL3 ${SDL_REQUIRED_VERSION} "
+			"or a newer SDL3 release (not SDL 4).${CF_SDL_CONSIDERED} Point CMAKE_PREFIX_PATH or SDL3_DIR at an "
+			"SDL3 install, or set CF_USE_SYSTEM_SDL=OFF to download and build SDL3 instead.")
+	endif()
+	# Match the FetchContent build: static CF links static SDL, shared CF links shared SDL. Static CF
+	# falls back to a shared SDL when that's all the package has (common for distro packages).
+	if(CF_FRAMEWORK_STATIC AND TARGET SDL3::SDL3-static)
+		set(CF_SDL_TARGET SDL3::SDL3-static)
+	else()
+		set(CF_SDL_TARGET SDL3::SDL3)
+	endif()
+	message(STATUS "Using installed SDL3 ${SDL3_VERSION} (${CF_SDL_TARGET}) from ${SDL3_DIR}")
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} ${CF_SDL_TARGET})
+
+	# SDL3::SDL3 prefers the shared library. On Windows its DLL lives in the install prefix, so
+	# cf_copy_sdl_dll puts it next to CF's own executables.
+	if(WIN32 AND TARGET SDL3::SDL3-shared AND NOT CF_SDL_TARGET STREQUAL "SDL3::SDL3-static")
+		set(CF_SDL_DLL_TARGET SDL3::SDL3-shared)
+	endif()
+
+	# An installed SDL ships no private sources for gen_d3d12_layout, so use the offsets recorded from
+	# SDL 3.4.0's sources. cute_graphics_sdlgpu.cpp only applies them when the runtime SDL is 3.4.0.
+	if(WIN32)
+		if(NOT SDL3_VERSION VERSION_EQUAL 3.4.0)
+			message(STATUS "D3D12 debug-layer warning filter disabled: its layout offsets were recorded from SDL 3.4.0, found ${SDL3_VERSION}.")
+		endif()
+		file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")
+		configure_file(tools/d3d12_layout_sdl_3_4_0.h "${CMAKE_CURRENT_BINARY_DIR}/generated/d3d12_layout.gen.h" COPYONLY)
+		target_include_directories(cute PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+	endif()
+elseif(NOT EMSCRIPTEN) # Emscripten provides it's own SDL3.
 	# SDL for platform support.
 	set(SDL_REQUIRED_VERSION 3.4.0)
 	# Just don't build the shared library at all, it's not needed.
@@ -476,6 +523,15 @@ if(NOT EMSCRIPTEN) # Emscripten provides it's own SDL3.
 		target_include_directories(cute PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 	endif()
 endif()
+
+# Copies an installed SDL3.dll next to TARGET. A no-op unless CF_USE_SYSTEM_SDL resolved to a shared SDL on Windows.
+function(cf_copy_sdl_dll TARGET)
+	if(CF_SDL_DLL_TARGET)
+		add_custom_command(TARGET ${TARGET} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${CF_SDL_DLL_TARGET}>" "$<TARGET_FILE_DIR:${TARGET}>"
+		)
+	endif()
+endfunction()
 
 add_subdirectory(tools)
 if (CF_CUTE_SYM)
