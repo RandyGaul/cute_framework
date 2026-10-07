@@ -226,9 +226,10 @@ static struct
 	SDL_GPURenderPass* active_pass;
 } g_ctx = { };
 
-// Interned names of the debug groups open on g_ctx.cmd, reopened when a mid-frame submit
-// swaps command buffers.
-static Array<const char*> s_gpu_labels;
+// Names of the debug groups open on g_ctx.cmd, reopened when a mid-frame submit swaps command
+// buffers. Owned copies that live only while the group is open: labels are often dynamic
+// (frame or entity IDs), so interning them would grow the intern table without bound.
+static Array<String> s_gpu_labels;
 
 static inline void s_end_active_pass() {
 	if (g_ctx.active_pass) {
@@ -930,6 +931,7 @@ void cf_sdlgpu_cleanup()
 		g_ctx.cmd = NULL;
 	}
 	SDL_WaitForGPUIdle(g_ctx.device);
+	s_gpu_labels = Array<String>();
 	SDL_ReleaseWindowFromGPUDevice(g_ctx.device, g_ctx.window);
 	SDL_DestroyGPUDevice(g_ctx.device);
 }
@@ -991,7 +993,7 @@ static void s_submit_and_reacquire(bool wait)
 		SDL_SubmitGPUCommandBuffer(g_ctx.cmd);
 	}
 	g_ctx.cmd = SDL_AcquireGPUCommandBuffer(g_ctx.device);
-	for (int i = 0; i < s_gpu_labels.count(); ++i) SDL_PushGPUDebugGroup(g_ctx.cmd, s_gpu_labels[i]);
+	for (int i = 0; i < s_gpu_labels.count(); ++i) SDL_PushGPUDebugGroup(g_ctx.cmd, s_gpu_labels[i].c_str());
 }
 
 void cf_sdlgpu_gpu_sync()
@@ -2530,7 +2532,7 @@ void cf_sdlgpu_push_gpu_label(const char* name)
 {
 	if (!g_ctx.cmd) return;
 	SDL_PushGPUDebugGroup(g_ctx.cmd, name);
-	s_gpu_labels.add(sintern(name));
+	s_gpu_labels.add(String(name));
 }
 
 void cf_sdlgpu_pop_gpu_label()

@@ -7,6 +7,7 @@
 
 #include "test_harness.h"
 #include "test_app_shared.h"
+#include "test_leak.h"
 
 #include <cute.h>
 
@@ -196,9 +197,40 @@ TEST_CASE(test_gpu_submit_mid_pass)
 	return true;
 }
 
+// Labels open across a submit are remembered so they can be reopened, but only while open:
+// distinct dynamic names (frame or entity IDs) must not pile up for the life of the app.
+TEST_CASE(test_gpu_label_names_not_retained)
+{
+	if (!test_leak_check_enabled()) return true;
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	AppDestroyGuard app_guard;
+
+	cf_app_update(NULL);
+	cf_push_gpu_label("warm up");
+	cf_gpu_submit();
+	cf_pop_gpu_label();
+	cf_app_draw_onto_screen(false);
+
+	TestLeakCheck leak;
+	test_leak_begin(&leak);
+	for (int frame = 0; frame < 3; ++frame) {
+		cf_app_update(NULL);
+		for (int i = 0; i < 200; ++i) {
+			cf_push_gpu_label(String::fmt("label %d/%d", frame, i).c_str());
+			cf_pop_gpu_label();
+		}
+		cf_push_gpu_label(String::fmt("open at frame end %d", frame).c_str());
+		cf_gpu_submit();
+		cf_app_draw_onto_screen(false);
+	}
+	REQUIRE(test_leak_blocks(&leak) < 100);
+	return true;
+}
+
 TEST_SUITE(test_gpu_submit)
 {
 	RUN_TEST_CASE(test_gpu_submit_between_render_to);
 	RUN_TEST_CASE(test_gpu_submit_twice_in_one_frame);
 	RUN_TEST_CASE(test_gpu_submit_mid_pass);
+	RUN_TEST_CASE(test_gpu_label_names_not_retained);
 }
