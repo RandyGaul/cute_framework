@@ -456,10 +456,31 @@ if(NOT EMSCRIPTEN AND CF_USE_SYSTEM_SDL)
 	message(STATUS "Using installed SDL3 ${SDL3_VERSION} (${CF_SDL_TARGET}) from ${SDL3_DIR}")
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} ${CF_SDL_TARGET})
 
-	# SDL3::SDL3 prefers the shared library. On Windows its DLL lives in the install prefix, so
-	# cf_copy_sdl_dll puts it next to CF's own executables.
-	if(WIN32 AND TARGET SDL3::SDL3-shared AND NOT CF_SDL_TARGET STREQUAL "SDL3::SDL3-static")
-		set(CF_SDL_DLL_TARGET SDL3::SDL3-shared)
+	# On Windows a shared SDL's DLL lives in the install prefix, so cf_copy_sdl_dll puts it next to CF's
+	# own executables. Packages differ in how SDL3::SDL3 reaches the library (a real target, an ALIAS,
+	# or an INTERFACE wrapper), so follow it to whatever library is actually linked.
+	if(WIN32)
+		set(CF_SDL_LINKED ${CF_SDL_TARGET})
+		get_target_property(CF_SDL_ALIASED ${CF_SDL_LINKED} ALIASED_TARGET)
+		if(CF_SDL_ALIASED)
+			set(CF_SDL_LINKED ${CF_SDL_ALIASED})
+		endif()
+		get_target_property(CF_SDL_TYPE ${CF_SDL_LINKED} TYPE)
+		if(CF_SDL_TYPE STREQUAL "INTERFACE_LIBRARY")
+			get_target_property(CF_SDL_WRAPPED ${CF_SDL_LINKED} INTERFACE_LINK_LIBRARIES)
+			foreach(CF_SDL_ITEM IN LISTS CF_SDL_WRAPPED)
+				if(TARGET ${CF_SDL_ITEM})
+					get_target_property(CF_SDL_ITEM_TYPE ${CF_SDL_ITEM} TYPE)
+					if(CF_SDL_ITEM_TYPE STREQUAL "SHARED_LIBRARY")
+						set(CF_SDL_LINKED ${CF_SDL_ITEM})
+						set(CF_SDL_TYPE SHARED_LIBRARY)
+					endif()
+				endif()
+			endforeach()
+		endif()
+		if(CF_SDL_TYPE STREQUAL "SHARED_LIBRARY")
+			set(CF_SDL_DLL_TARGET ${CF_SDL_LINKED})
+		endif()
 	endif()
 
 	# An installed SDL ships no private sources for gen_d3d12_layout, so use the offsets recorded from
