@@ -738,7 +738,7 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		if (is_sdf && !field && tc.fill == 1.0f && geom.alpha >= 1.0f && geom.color.a >= 1.0f && geom.type != BATCH_GEOMETRY_TYPE_SEGMENT_CLIPPED && blend == CF_DRAW_BLEND_NORMAL && !(tc.type & 16u)) {
 			tc.opaque = 1.0f;
 		}
-		// Field flag: bin by bounds only, and derive the AA edge from the field's slope.
+		// Field flag: bin by bounds only.
 		if (field) tc.type |= 32u;
 
 		if (instanced) {

@@ -364,7 +364,8 @@ float dash_segment(vec2 p, vec2 a, vec2 b, float d, float r, vec3 dash)
 // generated version stitching every registered `float sdf(vec2 p, ShapeParams s)` snippet
 // plus a per-command dispatcher. User snippets need not be true distances: commands carrying
 // one are flagged (type bit 32), bin by their bounds alone, never claim opaque cover, and
-// take their AA edge from the field's local slope (field_distance).
+// take their AA edge from the field's local slope (field_distance; group operands are
+// rescaled inside csg_distance, before any smoothing).
 static const char* s_custom_shapes_stub = R"(
 struct ShapeParams
 {
@@ -390,7 +391,8 @@ float csg_smin(float a, float b, float k)
 	return mix(b, a, h) - k * h * (1.0 - h);
 }
 
-float csg_distance(uint po, int n, vec2 p, vec4 attributes)
+// h: world-space finite-difference step for custom operands' slope, about one pixel.
+float csg_distance(uint po, int n, vec2 p, vec4 attributes, float h)
 {
 	// Payload: po+0 = pre-padded bounds (used by the vertex stage), then six vec4s per
 	// operand: (prim, aux, op, k), (radius, 0, 0, 0), and 8 vec2s of shape params.
@@ -420,6 +422,10 @@ float csg_distance(uint po, int n, vec2 p, vec4 attributes)
 			sp.e = q2.xy; sp.f = q2.zw; sp.g = q3.xy; sp.h = q3.zw;
 			sp.attributes = attributes;
 			di = custom_sdf(int(h4.y), p, sp);
+			// Rescale the user field by its world-space slope (forward differences, step h)
+			// so smoothing k and the k/4 bounds padding stay in world units.
+			vec2 g = vec2(custom_sdf(int(h4.y), p + vec2(h, 0.0), sp) - di, custom_sdf(int(h4.y), p + vec2(0.0, h), sp) - di) / h;
+			di /= max(length(g), 1.0e-6);
 		} else {
 			cpts[0] = q0.xy; cpts[1] = q0.zw; cpts[2] = q1.xy; cpts[3] = q1.zw;
 			cpts[4] = q2.xy; cpts[5] = q2.zw; cpts[6] = q3.xy; cpts[7] = q3.zw;
@@ -846,11 +852,11 @@ void main()
 		sp_custom.attributes = v_user;
 		d = custom_sdf(v_n, v_pos, sp_custom);
 	} else if (is_csg) {
-		d = csg_distance(uint(v_po), v_n, v_pos, v_user);
+		d = csg_distance(uint(v_po), v_n, v_pos, v_user, length(dFdx(v_pos)));
 	}
-	// Custom fields (and groups holding one) take their edge from the local slope. Both
-	// branches above are primitive-uniform, so the derivatives are well-defined.
-	if ((is_custom || is_csg) && v_fx_params.z > 0.5) {
+	// Custom fields take their edge from the local slope (group operands already did, inside
+	// csg_distance). The branch is primitive-uniform, so the derivatives are well-defined.
+	if (is_custom) {
 		d = field_distance(d, vec2(dFdx(d), dFdy(d)), dFdx(v_pos), dFdy(v_pos));
 	}
 	if (is_glyph) {
@@ -1003,11 +1009,10 @@ vec4 cf_payload(uint i) { return payload[i]; }
 
 vec2 pts[8];
 
-// A custom shape's field, or a shape group's composite, at world point p.
-float tile_field(Cmd cmd, uint type, vec2 p)
+// A custom shape's field at world point p.
+float tile_custom_field(Cmd cmd, vec2 p)
 {
 	uint po = cmd.meta.z;
-	if (type == CMD_TYPE_CSG) return csg_distance(po, int(cmd.misc.y), p, cmd.user);
 	vec4 P0 = payload[po];
 	vec4 P1 = payload[po + 1u];
 	vec4 P2 = payload[po + 2u];
@@ -1198,18 +1203,18 @@ void main()
 				if (dashed) d = dash_segment(p, P0.xy, P0.zw, d, cmd.shape.x, payload[po + 3u].xyz);
 			} else if (type == CMD_TYPE_ARROW) {
 				d = distance_arrow(p, P0.xy, P0.zw, P1.x, P1.y);
-			} else if (type == CMD_TYPE_CUSTOM || type == CMD_TYPE_CSG) {
-				d = tile_field(cmd, type, p);
-				if ((cmd.meta.x & 32u) != 0u) {
-					// No derivatives inside the tile walk (divergent skips above, and FXC
-					// forbids gradients in the dynamic loop): one-pixel forward differences
-					// stand in for dFdx/dFdy. Central ones cost two more field evaluations
-					// for no visible gain.
-					vec2 jx = im0.xy * (2.0 / u_canvas_wh.x);
-					vec2 jy = im0.zw * (-2.0 / u_canvas_wh.y);
-					vec2 s = vec2(tile_field(cmd, type, p + jx) - d, tile_field(cmd, type, p + jy) - d);
-					d = field_distance(d, s, jx, jy);
-				}
+			} else if (type == CMD_TYPE_CUSTOM) {
+				// No derivatives inside the tile walk (divergent skips above, and FXC
+				// forbids gradients in the dynamic loop): one-pixel forward differences
+				// stand in for dFdx/dFdy. Central ones cost two more field evaluations
+				// for no visible gain.
+				d = tile_custom_field(cmd, p);
+				vec2 jx = im0.xy * (2.0 / u_canvas_wh.x);
+				vec2 jy = im0.zw * (-2.0 / u_canvas_wh.y);
+				vec2 s = vec2(tile_custom_field(cmd, p + jx) - d, tile_custom_field(cmd, p + jy) - d);
+				d = field_distance(d, s, jx, jy);
+			} else if (type == CMD_TYPE_CSG) {
+				d = csg_distance(po, int(cmd.misc.y), p, cmd.user, length(im0.xy) * (2.0 / u_canvas_wh.x));
 			} else {
 				vec4 P2 = payload[po + 2u];
 				vec4 P3 = payload[po + 3u];
@@ -1346,8 +1351,6 @@ void main()
 		fx_glow = cf_payload(fx_off + 1u);
 		fx_params = cf_payload(fx_off + 2u);
 	}
-	// Field flag: the fragment stage derives this command's edge from the field's slope.
-	fx_params.z = (cmd.meta.x & 32u) != 0u ? 1.0 : 0.0;
 
 	vec2 pos = vec2(0);
 	vec2 uv = vec2(0);
@@ -1560,7 +1563,7 @@ void main()
 "		sp.attributes = cmd.user;\n" \
 "		d = custom_sdf(int(cmd.misc.y), p, sp);\n" \
 "	} else if (type == 10u) {\n" \
-"		d = csg_distance(po, int(cmd.misc.y), p, cmd.user);\n" \
+"		d = csg_distance(po, int(cmd.misc.y), p, cmd.user, length(dwx));\n" \
 "	} else {\n" \
 "		vec4 P2 = payload[po + 2u];\n" \
 "		vec4 P3 = payload[po + 3u];\n" \

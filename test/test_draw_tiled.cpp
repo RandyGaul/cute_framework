@@ -1867,6 +1867,32 @@ static void s_scene_ripple()
 	cf_draw_pop_color();
 }
 
+static const char* s_scaled_circle_sdf_src = R"(
+// params: a = center, b.x = radius, b.y = field scale
+float sdf(vec2 p, ShapeParams s)
+{
+	return (length(p - s.a) - s.b.x) * s.b.y;
+}
+)";
+
+static CF_CustomShape s_scaled_circle_shape;
+static float s_smooth_group_scale;
+
+// A smooth union of a custom circle field and a built-in circle. The smoothing is in world
+// units whatever the field's scale, so a field scaled by 0.01 must render exactly like the
+// unscaled one -- and stay inside the group's k/4 bounds padding.
+static void s_scene_smooth_group()
+{
+	cf_draw_push_color(cf_make_color_rgba_f(1, 1, 1, 1));
+	cf_draw_shape_group_begin();
+	float params[4] = { -60, 0, 50, s_smooth_group_scale };
+	cf_draw_custom_shape_fill(s_scaled_circle_shape, cf_make_aabb(cf_v2(-110, -50), cf_v2(-10, 50)), params, 4);
+	cf_draw_shape_group_op(CF_SHAPE_OP_UNION, 60);
+	cf_draw_circle_fill2(cf_v2(60, 0), 50);
+	cf_draw_shape_group_end();
+	cf_draw_pop_color();
+}
+
 static void s_scene_ellipse()
 {
 	cf_draw_push_color(cf_make_color_rgba_f(1, 1, 1, 1));
@@ -1942,6 +1968,20 @@ TEST_CASE(test_draw_custom_shape_warped_fields)
 		REQUIRE(ellipse_y > circle_y * 0.6f && ellipse_y < circle_y * 1.6f);
 	}
 	REQUIRE(s_diff_ok(a, b, w * h, "ellipse tiled-vs-mesh"));
+
+	// Smooth group over a scaled field: matches the unscaled reference in both paths.
+	s_scaled_circle_shape = cf_make_custom_shape(s_scaled_circle_sdf_src);
+	REQUIRE(s_scaled_circle_shape.id);
+	CF_Pixel* ref = (CF_Pixel*)cf_alloc(w * h * sizeof(CF_Pixel));
+	s_smooth_group_scale = 1.0f;
+	REQUIRE(s_readback(s_scene_smooth_group, 0, w, h, ref));
+	REQUIRE(s_px_near(s_probe(ref, w, h, 0), 255, 255, 255, 255, 3)); // The blend bridges the gap.
+	s_smooth_group_scale = 0.01f;
+	for (int mode = 0; mode <= 1; ++mode) {
+		REQUIRE(s_readback(s_scene_smooth_group, mode, w, h, px[mode]));
+		REQUIRE(s_diff_ok(ref, px[mode], w * h, mode ? "scaled smooth group (tiled)" : "scaled smooth group (instanced)"));
+	}
+	cf_free(ref);
 
 	cf_free(a);
 	cf_free(b);
