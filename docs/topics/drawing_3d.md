@@ -212,6 +212,7 @@ Each common 3D need has a sample showing the pattern, because each one is a patt
 | Sample | What it proves |
 | --- | --- |
 | `draw3d` | A 10,000-building city recorded ONCE, replayed per pass under each pass's shader (closure semantics: ambient shader + uniforms bind per pass); shadow-mapped sun via a comparison sampler (hardware PCF); fog; procedural window lights |
+| `cel_shading` | Toon shading with inverted-hull outlines: one draw list replayed twice, under the cel shader and then under a hull shader with front-face culling (ambient shader + render state bind per pass); glass props froze their blend state inside the recording |
 | `pixel_3d` | Multi-pass pixel-art pipeline: two shadow maps (color-encoded depth + hand-rolled PCF), lit pass, view-space g-buffer, 2D post-process composite |
 | `skinning` | GPU skinning: joint/weight vertex attributes + a `mat4` array uniform; sixty strands, one shared skeleton, one instanced draw |
 | `billboards` | Sprite-textured camera-facing quads: cutout trees (depth-ordered, no sorting) and additive fireflies (order-independent) |
