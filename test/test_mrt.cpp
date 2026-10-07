@@ -197,9 +197,128 @@ TEST_CASE(test_mrt_single_target_compat)
 	return true;
 }
 
+// The limit query is sane on whatever backend runs the suite, and exact where it's knowable.
+TEST_CASE(test_mrt_query_limit)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	int max_targets = cf_query_max_canvas_targets();
+	REQUIRE(max_targets >= 4 && max_targets <= CF_MAX_CANVAS_TARGETS);
+	CF_BackendType backend = cf_query_backend();
+	if (backend == CF_BACKEND_TYPE_D3D12 || backend == CF_BACKEND_TYPE_METAL) REQUIRE(max_targets == 8);
+	if (backend == CF_BACKEND_TYPE_VULKAN) REQUIRE(max_targets == 4);
+	test_destroy_app();
+	return true;
+}
+
+static bool s_near(uint8_t a, uint8_t b)
+{
+	int d = (int)a - (int)b;
+	return d > -8 && d < 8;
+}
+
+// Each target gets its own color from a shader with one output per target, so a target count
+// that silently fell short, or an output landing in the wrong attachment, reads back wrong.
+static bool s_check_n_targets(int n)
+{
+	static const CF_Pixel colors[CF_MAX_CANVAS_TARGETS] = {
+		{ { 255, 0, 0, 255 } }, { { 0, 255, 0, 255 } }, { { 0, 0, 255, 255 } }, { { 255, 255, 0, 255 } },
+		{ { 0, 255, 255, 255 } }, { { 255, 0, 255, 255 } }, { { 255, 255, 255, 255 } }, { { 128, 64, 0, 255 } },
+	};
+	String fs;
+	for (int i = 0; i < n; ++i) fs.fmt_append("layout (location = %d) out vec4 out_%d;\n", i, i);
+	fs.fmt_append("void main() {\n");
+	for (int i = 0; i < n; ++i) {
+		fs.fmt_append("    out_%d = vec4(%f, %f, %f, 1.0);\n", i, colors[i].colors.r / 255.0f, colors[i].colors.g / 255.0f, colors[i].colors.b / 255.0f);
+	}
+	fs.fmt_append("}\n");
+
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.target_count = n;
+	CF_Canvas canvas = cf_make_canvas(params);
+	REQUIRE(canvas.id);
+	for (int i = 0; i < n; ++i) cf_canvas_set_clear_color2(canvas, i, cf_make_color_rgb_f(0, 0, 0));
+	CF_Shader shader = cf_make_shader_from_source(s_vs, fs.c_str());
+	REQUIRE(shader.id);
+	CF_Mesh mesh = s_make_fullscreen_quad();
+	CF_Material material = cf_make_material();
+
+	cf_app_update(NULL);
+	cf_apply_canvas(canvas, true);
+	cf_apply_mesh(mesh);
+	cf_apply_shader(shader, material);
+	cf_draw_elements();
+	cf_app_draw_onto_screen(false);
+
+	CF_Pixel* px = (CF_Pixel*)cf_alloc(W * H * (int)sizeof(CF_Pixel));
+	for (int i = 0; i < n; ++i) {
+		CF_Pixel p = s_readback_center(canvas, i, px);
+		REQUIRE(s_near(p.colors.r, colors[i].colors.r));
+		REQUIRE(s_near(p.colors.g, colors[i].colors.g));
+		REQUIRE(s_near(p.colors.b, colors[i].colors.b));
+	}
+	REQUIRE(cf_canvas_get_target2(canvas, n).id == 0);
+
+	cf_free(px);
+	cf_destroy_material(material);
+	cf_destroy_mesh(mesh);
+	cf_destroy_shader(shader);
+	cf_destroy_canvas(canvas);
+	return true;
+}
+
+TEST_CASE(test_mrt_six_and_eight_targets)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	int max_targets = cf_query_max_canvas_targets();
+	for (int n = 6; n <= 8; n += 2) {
+		if (n > max_targets) {
+			printf("(skipping %d targets: this device supports %d) ", n, max_targets);
+			continue;
+		}
+		if (!s_check_n_targets(n)) return false;
+	}
+	test_destroy_app();
+	return true;
+}
+
+static int s_assert_count;
+static void s_count_assert(bool expr, const char* message, const char* file, int line)
+{
+	(void)message; (void)file; (void)line;
+	if (!expr) ++s_assert_count;
+}
+
+// Asking for more targets than the device has must fail loudly -- an assert plus an invalid
+// canvas -- instead of quietly handing back a canvas with fewer targets than the shader writes.
+TEST_CASE(test_mrt_over_limit)
+{
+	if (!test_make_app(W, H)) return true; // Headless CI: no display/GPU.
+	int max_targets = cf_query_max_canvas_targets();
+	cf_assert_fn* prev_assert = g_assert_fn;
+	cf_set_assert_handler(s_count_assert);
+	s_assert_count = 0;
+	CF_CanvasParams params = cf_canvas_defaults(W, H);
+	params.target_count = max_targets + 1;
+	CF_Canvas canvas = cf_make_canvas(params);
+	cf_set_assert_handler(prev_assert);
+	REQUIRE(canvas.id == 0);
+	REQUIRE(s_assert_count == 1);
+
+	// The limit itself still works.
+	params.target_count = max_targets;
+	canvas = cf_make_canvas(params);
+	REQUIRE(canvas.id);
+	cf_destroy_canvas(canvas);
+	test_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_mrt)
 {
 	RUN_TEST_CASE(test_mrt_draw_and_clear);
 	RUN_TEST_CASE(test_mrt_single_target_compat);
 	RUN_TEST_CASE(test_mrt_per_target_blend);
+	RUN_TEST_CASE(test_mrt_query_limit);
+	RUN_TEST_CASE(test_mrt_six_and_eight_targets);
+	RUN_TEST_CASE(test_mrt_over_limit);
 }

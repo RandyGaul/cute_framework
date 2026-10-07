@@ -453,7 +453,7 @@ static bool s_tiled_batch_eligible(int count)
 	// Viewports remap NDC; the tile walk derives NDC from gl_FragCoord -- mesh path.
 	if (cmd.viewport.w >= 0 && cmd.viewport.h >= 0) return false;
 	// In-register composition is only equivalent to the default premultiplied src-over state.
-	if (CF_MEMCMP(&cmd.render_state, &s_draw->default_render_state, sizeof(CF_RenderState)) != 0) return false;
+	if (!(cmd.render_state == s_draw->default_render_state)) return false;
 	return true;
 }
 
@@ -864,7 +864,7 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		cf_material_set_uniform_fs(s_draw->material, "u_alpha_discard", &alpha_discard, CF_UNIFORM_TYPE_INT, 1);
 		int use_smooth_uv = cmd.filter_mode == CF_DRAW_FILTER_SMOOTH ? 0 : 1;
 		cf_material_set_uniform_fs(s_draw->material, "u_use_smooth_uv", &use_smooth_uv, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_render_state(s_draw->material, s_depth_run_state(s_blend_run_state(cmd.render_state, blend, false), depth));
+		cf_material_set_render_state(s_draw->material, s_depth_run_state(s_blend_run_state(cmd.render_state.expand(), blend, false), depth));
 		void* sampler_override = (cmd.filter_mode == CF_DRAW_FILTER_NEAREST) ? s_draw->sampler_nearest : s_draw->sampler_linear;
 		cf_set_sampler_override(sampler_override);
 		cf_apply_mesh(s_draw->corner_mesh);
@@ -968,7 +968,7 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 	int tile_px = CF_TILE_PX;
 	cf_material_set_uniform_fs(s_draw->material, "u_tile_px", &tile_px, CF_UNIFORM_TYPE_INT, 1);
 	cf_material_set_uniform_fs(s_draw->material, "u_blend", &blend, CF_UNIFORM_TYPE_INT, 1);
-	cf_material_set_render_state(s_draw->material, s_blend_run_state(cmd.render_state, blend, true));
+	cf_material_set_render_state(s_draw->material, s_blend_run_state(cmd.render_state.expand(), blend, true));
 
 	void* sampler_override = (cmd.filter_mode == CF_DRAW_FILTER_NEAREST) ? s_draw->sampler_nearest : s_draw->sampler_linear;
 	cf_set_sampler_override(sampler_override);
@@ -5200,6 +5200,60 @@ CF_Rect cf_draw_peek_scissor()
 	return s_draw->scissors.last();
 }
 
+CF_CmdRenderState::CF_CmdRenderState(const CF_RenderState& rs) : CF_CmdRenderState()
+{
+	primitive_type = rs.primitive_type;
+	cull_mode = rs.cull_mode;
+	blend = rs.blend;
+	blend_count = rs.blend_count;
+	alpha_to_coverage = rs.alpha_to_coverage;
+	depth_compare = rs.depth_compare;
+	depth_write_enabled = rs.depth_write_enabled;
+	stencil = rs.stencil;
+	depth_bias_constant_factor = rs.depth_bias_constant_factor;
+	depth_bias_clamp = rs.depth_bias_clamp;
+	depth_bias_slope_factor = rs.depth_bias_slope_factor;
+	enable_depth_bias = rs.enable_depth_bias;
+	enable_depth_clip = rs.enable_depth_clip;
+	if (rs.blend_count <= 1) return;
+	// Slots past blend_count are unused; zeroing them makes equal states intern to one set.
+	CF_BlendSet set;
+	CF_MEMSET(&set, 0, sizeof(set));
+	int used = cf_min(rs.blend_count, CF_MAX_CANVAS_TARGETS);
+	CF_MEMCPY(set.blends, rs.blends, used * sizeof(CF_BlendState));
+	for (int i = 0; i < s_draw->blend_sets.count(); ++i) {
+		if (!CF_MEMCMP(&s_draw->blend_sets[i], &set, sizeof(set))) {
+			blend_set = i;
+			return;
+		}
+	}
+	blend_set = s_draw->blend_sets.count();
+	s_draw->blend_sets.add(set);
+}
+
+CF_RenderState CF_CmdRenderState::expand() const
+{
+	CF_RenderState rs = { };
+	rs.primitive_type = primitive_type;
+	rs.cull_mode = cull_mode;
+	if (blend_set >= 0) {
+		CF_MEMCPY(rs.blends, s_draw->blend_sets[blend_set].blends, sizeof(rs.blends));
+	} else {
+		rs.blend = blend;
+	}
+	rs.blend_count = blend_count;
+	rs.alpha_to_coverage = alpha_to_coverage;
+	rs.depth_compare = depth_compare;
+	rs.depth_write_enabled = depth_write_enabled;
+	rs.stencil = stencil;
+	rs.depth_bias_constant_factor = depth_bias_constant_factor;
+	rs.depth_bias_clamp = depth_bias_clamp;
+	rs.depth_bias_slope_factor = depth_bias_slope_factor;
+	rs.enable_depth_bias = enable_depth_bias;
+	rs.enable_depth_clip = enable_depth_clip;
+	return rs;
+}
+
 void cf_draw_push_render_state(CF_RenderState render_state)
 {
 	PUSH_DRAW_VAR_AND_ADD_CMD_IF_NEEDED(render_state);
@@ -5584,7 +5638,7 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 	cf_material_set_uniform_fs(s_draw->material, "u_use_smooth_uv", &use_smooth_uv, CF_UNIFORM_TYPE_INT, 1);
 
 	// Apply render state.
-	cf_material_set_render_state(s_draw->material, cmd->render_state);
+	cf_material_set_render_state(s_draw->material, cmd->render_state.expand());
 
 	// Set sampler filter based on filter mode.
 	void* sampler_override = (cmd->filter_mode == CF_DRAW_FILTER_NEAREST) ? s_draw->sampler_nearest : s_draw->sampler_linear;

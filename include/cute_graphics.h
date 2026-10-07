@@ -1568,12 +1568,33 @@ CF_INLINE const char* cf_samplecount_string(CF_SampleCount count) {
 /**
  * @function CF_MAX_CANVAS_TARGETS
  * @category graphics
- * @brief    The maximum number of color targets a single canvas may have.
- * @remarks  Four is the portable guarantee: both SDL_GPU and WebGL2/GLES 3.0 support at least
- *           four simultaneous color attachments.
- * @related  CF_CanvasParams cf_make_canvas cf_canvas_get_target2
+ * @brief    The most color targets a canvas can ever have, on any backend.
+ * @remarks  This sizes the arrays in `CF_CanvasParams` and `CF_RenderState`. The current device may
+ *           support fewer -- `cf_query_max_canvas_targets` returns the real limit. Four is the portable
+ *           guarantee.
+ * @related  CF_CanvasParams cf_make_canvas cf_canvas_get_target2 cf_query_max_canvas_targets
  */
-#define CF_MAX_CANVAS_TARGETS 4
+#define CF_MAX_CANVAS_TARGETS 8
+
+/**
+ * @function cf_query_max_canvas_targets
+ * @category graphics
+ * @brief    Returns how many color targets a canvas can have on the current device.
+ * @return   A value from 4 to `CF_MAX_CANVAS_TARGETS`.
+ * @remarks  `cf_make_canvas` fails with an assert and returns an invalid canvas when `target_count` exceeds
+ *           this. Per backend:
+ *
+ *           - D3D12 and Metal: 8.
+ *           - Vulkan: 4. Vulkan only guarantees four color attachments, and SDL_GPU doesn't expose the
+ *             device's real limit, so CF reports the guarantee.
+ *           - GLES/WebGL2: the smaller of `GL_MAX_DRAW_BUFFERS` and `GL_MAX_COLOR_ATTACHMENTS`, capped at 8.
+ *             GLES 3.0 and WebGL2 only guarantee four.
+ *
+ *           Check this before making a canvas with more than four targets, and fall back to fewer
+ *           targets (or more passes) when it comes up short. Requires a running app.
+ * @related  CF_MAX_CANVAS_TARGETS CF_CanvasParams cf_make_canvas cf_query_backend
+ */
+CF_API int CF_CALL cf_query_max_canvas_targets(void);
 
 /**
  * @struct   CF_CanvasParams
@@ -1602,7 +1623,8 @@ typedef struct CF_CanvasParams
 		CF_TextureParams targets[CF_MAX_CANVAS_TARGETS];
 	};
 
-	/* @member How many color targets this canvas has, from 1 to `CF_MAX_CANVAS_TARGETS`. Zero means
+	/* @member How many color targets this canvas has, from 1 to `cf_query_max_canvas_targets`
+	   (at most `CF_MAX_CANVAS_TARGETS`); more fails canvas creation. Zero means
 	   one, so zero-initialized params behave exactly as before this member existed. Multiple render
 	   targets may be multisampled: each target resolves into its own texture in its own format, and
 	   `cf_canvas_get_target`/`cf_canvas_get_target2`/readback all return the resolved side. The GLES
@@ -3126,6 +3148,7 @@ CF_INLINE void apply_mesh(CF_Mesh mesh) { cf_apply_mesh(mesh); }
 CF_INLINE void apply_shader(CF_Shader shader, CF_Material material) { cf_apply_shader(shader, material); }
 CF_INLINE void draw_elements() { cf_draw_elements(); }
 CF_INLINE bool query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op) { return cf_query_pixel_format(format, op); }
+CF_INLINE int query_max_canvas_targets() { return cf_query_max_canvas_targets(); }
 CF_INLINE void texture_update_mip(CF_Texture texture, void* data, int size, int mip_level) { cf_texture_update_mip(texture, data, size, mip_level); }
 CF_INLINE void texture_update_layer(CF_Texture texture, void* data, int size, int layer) { cf_texture_update_layer(texture, data, size, layer); }
 CF_INLINE void generate_mipmaps(CF_Texture texture) { cf_generate_mipmaps(texture); }

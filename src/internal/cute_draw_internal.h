@@ -229,6 +229,36 @@ struct CF_DrawUniform
 	CF_Texture texture = { 0 };
 };
 
+// CF_RenderState as a command stores it. Commands are copied, compared and sorted per draw, so
+// they keep only blends[0] inline; per-target blends (blend_count > 1) are interned in
+// CF_Draw::blend_sets. Otherwise field-for-field with CF_RenderState.
+struct CF_CmdRenderState
+{
+	CF_PrimitiveType primitive_type;
+	CF_CullMode cull_mode;
+	CF_BlendState blend;
+	int blend_set; // Index into CF_Draw::blend_sets, -1 when every target shares `blend`.
+	int blend_count;
+	bool alpha_to_coverage;
+	CF_CompareFunction depth_compare;
+	bool depth_write_enabled;
+	CF_StencilParams stencil;
+	float depth_bias_constant_factor;
+	float depth_bias_clamp;
+	float depth_bias_slope_factor;
+	bool enable_depth_bias;
+	bool enable_depth_clip;
+
+	CF_CmdRenderState() { CF_MEMSET((void*)this, 0, sizeof(*this)); blend_set = -1; } // Zeroed padding keeps operator== a memcmp.
+	CF_CmdRenderState(const CF_RenderState& rs);
+	CF_RenderState expand() const;
+	bool operator==(const CF_CmdRenderState& o) const { return !CF_MEMCMP(this, &o, sizeof(*this)); }
+	bool operator==(const CF_RenderState& rs) const { return *this == CF_CmdRenderState(rs); }
+};
+static_assert(sizeof(CF_CmdRenderState) == sizeof(CF_RenderState) - (CF_MAX_CANVAS_TARGETS - 1) * sizeof(CF_BlendState) + sizeof(int), "CF_CmdRenderState must mirror CF_RenderState.");
+
+struct CF_BlendSet { CF_BlendState blends[CF_MAX_CANVAS_TARGETS]; };
+
 struct CF_Command
 {
 	int layer = 0; // The layer whose queue this command lives in (see CF_DrawLayer).
@@ -236,7 +266,7 @@ struct CF_Command
 	CF_Rect viewport = { 0, 0, -1, -1 };
 	float alpha_discard = 1.0f;
 	CF_DrawFilterMode filter_mode = CF_DRAW_FILTER_SMOOTH;
-	CF_RenderState render_state;
+	CF_CmdRenderState render_state;
 	CF_Shader shader;
 	Cute::Array<atlas_cache_entry_t> items; // Sprite/text atlas entries; udata indexes `geoms`.
 	CF_DrawUniform u;
@@ -458,6 +488,9 @@ struct CF_Draw
 	Cute::Array<float> glow_radii = { 0 };
 	Cute::Array<float> antialias = { 1.5f };
 	Cute::Array<CF_RenderState> render_states;
+	// Interned per-target blends of commands (CF_CmdRenderState::blend_set). Blend states are all
+	// enums and bools, so a program only ever uses a handful; never freed.
+	Cute::Array<CF_BlendSet> blend_sets;
 	Cute::Array<CF_Rect> scissors = { { 0, 0, -1, -1 } };
 	Cute::Array<CF_Rect> viewports = { { 0, 0, -1, -1 } };
 	Cute::Array<int> layers = { 0 };

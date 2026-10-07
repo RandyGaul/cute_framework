@@ -290,7 +290,17 @@ The plain `cf_material_set_texture_fs` keeps sampling through the texture's own 
 
 ## Multiple Render Targets
 
-A canvas can carry up to `CF_MAX_CANVAS_TARGETS` color targets (`CF_CanvasParams::target_count`); the fragment shader writes `layout (location = N) out` per target -- the classic g-buffer setup. Each target can blend its own way: `CF_RenderState::blend` aliases `blends[0]`, and setting `blend_count` with `blends[1]`+ gives every target its own blend and write mask (accumulate HDR into target 0 while overwriting normals in target 1). Per-target blend is SDL_GPU-only -- the GLES backend applies `blends[0]` to every target. `cf_canvas_get_target2(canvas, index)` fetches each result.
+A canvas can carry several color targets (`CF_CanvasParams::target_count`); the fragment shader writes `layout (location = N) out` per target -- the classic g-buffer setup. Each target can blend its own way: `CF_RenderState::blend` aliases `blends[0]`, and setting `blend_count` with `blends[1]`+ gives every target its own blend and write mask (accumulate HDR into target 0 while overwriting normals in target 1). Per-target blend is SDL_GPU-only -- the GLES backend applies `blends[0]` to every target. `cf_canvas_get_target2(canvas, index)` fetches each result.
+
+How many targets depends on the device. `CF_MAX_CANVAS_TARGETS` (8) is the most any backend allows; `cf_query_max_canvas_targets()` returns what the current one allows:
+
+| Backend | Limit |
+| --- | --- |
+| D3D12, Metal | 8 |
+| Vulkan | 4 -- the spec guarantee; SDL_GPU doesn't expose the device's real `maxColorAttachments` |
+| GLES / WebGL2 | min(`GL_MAX_DRAW_BUFFERS`, `GL_MAX_COLOR_ATTACHMENTS`, 8); the spec guarantees 4 |
+
+Four targets work everywhere. Past four, check the query and fall back (fewer targets, or a second pass) when it comes up short. Asking `cf_make_canvas` for more than the query allows asserts and returns an invalid canvas, rather than quietly giving you fewer targets than your shader writes.
 
 ## Compressed Textures (DDS)
 

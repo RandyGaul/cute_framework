@@ -1147,6 +1147,16 @@ bool cf_compute_shader_reload(CF_ComputeShader* shader)
 
 CF_DISPATCH_SHIM(bool, texture_supports_format, (CF_PixelFormat format, CF_TextureUsageBits usage), format, usage)
 CF_DISPATCH_SHIM(bool, query_pixel_format, (CF_PixelFormat format, CF_PixelFormatOp op), format, op)
+CF_DISPATCH_SHIM(int, query_max_canvas_targets, (void))
+
+bool cf_canvas_target_count_supported(int target_count)
+{
+	int max_targets = cf_query_max_canvas_targets();
+	if (target_count <= max_targets) return true;
+	fprintf(stderr, "cf_make_canvas: %d color targets requested, but this device supports %d (see cf_query_max_canvas_targets).\n", target_count, max_targets);
+	CF_ASSERT(!"Canvas target_count exceeds cf_query_max_canvas_targets.");
+	return false;
+}
 
 CF_DISPATCH_SHIM(CF_Texture, make_texture, (CF_TextureParams params), params)
 CF_DISPATCH_SHIM_VOID(destroy_texture, (CF_Texture texture_handle), texture_handle)
