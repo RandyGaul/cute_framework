@@ -56,6 +56,7 @@ TEST_SUITE(test_gpu_submit);
 TEST_SUITE(test_mrt);
 TEST_SUITE(test_texture_types);
 TEST_SUITE(test_shadow_sampling);
+TEST_SUITE(test_canvas_copy_depth);
 TEST_SUITE(test_instancing);
 TEST_SUITE(test_draw3d);
 TEST_SUITE(test_uniform_arrays);
@@ -150,6 +151,7 @@ int main(int argc, char* argv[])
 	RUN_TRACED(test_mrt);
 	RUN_TRACED(test_texture_types);
 	RUN_TRACED(test_shadow_sampling);
+	RUN_TRACED(test_canvas_copy_depth);
 	RUN_TRACED(test_instancing);
 	RUN_TRACED(test_draw3d);
 	RUN_TRACED(test_uniform_arrays);

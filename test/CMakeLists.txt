@@ -29,6 +29,7 @@ set(CF_TEST_SRCS
 	test_mrt.cpp
 	test_texture_types.cpp
 	test_shadow_sampling.cpp
+	test_canvas_copy_depth.cpp
 	test_instancing.cpp
 	test_draw3d.cpp
 	test_uniform_arrays.cpp

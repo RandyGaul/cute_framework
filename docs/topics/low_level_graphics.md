@@ -314,6 +314,10 @@ UV-coordinates are two floats, each in the range from `[0,1]`. The coordinate (0
 
 A canvas can attach an *existing* texture as its render target (`CF_CanvasParams::attach_target`) and address one slice of it: `attach_layer` picks a cube face or array layer, `attach_mip` picks a mip level. This is how multi-view techniques stay allocation-free -- six passes into one cube texture for point-light shadows, one pass per cascade into a depth 2D-array, and bloom chains that ping-pong between the mip levels of two textures so no pass ever samples what it writes (mark the texture `allocate_mipmaps` and upload/attach per mip; `cf_canvas_get_size` reports the attached mip's dimensions). The `point_light` and `fireflies` samples show the face and mip recipes respectively.
 
+### Sampling Depth While Depth-Testing
+
+Soft particles, water, decals and SDF occlusion all need to read the scene's depth while still depth-testing against it, and a pass can't sample the depth target it's attached to. [`cf_canvas_copy_depth`](../graphics/function/cf_canvas_copy_depth.md)`(dst, src)` copies a canvas's whole depth target into a second canvas: draw the scene, copy its depth, then draw effects into the scene canvas while they sample the copy through [`cf_canvas_get_depth_stencil_target`](../graphics/function/cf_canvas_get_depth_stencil_target.md). Both canvases need depth targets of the same size and format, and the copy's needs `CF_TEXTURE_USAGE_SAMPLER_BIT` (with `CF_FILTER_NEAREST`) to be sampled. The scene canvas needs neither, so its depth can stay a renderbuffer on OpenGL ES.
+
 ### App's Default Render Canvas
 
 The app window itself has a [default canvas](application_window.md#resizing-windows). This canvas is used for higher-level [`Drawing API`](drawing.md) to get things onto the screen. By default CF collects everything and automatically displays it onto the default canvas.

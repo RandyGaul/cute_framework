@@ -1729,6 +1729,46 @@ CF_API CF_Texture CF_CALL cf_canvas_get_target2(CF_Canvas canvas, int index);
 CF_API CF_Texture CF_CALL cf_canvas_get_depth_stencil_target(CF_Canvas canvas);
 
 /**
+ * @function cf_canvas_copy_depth
+ * @category graphics
+ * @brief    Copies the whole depth (and stencil) target of one canvas into another.
+ * @param    dst     The canvas receiving the depth.
+ * @param    src     The canvas whose depth is copied.
+ * @remarks  This is how a pass samples the depth of the canvas it is still depth-testing against:
+ *           soft particles, water, decals, and SDF occlusion all want both at once, and a texture
+ *           can't be sampled while attached. Draw the scene, copy its depth, then draw the effects
+ *           into the scene canvas while they sample the copy.
+ *
+ *           ```c
+ *           CF_CanvasParams params = cf_canvas_defaults(w, h);
+ *           params.depth_stencil_enable = true;
+ *           CF_Canvas scene = cf_make_canvas(params);
+ *           params.depth_stencil_target.usage |= CF_TEXTURE_USAGE_SAMPLER_BIT;
+ *           params.depth_stencil_target.filter = CF_FILTER_NEAREST;
+ *           CF_Canvas scene_depth = cf_make_canvas(params);
+ *
+ *           // ...draw opaque geometry into `scene`...
+ *           cf_canvas_copy_depth(scene_depth, scene);
+ *           cf_material_set_texture_fs(fx, "u_depth", cf_canvas_get_depth_stencil_target(scene_depth));
+ *           cf_apply_canvas(scene, false);
+ *           // ...draw effects with depth testing on, fading against `u_depth`...
+ *           ```
+ *
+ *           Both canvases need a depth target of the same size and format, and neither may use
+ *           MSAA; anything else asserts, logs to stderr, and copies nothing. Only `dst` needs
+ *           `CF_TEXTURE_USAGE_SAMPLER_BIT`, and only to be sampled. The copy works at canvas
+ *           level because a depth target without sampler usage may not be a texture at all
+ *           (a renderbuffer on OpenGL ES). If `dst` exists only to hold the copy, make it
+ *           depth-only by attaching a depth texture with `attach_target`.
+ *
+ *           Draws submitted through the immediate-mode draw API are copied only after they reach
+ *           the canvas (`cf_render_to`). SDL_GPU's D3D12 driver copies only the depth plane, so
+ *           don't rely on a copied stencil there.
+ * @related  cf_canvas_get_depth_stencil_target CF_CanvasParams cf_make_canvas cf_apply_canvas
+ */
+CF_API void CF_CALL cf_canvas_copy_depth(CF_Canvas dst, CF_Canvas src);
+
+/**
  * @function cf_clear_canvas
  * @category graphics
  * @brief    Clears the color and depth-stencil targets of the given canvas.
@@ -3049,6 +3089,7 @@ CF_INLINE void destroy_canvas(CF_Canvas canvas) { cf_destroy_canvas(canvas); }
 CF_INLINE CF_Texture canvas_get_target(CF_Canvas canvas) { return cf_canvas_get_target(canvas); }
 CF_INLINE CF_Texture canvas_get_target2(CF_Canvas canvas, int index) { return cf_canvas_get_target2(canvas, index); }
 CF_INLINE CF_Texture canvas_get_depth_stencil_target(CF_Canvas canvas) { return cf_canvas_get_depth_stencil_target(canvas); }
+CF_INLINE void canvas_copy_depth(CF_Canvas dst, CF_Canvas src) { cf_canvas_copy_depth(dst, src); }
 CF_INLINE void clear_canvas(CF_Canvas canvas) { cf_clear_canvas(canvas); }
 CF_INLINE void canvas_set_clear_color(CF_Canvas canvas, CF_Color color) { cf_canvas_set_clear_color(canvas, color); }
 CF_INLINE void canvas_set_clear_color2(CF_Canvas canvas, int index, CF_Color color) { cf_canvas_set_clear_color2(canvas, index, color); }

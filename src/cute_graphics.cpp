@@ -1241,11 +1241,28 @@ CF_Texture cf_make_texture_from_dds(const char* virtual_path)
 	return texture;
 }
 
+bool cf_canvas_copy_depth_check(CF_CanvasDepthDesc dst, CF_CanvasDepthDesc src, bool same_canvas)
+{
+	const char* error = NULL;
+	if (!dst.valid || !src.valid) error = "a canvas handle is invalid";
+	else if (same_canvas) error = "source and destination are the same canvas";
+	else if (!src.has_depth) error = "the source canvas has no depth target";
+	else if (!dst.has_depth) error = "the destination canvas has no depth target";
+	else if (src.w != dst.w || src.h != dst.h) error = "the canvases differ in size";
+	else if (src.format != dst.format) error = "the canvases' depth formats differ";
+	else if (src.sample_count > 1 || dst.sample_count > 1) error = "a canvas is multisampled";
+	if (!error) return true;
+	fprintf(stderr, "cf_canvas_copy_depth: %s (dst %dx%d, src %dx%d); nothing was copied.\n", error, dst.w, dst.h, src.w, src.h);
+	CF_ASSERT(!"cf_canvas_copy_depth misuse, see stderr.");
+	return false;
+}
+
 CF_DISPATCH_SHIM(CF_Canvas, make_canvas, (CF_CanvasParams params), params)
 CF_DISPATCH_SHIM_VOID(destroy_canvas, (CF_Canvas canvas_handle), canvas_handle)
 CF_DISPATCH_SHIM(CF_Texture, canvas_get_target, (CF_Canvas canvas_handle), canvas_handle)
 CF_DISPATCH_SHIM(CF_Texture, canvas_get_target2, (CF_Canvas canvas_handle, int index), canvas_handle, index)
 CF_DISPATCH_SHIM(CF_Texture, canvas_get_depth_stencil_target, (CF_Canvas canvas_handle), canvas_handle)
+CF_DISPATCH_SHIM_VOID(canvas_copy_depth, (CF_Canvas dst, CF_Canvas src), dst, src)
 CF_DISPATCH_SHIM_VOID(canvas_get_size, (CF_Canvas canvas_handle, int* w, int* h), canvas_handle, w, h)
 CF_DISPATCH_SHIM_VOID(clear_canvas, (CF_Canvas canvas_handle), canvas_handle)
 CF_DISPATCH_SHIM_VOID(canvas_set_clear_color, (CF_Canvas canvas_handle, CF_Color color), canvas_handle, color)
