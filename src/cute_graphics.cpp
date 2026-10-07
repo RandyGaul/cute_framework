@@ -1338,3 +1338,4 @@ CF_DISPATCH_SHIM_VOID(draw_elements_instanced, (int instance_count), instance_co
 CF_DISPATCH_SHIM_VOID(draw_elements_range, (int first_element, int element_count, int instance_count), first_element, element_count, instance_count)
 CF_DISPATCH_SHIM_VOID(draw_elements_indirect, (CF_StorageBuffer args, int offset, int draw_count), args, offset, draw_count)
 CF_DISPATCH_SHIM_VOID(gpu_sync, (), )
+CF_DISPATCH_SHIM_VOID(gpu_submit, (), )

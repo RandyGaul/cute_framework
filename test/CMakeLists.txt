@@ -24,6 +24,7 @@ set(CF_TEST_SRCS
 	test_shader_reload.cpp
 	test_shader_directory.cpp
 	test_canvas_clear.cpp
+	test_gpu_submit.cpp
 	test_compute.cpp
 	test_mrt.cpp
 	test_texture_types.cpp
