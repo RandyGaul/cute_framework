@@ -116,7 +116,8 @@ typedef struct CF_Canvas { uint64_t id; } CF_Canvas;
  *           half-float, ...) only where the driver's implementation-defined read pair matches
  *           the target. A target it cannot read returns a zero'd handle; BGRA targets come back
  *           in RGBA byte order.
- *           The GLES backend (which is what web/Emscripten builds use) implements readback
+ *           WebGPU (desktop and web) reads back asynchronously, like SDL_GPU.
+ *           The GLES backend (WebGL2 on the web) implements readback
  *           synchronously: the copy has already happened by the time `cf_canvas_readback` returns and
  *           `cf_readback_ready` is immediately true. The API shape is the same either way, so polling
  *           code stays portable, but expect a pipeline stall there rather than an async copy.
@@ -795,7 +796,7 @@ CF_API void CF_CALL cf_gpu_sync(void);
  * @category graphics
  * @brief    Sends the GPU work recorded so far to the GPU now, without waiting for it to finish.
  * @remarks  This is `cf_gpu_sync` without the wait. On SDL_GPU it submits the current command buffer and continues
- *           recording in a new one; on GLES it is `glFlush`.
+ *           recording in a new one; on WebGPU it submits the command encoder; on GLES it is `glFlush`.
  *
  *           It ends the current render pass. The canvas stays applied, and the next draw resumes the pass, keeping
  *           everything drawn before the submit. Call it between draws, not between `cf_apply_shader` and its draw:
@@ -812,7 +813,8 @@ CF_API void CF_CALL cf_gpu_submit(void);
 /**
  * @function cf_texture_handle
  * @category graphics
- * @brief    Returns an SDL_GPUTexture* casted to a `uint64_t`.
+ * @brief    Returns the backend's native texture handle casted to a `uint64_t`: an SDL_GPUTexture* on SDL_GPU,
+ *           a WGPUTextureView on WebGPU.
  * @remarks  This is useful for e.g. rendering textures in an external system like Dear ImGui.
  * @related  CF_TextureParams CF_Texture cf_make_texture
  */
@@ -821,7 +823,9 @@ CF_API uint64_t CF_CALL cf_texture_handle(CF_Texture texture);
 /**
  * @function cf_texture_binding_handle
  * @category graphics
- * @brief    Returns an SDL_GPUTextureSamplerBinding* casted to a `uint64_t`.
+ * @brief    Returns the backend's native texture binding handle casted to a `uint64_t`: an
+ *           SDL_GPUTextureSamplerBinding* on SDL_GPU; on WebGPU, a pointer to a `{ WGPUTextureView, WGPUSampler }`
+ *           pair.
  * @remarks  This is useful for e.g. rendering textures in an external system like Dear ImGui.
  * @related  CF_TextureParams CF_Texture cf_make_texture
  */
@@ -1043,7 +1047,7 @@ CF_API void CF_CALL cf_destroy_shader(CF_Shader shader);
 // Compute Shaders.
 //
 // Compute shaders run on the GPU outside the graphics pipeline. SDL_GPU backends (Vulkan, D3D12,
-// Metal) run them natively. GLES3/WebGL2 emulates them with draws, for a restricted class of
+// Metal) and WebGPU run them natively. GLES3/WebGL2 emulates them with draws, for a restricted class of
 // shaders; see `cf_make_compute_shader`.
 //
 // Uniforms and sampled textures are supplied via a CF_Material's compute stage (cs).
@@ -1675,8 +1679,9 @@ CF_API void CF_CALL cf_canvas_set_clear_depth_stencil(CF_Canvas canvas, float de
  * @category graphics
  * @brief    Initiates an async GPU-to-CPU copy of pixel data from a canvas.
  * @param    canvas  The canvas to read back pixel data from.
- * @return   Returns a `CF_Readback` handle. Returns a zero handle on failure or if unsupported (e.g. web/Emscripten).
- * @remarks  Ends any active render pass silently. Each readback uses its own command buffer and fence.
+ * @return   Returns a `CF_Readback` handle. Returns a zero handle on failure, such as a target format the
+ *           backend can't read back.
+ * @remarks  Works on every backend: SDL_GPU, WebGPU, and GLES3/WebGL2. Ends any active render pass silently. Each readback uses its own command buffer and fence.
  *           For screen readback, use `cf_canvas_readback(cf_app_get_canvas())`.
  * @related  CF_Readback cf_readback_ready cf_readback_data cf_readback_size cf_destroy_readback
  */
@@ -2368,7 +2373,7 @@ typedef struct CF_RenderState
 
 	/* @member How many entries of `blends` are meaningful. Zero or one means every color target
 	   shares `blends[0]` (exactly the old behavior, so zero-initialized state is unchanged).
-	   Per-target blend is SDL_GPU-only: the GLES backend has no indexed blend (ES 3.0) and
+	   Per-target blend works on SDL_GPU and WebGPU: the GLES backend has no indexed blend (ES 3.0) and
 	   applies `blends[0]` to every target. */
 	int blend_count;
 
@@ -2409,7 +2414,7 @@ typedef struct CF_RenderState
 	/* @member True to enable depth clip, false to enable depth clamp. Clipping discards fragments
 	   outside the near/far planes; clamping keeps them, pinned to the nearest plane, which is how
 	   shadow casters are usually kept from being clipped away. Only implemented on the SDL_GPU
-	   backend -- GLES has no equivalent of `GL_DEPTH_CLAMP` and silently ignores this. */
+	   backend, and on WebGPU when the device has depth-clip-control -- GLES has no equivalent of `GL_DEPTH_CLAMP` and silently ignores this. */
 	bool enable_depth_clip;
 } CF_RenderState;
 // @end
@@ -2853,7 +2858,7 @@ typedef struct CF_DrawIndexedIndirectArgs
  * @remarks  Call in place of `cf_draw_elements`, after `cf_apply_shader`. This closes the
  *           GPU-driven loop: a compute shader culls, compacts, and writes counts into the args
  *           buffer (`compute_writable` + `indirect_drawable`), and the draw consumes them with
- *           no CPU readback. SDL_GPU backends only; not available on GLES3/web.
+ *           no CPU readback. Not available on GLES3/WebGL2.
  * @related  cf_draw_elements CF_DrawIndirectArgs CF_DrawIndexedIndirectArgs cf_make_storage_buffer cf_dispatch_compute
  */
 CF_API void CF_CALL cf_draw_elements_indirect(CF_StorageBuffer args, int offset, int draw_count);

@@ -98,7 +98,7 @@ Either way, [`cf_query_backend`](../graphics/function/cf_query_backend.md) tells
 | GPU-writable storage (`compute_writable`) | ✔ | ✔ | ✔ (emulated, with limits) |
 | Indirect draws | ✔ | ✔ | ✘ |
 | Dear ImGui | ✔ | ✔ | ✔ |
-| `cf_push_gpu_label` capture regions | ✔ | no-op | no-op |
+| `cf_push_gpu_label` capture regions | ✔ | debug bit only | no-op |
 
 The GLES3 column's emulations and their limits are described on the [Emscripten page](emscripten.md#gles3-backend-capabilities).
 
@@ -109,7 +109,7 @@ WebGPU itself is missing a few things the other backends have. Here is what beha
 - **Pixel formats**: `CF_PIXEL_FORMAT_A8_UNORM` and the 16-bit packed formats (`B5G6R5`, `B5G5R5A1`, `B4G4R4A4`) have no WebGPU equivalent, so creating a texture with them fails. BC compressed formats, the 16-bit normalized formats, and `D32_FLOAT_S8_UINT` depend on the device. Check with [`cf_query_pixel_format`](../graphics/function/cf_query_pixel_format.md).
 - **LOD bias**: a sampler's LOD bias is ignored. CF logs this once.
 - **3D texture mipmaps**: [`cf_generate_mipmaps`](../graphics/function/cf_generate_mipmaps.md) skips 3D textures. CF logs this once.
-- **Debug labels**: [`cf_push_gpu_label`](../graphics/function/cf_push_gpu_label.md) and `cf_pop_gpu_label` do nothing.
+- **Debug labels**: [`cf_push_gpu_label`](../graphics/function/cf_push_gpu_label.md) and `cf_pop_gpu_label` do nothing unless the app was made with `CF_APP_OPTIONS_GFX_DEBUG_BIT`. The draw API labels every batch, and on the web each label costs calls into the browser.
 - **Depth clip**: turning off depth clipping (`enable_depth_clip = false`) needs a device feature. Without it the setting is ignored, and CF logs this once.
 - **MSAA**: 1x and 4x always work. 2x and 8x only work on desktop when the device supports them, and never on the web. [`cf_app_set_msaa`](../app/function/cf_app_set_msaa.md) returns false for a sample count the backend can't do.
 
