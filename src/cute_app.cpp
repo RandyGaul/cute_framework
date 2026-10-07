@@ -617,6 +617,7 @@ int cf_app_draw_onto_screen(bool clear)
 	s_draw->scissors.set_count(1);
 	s_draw->viewports.set_count(1);
 	s_draw->layers.set_count(1);
+	s_draw->zs.set_count(1);
 	s_draw->reset_cam();
 	s_draw->font_sizes.set_count(1);
 	s_draw->fonts.set_count(1);

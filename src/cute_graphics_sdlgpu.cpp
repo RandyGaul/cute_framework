@@ -2592,6 +2592,11 @@ void cf_sdlgpu_current_canvas_size(int* w, int* h)
 	*h = g_ctx.canvas->h;
 }
 
+bool cf_sdlgpu_current_canvas_has_depth()
+{
+	return g_ctx.canvas && g_ctx.canvas->depth_stencil;
+}
+
 void cf_sdlgpu_draw_elements()
 {
 	CF_MeshInternal* mesh = g_ctx.canvas->mesh;

@@ -3422,6 +3422,11 @@ void cf_gles_current_canvas_size(int* w, int* h)
 	}
 }
 
+bool cf_gles_current_canvas_has_depth()
+{
+	return s_canvas_has_depth(g_ctx.canvas);
+}
+
 // Synchronous readback: glReadPixels straight into a CPU buffer. CF renders canvases
 // with row 0 at the top (the window blit un-flips), so GL's bottom-up read order
 // already yields top-down rows -- no flip here.

@@ -746,7 +746,7 @@ CF_API void CF_CALL cf_draw_shape_group_end_stroked(float thickness);
  *           Layers are stream-structural state, so they also order 3d mesh submissions (`cf_draw3d_mesh`) against 2d drawing and each other.
  *           Each layer keeps its own command queue, so switching layers is cheap: draws recorded on the same layer batch
  *           together no matter how many times other layers were visited in between.
- * @related  cf_draw_push_layer cf_draw_pop_layer cf_draw_peek_layer cf_draw3d_mesh
+ * @related  cf_draw_push_layer cf_draw_pop_layer cf_draw_peek_layer cf_draw3d_mesh cf_draw_push_z
  */
 CF_API void CF_CALL cf_draw_push_layer(int layer);
 
@@ -769,6 +769,58 @@ CF_API int CF_CALL cf_draw_pop_layer(void);
  * @related  cf_draw_push_layer cf_draw_pop_layer cf_draw_peek_layer
  */
 CF_API int CF_CALL cf_draw_peek_layer(void);
+
+/**
+ * @function cf_draw_push_z
+ * @category draw
+ * @brief    Pushes a Z for subsequent 2d drawing, in world units, like positions.
+ * @param    z          The world z. Higher is nearer the viewer, like higher layers draw on top.
+ * @remarks  Z is the third axis of the 2d world: a 2d draw at (x, y) with Z pushed sits at world point (x, y, z).
+ *           The 2d world is the 3d world's xy plane, so a 2d sprite at z = 3 and a 3d mesh at z = 3 sit at the
+ *           same depth and occlude each other through the depth buffer. Z is view-aligned: it never moves or
+ *           resizes a shape (the 2d camera doesn't change Z), it only sets the depth the shape tests and writes.
+ *
+ *           Depth comes from the 3d camera (`cf_draw3d_push_projection` and `cf_draw3d_push_view`) at the time
+ *           of the draw, exactly as meshes are projected, so draw 2d with Z while the 3d camera is pushed. While no
+ *           3d projection is pushed, Z maps onto a default range of -10000 to 10000 world units (clamped) and
+ *           still orders 2d against 2d.
+ *
+ *           With no Z pushed, 2d drawing doesn't touch the depth buffer at all. Pushing any Z, even 0, opts
+ *           sprites, shapes, text, custom shapes, shape groups, and draw lists into depth: they test with
+ *           `CF_COMPARE_FUNCTION_LESS_THAN_OR_EQUAL` (or a depth test from `cf_draw_push_render_state`), and opaque
+ *           draws also write depth. Opaque means full color and opacity under `CF_DRAW_BLEND_NORMAL` with no glow;
+ *           opaque draws write depth only where their coverage is at least half (sprites cut at half alpha, shapes
+ *           drop the outer half of their anti-aliased fringe), so an edge never punches a halo into what's drawn
+ *           behind it later. Translucent draws test without writing, and keep layer and submission order among
+ *           themselves -- draw them back to front. Layers still order draws as usual; depth decides occlusion among
+ *           depth-tested draws.
+ *
+ *           Depth only exists on canvases made with `depth_stencil_enable`; elsewhere Z does nothing. Draws with Z
+ *           always take the instanced path (the tiled path can't depth test). Draw lists record Z relative to the
+ *           Z current at `cf_draw_list_begin` and add the Z current at `cf_draw_list` on replay, like layers, under
+ *           the 3d camera live at replay. A draw shader that writes `gl_FragDepth` replaces the Z depth; read
+ *           `gl_FragCoord.z` for the Z depth to offset from. Canvas blits (`cf_draw_canvas`) ignore Z.
+ * @related  cf_draw_push_z cf_draw_pop_z cf_draw_peek_z cf_draw_push_layer cf_draw3d_push_projection cf_draw3d_push_view
+ */
+CF_API void CF_CALL cf_draw_push_z(float z);
+
+/**
+ * @function cf_draw_pop_z
+ * @category draw
+ * @brief    Pops and returns the last Z, in world units, like positions.
+ * @remarks  Popping the last pushed Z returns 2d drawing to no depth at all. See `cf_draw_push_z`.
+ * @related  cf_draw_push_z cf_draw_pop_z cf_draw_peek_z
+ */
+CF_API float CF_CALL cf_draw_pop_z(void);
+
+/**
+ * @function cf_draw_peek_z
+ * @category draw
+ * @brief    Returns the last Z, in world units, like positions. 0 when no Z is pushed.
+ * @remarks  See `cf_draw_push_z`.
+ * @related  cf_draw_push_z cf_draw_pop_z cf_draw_peek_z
+ */
+CF_API float CF_CALL cf_draw_peek_z(void);
 
 /**
  * @function cf_draw_push_color
@@ -2516,6 +2568,9 @@ CF_INLINE void draw_shape_group_end_stroked(float thickness) { cf_draw_shape_gro
 CF_INLINE void draw_push_layer(int layer) { cf_draw_push_layer(layer); }
 CF_INLINE int draw_pop_layer() { return cf_draw_pop_layer(); }
 CF_INLINE int draw_peek_layer() { return cf_draw_peek_layer(); }
+CF_INLINE void draw_push_z(float z) { cf_draw_push_z(z); }
+CF_INLINE float draw_pop_z() { return cf_draw_pop_z(); }
+CF_INLINE float draw_peek_z() { return cf_draw_peek_z(); }
 CF_INLINE void draw_push_color(CF_Color c) { cf_draw_push_color(c); }
 CF_INLINE CF_Color draw_pop_color() { return cf_draw_pop_color(); }
 CF_INLINE CF_Color draw_peek_color() { return cf_draw_peek_color(); }

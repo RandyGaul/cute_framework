@@ -237,6 +237,65 @@ void cf_get_pixels(ATLAS_CACHE_U64 image_id, void* buffer, int bytes_to_fill, vo
 }
 
 
+// Depth at one ndc point of the 2d plane at world `z`: the 3d point on that plane under the
+// pixel (the camera ray through ndc meets z = const), mapped through `vp`. Falls back to the
+// point (0, 0, z) when the camera sees the plane edge-on, and to the near plane when the
+// plane lies behind the camera.
+static float s_plane_depth_at(const CF_M4x4& vp, float z, float nx, float ny)
+{
+	const float* e = vp.elements; // Column-major: row r is (e[r], e[4+r], e[8+r], e[12+r]).
+	float k0 = e[8] * z + e[12], k1 = e[9] * z + e[13], k2 = e[10] * z + e[14], k3 = e[11] * z + e[15];
+	float a00 = e[0] - nx * e[3], a01 = e[4] - nx * e[7], b0 = -(k0 - nx * k3);
+	float a10 = e[1] - ny * e[3], a11 = e[5] - ny * e[7], b1 = -(k1 - ny * k3);
+	float det = a00 * a11 - a01 * a10;
+	float x = 0, y = 0;
+	if (fabsf(det) > 1.0e-12f) {
+		x = (b0 * a11 - a01 * b1) / det;
+		y = (a00 * b1 - b0 * a10) / det;
+	}
+	float w = e[3] * x + e[7] * y + k3;
+	if (w <= 1.0e-6f) return 0;
+	return cf_clamp01((e[2] * x + e[6] * y + k2) / w);
+}
+
+// The depth plane 2d geometry at world `z` rasterizes with: depth = plane . (ndc.x, ndc.y, 1).
+// A plane of constant world z has depth affine in ndc under any projective camera, so three
+// samples pin it exactly; a camera looking straight down z gives a flat plane. With no 3d
+// camera (vp NULL), z maps linearly onto the default range, higher z nearer.
+static void s_depth_plane(const CF_M4x4* vp, float z, float* plane)
+{
+	if (!vp) {
+		float zc = cf_clamp(z, -CF_DRAW_Z_RANGE, CF_DRAW_Z_RANGE);
+		plane[0] = 0;
+		plane[1] = 0;
+		plane[2] = 0.5f - zc * (0.5f / CF_DRAW_Z_RANGE);
+		return;
+	}
+	float d0 = s_plane_depth_at(*vp, z, 0, 0);
+	plane[0] = s_plane_depth_at(*vp, z, 1, 0) - d0;
+	plane[1] = s_plane_depth_at(*vp, z, 0, 1) - d0;
+	plane[2] = d0;
+}
+
+// Captures the z stack onto a geometry. Planes are cached across geometries: z and the 3d
+// camera rarely change from one draw to the next.
+static CF_INLINE void s_capture_depth(BatchGeometry& g)
+{
+	if (s_draw->zs.count() <= 1) return;
+	float z = s_draw->zs.last();
+	g.depth.has_z = true;
+	g.depth.z = z;
+	CF_M4x4 vp;
+	uint64_t cam = cf_draw3d_depth_camera(&vp);
+	if (!s_draw->depth_cache_valid || s_draw->depth_cache_z != z || s_draw->depth_cache_cam != cam) {
+		s_depth_plane(cam ? &vp : NULL, z, s_draw->depth_cache_plane);
+		s_draw->depth_cache_z = z;
+		s_draw->depth_cache_cam = cam;
+		s_draw->depth_cache_valid = true;
+	}
+	CF_MEMCPY(g.depth.plane, s_draw->depth_cache_plane, sizeof(g.depth.plane));
+}
+
 // Appends a zero-initialized geometry directly into the current command
 // (fill-in-place: no stack struct, no copy; unset fields stay zero).
 static CF_INLINE BatchGeometry& s_push_geom()
@@ -252,6 +311,7 @@ static CF_INLINE BatchGeometry& s_push_geom()
 	g.fx.outline_width = s_draw->outline_widths.last();
 	g.fx.glow = premultiply(s_draw->glows.last());
 	g.fx.glow_radius = s_draw->glow_radii.last();
+	s_capture_depth(g);
 	return g;
 }
 
@@ -427,7 +487,17 @@ static CF_RenderState s_blend_run_state(CF_RenderState rs, int blend, bool tiled
 	return rs;
 }
 
-static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* uvs, int start, int end, uint64_t texture_id, int texture_w, int texture_h, int blend, bool instanced)
+// Depth-tested canvas state for a Z run (see s_depth_mode): depth 1 tests, 2 also writes. A
+// depth test the caller pushed is kept; otherwise LESS_EQUAL, so equal-z draws keep paint order.
+static CF_RenderState s_depth_run_state(CF_RenderState rs, int depth)
+{
+	if (!depth) return rs;
+	if (rs.depth_compare == CF_COMPARE_FUNCTION_ALWAYS) rs.depth_compare = CF_COMPARE_FUNCTION_LESS_THAN_OR_EQUAL;
+	rs.depth_write_enabled = depth == 2;
+	return rs;
+}
+
+static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* uvs, int start, int end, uint64_t texture_id, int texture_w, int texture_h, int blend, int depth, bool instanced)
 {
 	CF_Command& cmd = *s_draw->processing_cmd;
 	int canvas_w, canvas_h;
@@ -449,6 +519,8 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 	CF_M3x2 last_mvp;
 	bool have_mvp = false;
 	uint32_t inv_off = 0;
+	float last_plane[3];
+	uint32_t depth_off = 0; // 0 until the first depth block lands (offset 0 is always the palette).
 	float ux0 = FLT_MAX, uy0 = FLT_MAX, ux1 = -FLT_MAX, uy1 = -FLT_MAX;
 
 	// Walk the geometry stream range in paint order. Sprite/text atlas uvs come from
@@ -726,6 +798,17 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 			pay.add({ geom.fx.outline_width, geom.fx.glow_radius, 0, 0 });
 		}
 
+		// 2d depth block (cf_draw_push_z): the ndc depth plane, and whether the run writes depth
+		// (the fragment stage then drops the AA fringe). Deduped across consecutive commands.
+		if (depth && geom.depth.has_z) {
+			if (!depth_off || CF_MEMCMP(geom.depth.plane, last_plane, sizeof(last_plane)) != 0) {
+				CF_MEMCPY(last_plane, geom.depth.plane, sizeof(last_plane));
+				depth_off = (uint32_t)pay.count();
+				pay.add({ last_plane[0], last_plane[1], last_plane[2], depth == 2 ? 1.0f : 0.0f });
+			}
+			CF_MEMCPY(&tc.fx[2], &depth_off, sizeof(depth_off));
+		}
+
 		// Opaque-cover cull candidate? Filled SDF shape at full alpha under normal
 		// blending (additive/multiply/screen shapes never hide what's beneath).
 		// Clipped segments are excluded: their planes can cut mid-tile, so "interior
@@ -781,7 +864,7 @@ static void s_draw_report_tiled(const BatchGeometry* geoms, const CF_PendingUV* 
 		cf_material_set_uniform_fs(s_draw->material, "u_alpha_discard", &alpha_discard, CF_UNIFORM_TYPE_INT, 1);
 		int use_smooth_uv = cmd.filter_mode == CF_DRAW_FILTER_SMOOTH ? 0 : 1;
 		cf_material_set_uniform_fs(s_draw->material, "u_use_smooth_uv", &use_smooth_uv, CF_UNIFORM_TYPE_INT, 1);
-		cf_material_set_render_state(s_draw->material, s_blend_run_state(cmd.render_state, blend, false));
+		cf_material_set_render_state(s_draw->material, s_depth_run_state(s_blend_run_state(cmd.render_state, blend, false), depth));
 		void* sampler_override = (cmd.filter_mode == CF_DRAW_FILTER_NEAREST) ? s_draw->sampler_nearest : s_draw->sampler_linear;
 		cf_set_sampler_override(sampler_override);
 		cf_apply_mesh(s_draw->corner_mesh);
@@ -945,12 +1028,14 @@ static void s_draw_report(atlas_cache_entry_t* entries, int count, int texture_w
 	}
 }
 
-// Routes one paint-ordered run of the stream to the tiled or instanced path.
-static void s_draw_report_range(const BatchGeometry* geoms, const CF_PendingUV* uvs, int start, int end, uint64_t texture_id, int texture_w, int texture_h, int blend)
+// Routes one paint-ordered run of the stream to the tiled or instanced path. Runs with Z
+// (depth != 0) always rasterize instanced: the tile walk composites in compute-binned lists
+// and has no depth test.
+static void s_draw_report_range(const BatchGeometry* geoms, const CF_PendingUV* uvs, int start, int end, uint64_t texture_id, int texture_w, int texture_h, int blend, int depth)
 {
 	int total = end - start;
 	if (total <= 0) return;
-	if (s_tiled_batch_eligible(total)) {
+	if (!depth && s_tiled_batch_eligible(total)) {
 		// Auto: the instanced path (rasterizer coverage) wins at moderate overdraw;
 		// tiled wins decisively when its opaque-cover cull can engage (up to ~9x on
 		// stacked opaque scenes). Route tiled only when a big opaque cover exists --
@@ -964,13 +1049,13 @@ static void s_draw_report_range(const BatchGeometry* geoms, const CF_PendingUV* 
 		// batch instead (it is O(cmds) regardless of footprint).
 		if (take && stats.footprint_tiles > s_draw->tiled_list_budget) take = false;
 		if (take) {
-			s_draw_report_tiled(geoms, uvs, start, end, texture_id, texture_w, texture_h, blend, false);
+			s_draw_report_tiled(geoms, uvs, start, end, texture_id, texture_w, texture_h, blend, 0, false);
 			return;
 		}
 	}
 	s_draw->instanced_batch_count++;
 	if (!s_draw->instanced_available) return; // Draw shader failed to compile; nothing can render.
-	s_draw_report_tiled(geoms, uvs, start, end, texture_id, texture_w, texture_h, blend, true);
+	s_draw_report_tiled(geoms, uvs, start, end, texture_id, texture_w, texture_h, blend, depth, true);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -3442,6 +3527,7 @@ void cf_draw_list_begin(CF_DrawList list)
 	// Layers are list-local, like transforms: replay offsets the recording from this layer
 	// onto whichever layer is current then.
 	(*data)->base_layer = s_draw->layers.last();
+	(*data)->base_z = s_draw->zs.last(); // Z is list-local the same way.
 	// Park the live scene's layers and record into a private, empty set: the recording
 	// moves into the list wholesale at cf_draw_list_end and the live layers come back untouched.
 	CF_ASSERT(s_draw->recording_saved_layers.count() == 0);
@@ -3490,6 +3576,11 @@ void cf_draw_list_end()
 					float extra = g.aa * (c.replay_aa_scale - 1.0f);
 					g.aa *= c.replay_aa_scale;
 					if (extra > 0) s_replay_inflate_quad(&g, extra);
+					// Planes re-derive when this list replays; only z composes here.
+					if (!g.csg_operand && (g.depth.has_z || c.replay_has_z)) {
+						g.depth.has_z = true;
+						g.depth.z += c.replay_z;
+					}
 				}
 			}
 			if (copy.u.data) {
@@ -3531,6 +3622,10 @@ void cf_draw_list(CF_DrawList list)
 	// layer serves a whole group and mesh fusion can track its previous command by index
 	// within it.
 	int layer_offset = s_draw->layers.last() - data->base_layer;
+	float z_offset = s_draw->zs.last() - data->base_z;
+	bool has_z = s_draw->zs.count() > 1;
+	CF_M4x4 vp3d;
+	bool has_cam3d = cf_draw3d_depth_camera(&vp3d) != 0;
 	CF_DrawLayer* dl = NULL;
 	int prev_mesh_index = -1; // Index in dl->cmds of the last replayed mesh command.
 	for (int i = 0; i < data->cmds.count(); ++i) {
@@ -3552,6 +3647,10 @@ void cf_draw_list(CF_DrawList list)
 		c.geoms_ref = &src.geoms;
 		c.replay_mvp = s_draw->mvp;
 		c.replay_aa_scale = inv_cam_scale;
+		c.replay_z = z_offset;
+		c.replay_has_z = has_z;
+		c.replay_has_cam3d = has_cam3d;
+		if (has_cam3d) c.replay_vp3d = vp3d;
 		if (src.mesh3d) {
 			c.geoms_ref = NULL;
 			// Fusion needs the previous replayed mesh command still directly underneath:
@@ -4802,8 +4901,10 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 				g.is_text = true;
 				BatchGeometry& pushed = s_push_geom();
 				CF_M3x2 mvp = pushed.mvp;
+				CF_DrawDepth depth = pushed.depth;
 				pushed = g;
 				pushed.mvp = mvp;
+				pushed.depth = depth;
 				DRAW_PUSH_ITEM(s);
 			}
 		}
@@ -4903,6 +5004,22 @@ int cf_draw_pop_layer()
 int cf_draw_peek_layer()
 {
 	return s_draw->layers.last();
+}
+
+void cf_draw_push_z(float z)
+{
+	s_draw->zs.add(z);
+}
+
+float cf_draw_pop_z()
+{
+	if (s_draw->zs.count() > 1) return s_draw->zs.pop();
+	return s_draw->zs.last();
+}
+
+float cf_draw_peek_z()
+{
+	return s_draw->zs.last();
 }
 
 void cf_draw_push_color(CF_Color c)
@@ -5492,7 +5609,25 @@ void static s_blit(CF_Command* cmd, CF_Canvas src, CF_Canvas dst, bool clear_dst
 	cf_draw_elements();
 }
 
-static void s_draw_report_range(const BatchGeometry* geoms, const CF_PendingUV* uvs, int start, int end, uint64_t texture_id, int texture_w, int texture_h);
+// How a geometry meets the depth buffer: 0 not at all (no Z pushed), 1 test only, 2 test and
+// write. Only opaque geometry writes -- full color and opacity under normal blending, with no
+// glow (a glow is all fringe). Translucent geometry tests without writing, so whatever is
+// drawn behind it later still shows through.
+static int s_depth_mode(const BatchGeometry& g)
+{
+	if (!g.depth.has_z) return 0;
+	if (g.blend != CF_DRAW_BLEND_NORMAL || g.alpha < 1.0f || g.fx.glow_radius > 0) return 1;
+	if (g.is_text || g.type == BATCH_GEOMETRY_TYPE_GLYPH) {
+		for (int i = 0; i < 4; ++i) if (g.text_colors[i].a < 1.0f) return 1;
+		return 2;
+	}
+	if (g.type == BATCH_GEOMETRY_TYPE_TRI && g.use_tri_colors) {
+		for (int i = 0; i < 3; ++i) if (g.tri_colors[i].a < 1.0f) return 1;
+		return 2;
+	}
+	if (g.is_sprite) return 2; // Per-texel alpha: the shader's core/fringe cut decides coverage.
+	return g.color.a < 1.0f ? 1 : 2;
+}
 
 // Runs after every atlas_cache_flush (which filled the per-flush uv table via the
 // callbacks): render the collated stream in paint order, splitting into a new draw
@@ -5506,18 +5641,23 @@ static void s_flush_pending_geoms()
 	int start = 0;
 	uint64_t run_tex = 0;
 	int run_w = 1, run_h = 1;
+	// Z means nothing on a canvas without depth: draw exactly as if none was pushed.
+	bool canvas_depth = cf_current_canvas_has_depth();
 	int run_blend = n ? geoms[0].blend : 0;
+	int run_depth = n && canvas_depth ? s_depth_mode(geoms[0]) : 0;
 	for (int i = 0; i < n; ++i) {
 		const BatchGeometry& g = geoms[i];
 		if (g.csg_operand) continue; // Rides with its CSG head.
-		// Blend mode changes split the stream: each run renders with its mode's exact
-		// fixed-function canvas state, and run sequencing preserves paint order.
-		if (g.blend != run_blend) {
-			s_draw_report_range(geoms, uvs, start, i, run_tex, run_w, run_h, run_blend);
+		// Blend mode and depth mode changes split the stream: each run renders with its
+		// mode's exact fixed-function canvas state, and run sequencing preserves paint order.
+		int depth = canvas_depth ? s_depth_mode(g) : 0;
+		if (g.blend != run_blend || depth != run_depth) {
+			s_draw_report_range(geoms, uvs, start, i, run_tex, run_w, run_h, run_blend, run_depth);
 			start = i;
 			run_tex = 0;
 			run_w = run_h = 1;
 			run_blend = g.blend;
+			run_depth = depth;
 		}
 		if (!(g.is_sprite || g.is_text)) continue;
 		if (uvs[i].texture_id == 0) continue;
@@ -5526,14 +5666,14 @@ static void s_flush_pending_geoms()
 			run_w = uvs[i].tex_w;
 			run_h = uvs[i].tex_h;
 		} else if (uvs[i].texture_id != run_tex) {
-			s_draw_report_range(geoms, uvs, start, i, run_tex, run_w, run_h, run_blend);
+			s_draw_report_range(geoms, uvs, start, i, run_tex, run_w, run_h, run_blend, run_depth);
 			start = i;
 			run_tex = uvs[i].texture_id;
 			run_w = uvs[i].tex_w;
 			run_h = uvs[i].tex_h;
 		}
 	}
-	s_draw_report_range(geoms, uvs, start, n, run_tex, run_w, run_h, run_blend);
+	s_draw_report_range(geoms, uvs, start, n, run_tex, run_w, run_h, run_blend, run_depth);
 	s_draw->pending_geoms.clear();
 	s_draw->pending_uvs.clear();
 }
@@ -5595,6 +5735,9 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 	if (src_geoms->count()) {
 		s_draw->need_flush = true;
 		int base = s_draw->pending_geoms.count();
+		bool have_plane = false;
+		float plane_z = 0;
+		float plane[3];
 		for (int i = 0; i < src_geoms->count(); ++i) {
 			s_draw->pending_geoms.add((*src_geoms)[i]);
 			if (cmd->geoms_ref) {
@@ -5603,6 +5746,17 @@ static void s_process_command(CF_Canvas canvas, CF_Command* cmd, CF_Command* nex
 				float extra = g.aa * (cmd->replay_aa_scale - 1.0f);
 				g.aa *= cmd->replay_aa_scale;
 				if (extra > 0) s_replay_inflate_quad(&g, extra);
+				// Z is list-local and the 3d camera is live at replay: re-derive the depth plane.
+				if (!g.csg_operand && (g.depth.has_z || cmd->replay_has_z)) {
+					g.depth.has_z = true;
+					g.depth.z += cmd->replay_z;
+					if (!have_plane || plane_z != g.depth.z) {
+						s_depth_plane(cmd->replay_has_cam3d ? &cmd->replay_vp3d : NULL, g.depth.z, plane);
+						plane_z = g.depth.z;
+						have_plane = true;
+					}
+					CF_MEMCPY(g.depth.plane, plane, sizeof(plane));
+				}
 			}
 			CF_PendingUV uv = { 0 };
 			s_draw->pending_uvs.add(uv);

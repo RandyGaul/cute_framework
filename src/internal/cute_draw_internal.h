@@ -10,6 +10,7 @@
 
 #include <cute_array.h>
 #include <cute_math.h>
+#include <cute_math3d.h>
 #include <cute_string.h>
 #include <cute_draw.h>
 #include <cute_graphics.h>
@@ -30,6 +31,18 @@ struct CF_DrawEffects
 	CF_Color glow;         // Premultiplied at capture.
 	float glow_radius;
 };
+
+// 2d depth (cf_draw_push_z), captured per geometry. The depth is a plane over the coverage
+// quad's ndc: depth = plane[0] * ndc.x + plane[1] * ndc.y + plane[2] (see s_depth_plane).
+struct CF_DrawDepth
+{
+	bool has_z; // Z was pushed: the geometry depth-tests, and writes depth when opaque.
+	float z;    // World z, in world units.
+	float plane[3];
+};
+
+// Half-width of the default depth range (world units) 2d Z maps into while no 3d projection is pushed.
+#define CF_DRAW_Z_RANGE 10000.0f
 
 enum BatchGeometryType : int
 {
@@ -87,6 +100,7 @@ struct BatchGeometry
 	float aa;
 	CF_DrawDash dash; // Captured from the dash stack; on == 0 means solid.
 	CF_DrawEffects fx; // Captured from the outline/glow stacks.
+	CF_DrawDepth depth; // Captured from the z stack.
 	bool is_text;
 	bool is_sprite;
 	bool fill;
@@ -174,7 +188,9 @@ struct CF_TileCmd
 	// Shape effects (cf_draw_push_outline / _glow). x: payload offset of the effect block in
 	// vec4 units, as float bits; 0 means no effects. y: how far past the shape's own extent the
 	// effects reach (the glow radius; outlines stay inside), so coverage quads and tile culling
-	// can pad for it. zw reserved.
+	// can pad for it. z: payload offset of the 2d depth block (plane a, b, c, depth write) as
+	// float bits; 0 means no Z. Instanced path only -- Z batches never take the tile walk.
+	// w reserved.
 	float fx[4];
 };
 
@@ -238,6 +254,13 @@ struct CF_Command
 	const Cute::Array<BatchGeometry>* geoms_ref = NULL;
 	CF_M3x2 replay_mvp;
 	float replay_aa_scale = 1.0f;
+	// Replay-time 2d depth: z offsets every replayed geometry's z (Z is list-local, like layers),
+	// a z pushed at replay makes the whole replay depth-aware, and depth planes come from the
+	// 3d camera live at replay (replay_vp3d, when replay_has_cam3d).
+	float replay_z = 0;
+	bool replay_has_z = false;
+	bool replay_has_cam3d = false;
+	CF_M4x4 replay_vp3d;
 	// 3d mesh submission payload (cf_draw3d_mesh), owned by this command and freed via
 	// cf_draw3d_free_cmd when the command is destroyed. See cute_draw3d.cpp.
 	struct CF_MeshCmd3d* mesh3d = NULL;
@@ -438,6 +461,13 @@ struct CF_Draw
 	Cute::Array<CF_Rect> scissors = { { 0, 0, -1, -1 } };
 	Cute::Array<CF_Rect> viewports = { { 0, 0, -1, -1 } };
 	Cute::Array<int> layers = { 0 };
+	// cf_draw_push_z stack. Only the default entry means "no Z": 2d draws skip depth entirely.
+	Cute::Array<float> zs = { 0 };
+	// Last depth plane computed in s_push_geom, reused while z and the 3d camera hold still.
+	float depth_cache_z = 0;
+	uint64_t depth_cache_cam = 0;
+	bool depth_cache_valid = false;
+	float depth_cache_plane[3];
 	Cute::Array<CF_M3x2> cam_stack = { cf_make_identity() };
 	Cute::Array<CF_M3x2> projection_stack;
 	float aaf = 0;
@@ -546,6 +576,8 @@ struct CF_DrawListData
 	// The layer that was current at cf_draw_list_begin. Recorded layers are relative to it:
 	// replay shifts every command by (current layer - base_layer).
 	int base_layer = 0;
+	// The z current at cf_draw_list_begin. Recorded z is relative to it, like layers.
+	float base_z = 0;
 };
 
 void cf_make_draw();
@@ -597,6 +629,10 @@ bool cf_draw3d_atlas_report(atlas_cache_entry_t* entries, int count, int texture
 // replayed from the same list during this replay, else NULL. Returns true when the source
 // command fused into `prev` instead of populating `dst` -- the caller then discards `dst`.
 bool cf_draw3d_replay_cmd(CF_Command* dst, CF_Command* prev, const CF_Command* src);
+// The 3d camera 2d Z maps through (cf_draw_push_z): fills `vp` with projection * view and
+// returns a nonzero id that changes whenever that matrix does, or returns 0 while no 3d
+// projection is pushed (2d Z then uses the default CF_DRAW_Z_RANGE).
+uint64_t cf_draw3d_depth_camera(CF_M4x4* vp);
 void cf_draw3d_free_list_cmds(struct CF_DrawListData* data);
 
 // We slice up a 64-bit int into lo + hi ranges to map where we can fetch pixels

@@ -163,6 +163,30 @@ Whenever a setting is pushed it will be used by subsequent drawing functions. Fo
 
 The layer controls the order things are drawn. You can set what layer to draw upon with [`cf_draw_push_layer`](../draw/function/cf_draw_push_layer.md). When done, restore the previously used layer with [`cf_draw_pop_layer`](../draw/function/cf_draw_pop_layer.md).
 
+## Depth (Z)
+
+Layers order whole draws. For 2.5D, where sprites and 3D props must occlude each other pixel by pixel, push a Z with [`cf_draw_push_z`](../draw/function/cf_draw_push_z.md). Z is the third axis of the 2D world, in world units like positions: a sprite drawn at (x, y) with Z pushed sits at world point (x, y, z), and higher Z is nearer the viewer, just as higher layers draw on top. The 2D world is the 3D world's xy plane, so a sprite at z = 3 and a mesh at z = 3 are at the same depth.
+
+```cpp
+// A 3D camera looking down -z at the xy plane.
+draw3d_push_projection(perspective(fov, aspect, 0.1f, 100.0f));
+draw3d_push_view(look_at(V3(cam.x, cam.y, 20), V3(cam.x, cam.y, 0), V3(0, 1, 0)));
+
+// 3D props: a pillar standing at z = 3.
+draw3d_push(); draw3d_translate(V3(pillar.x, pillar.y, 3)); draw3d_mesh(pillar_mesh); draw3d_pop();
+
+// 2D sprites at their own depths. The hero at z = 2 passes behind the pillar, the bird at z = 4 in front of it.
+draw_push_z(2); draw_sprite(&hero); draw_pop_z();
+draw_push_z(4); draw_sprite(&bird); draw_pop_z();
+```
+
+Z never moves or resizes a 2D draw -- the 2D camera places it on screen exactly as before -- it only sets the depth the draw tests and writes, taken from the 3D camera live at the time of the draw (so keep the 3D camera pushed while drawing 2D with Z). Without a 3D camera, Z maps onto a default range of ±10,000 world units and still orders 2D against 2D. A few rules:
+
+- Without any Z pushed, 2D drawing ignores depth completely, exactly as it always has.
+- Depth needs a canvas with `depth_stencil_enable` (the app's own canvas has one). On canvases without depth, Z does nothing.
+- Opaque draws write depth where they're at least half covered (sprites cut at half alpha, shapes drop the outer half of their anti-aliased edge), so edges never punch halos into whatever is drawn behind them later. Translucent draws test depth without writing it and keep their submission order, so draw them back to front.
+- Layers still order draws as usual; depth decides occlusion among draws with Z. Draw lists record Z relative to the Z at `draw_list_begin` and add the Z current at replay, like layers.
+
 ## Blend Modes
 
 Blend modes are recorded *per draw call* with [`cf_draw_push_blend`](../draw/function/cf_draw_push_blend.md) — no batching or render-state juggling required, and paint order is preserved across mode changes. Additive glow particles can interleave freely with alpha-blended sprites in one stream of draw calls:

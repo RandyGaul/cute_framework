@@ -303,6 +303,8 @@ void cf_set_sampler_override(void* sampler);
 // cf_apply_vs/fs_storage_buffers, cf_push/pop_gpu_label, and cf_draw_elements_instanced
 // used to be declared here as internal-only; they are public in cute_graphics.h now.
 void cf_current_canvas_size(int* w, int* h);
+// Whether the applied canvas has a depth buffer (2d Z only depth tests on those).
+bool cf_current_canvas_has_depth();
 
 // Region-granular texture ops used by the draw layer's atlas cache to rebuild atlas pages
 // GPU-side (repacks become texture->texture copies instead of CPU pixel re-fetch + upload).
