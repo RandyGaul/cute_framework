@@ -25,7 +25,7 @@ int test_app_options(int extra_options)
 	const char* gles = getenv("CF_TEST_GLES");
 	if (gles && *gles == '1') options |= CF_APP_OPTIONS_GFX_OPENGL_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
 	const char* webgpu = getenv("CF_TEST_WEBGPU");
-	if (webgpu && *webgpu == '1') options |= CF_APP_OPTIONS_GFX_WEBGPU_BIT;
+	if (webgpu && *webgpu == '1') options |= CF_APP_OPTIONS_GFX_WEBGPU_BIT | CF_APP_OPTIONS_GFX_DEBUG_BIT;
 	return options;
 }
 

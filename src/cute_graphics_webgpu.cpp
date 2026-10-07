@@ -480,6 +480,9 @@ static struct
 	// Debug groups must balance within each encoder, and the command encoder takes none while a
 	// pass is open. Labels pushed during a pass go on the pass, the innermost pass_label_count of
 	// them; the command encoder is brought back in line with `labels` whenever no pass is open.
+	// Off without CF_APP_OPTIONS_GFX_DEBUG_BIT: the draw API labels every batch, and on the web
+	// each group is two calls into the browser.
+	bool debug_labels;
 	Array<CF_WLabel> labels;
 	Array<uint64_t> encoder_labels;
 	int pass_label_count;
@@ -1751,6 +1754,7 @@ CF_Result cf_webgpu_init(bool debug)
 	s_make_ring(4 * 1024 * 1024);
 	s_make_arena(1024 * 1024);
 	g_ctx.serial = 1;
+	g_ctx.debug_labels = debug;
 	if (debug) printf("WebGPU: backend on %s\n", g_ctx.adapter_name && *g_ctx.adapter_name ? g_ctx.adapter_name : "an unnamed adapter");
 
 	WGPUBindGroupLayoutDescriptor edesc = WGPU_BIND_GROUP_LAYOUT_DESCRIPTOR_INIT;
@@ -3996,6 +4000,7 @@ void cf_webgpu_set_sampler_override(void* sampler)
 
 void cf_webgpu_push_gpu_label(const char* name)
 {
+	if (!g_ctx.debug_labels) return;
 	CF_WLabel label;
 	label.name = String(name);
 	label.id = ++g_ctx.label_serial;

@@ -2864,7 +2864,9 @@ CF_API void CF_CALL cf_draw_elements_indirect(CF_StorageBuffer args, int offset,
  * @brief    Pushes a named region onto the GPU timeline, visible in RenderDoc/Nsight/PIX.
  * @param    name   The region's display name in the capture.
  * @remarks  Purely diagnostic -- no rendering effect. Pop with `cf_pop_gpu_label`. Regions
- *           nest. No-op on the GLES backend.
+ *           nest. No-op on the GLES backend. On WebGPU, a no-op unless the app was made with
+ *           `CF_APP_OPTIONS_GFX_DEBUG_BIT`: there each region costs calls into the browser, and the draw API
+ *           labels every batch.
  * @related  cf_pop_gpu_label
  */
 CF_API void CF_CALL cf_push_gpu_label(const char* name);
