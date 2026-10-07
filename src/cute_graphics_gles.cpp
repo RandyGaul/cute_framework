@@ -945,6 +945,12 @@ void cf_gles_gpu_sync()
 	glFinish();
 }
 
+// Ring slots and frame fences don't care where GL's stream is cut, so a flush needs no bookkeeping.
+void cf_gles_gpu_submit()
+{
+	glFlush();
+}
+
 bool cf_gles_set_present_mode(CF_PresentMode mode)
 {
 	switch (mode) {

@@ -226,6 +226,11 @@ static struct
 	SDL_GPURenderPass* active_pass;
 } g_ctx = { };
 
+// Names of the debug groups open on g_ctx.cmd, reopened when a mid-frame submit swaps command
+// buffers. Owned copies that live only while the group is open: labels are often dynamic
+// (frame or entity IDs), so interning them would grow the intern table without bound.
+static Array<String> s_gpu_labels;
+
 static inline void s_end_active_pass() {
 	if (g_ctx.active_pass) {
 		SDL_EndGPURenderPass(g_ctx.active_pass);
@@ -926,6 +931,7 @@ void cf_sdlgpu_cleanup()
 		g_ctx.cmd = NULL;
 	}
 	SDL_WaitForGPUIdle(g_ctx.device);
+	s_gpu_labels = Array<String>();
 	SDL_ReleaseWindowFromGPUDevice(g_ctx.device, g_ctx.window);
 	SDL_DestroyGPUDevice(g_ctx.device);
 }
@@ -970,15 +976,34 @@ void cf_sdlgpu_flush()
 	}
 }
 
-void cf_sdlgpu_gpu_sync()
+// Submits the frame's command buffer mid-frame and continues in a fresh one. The canvas stays
+// applied and keeps its pending clear flag, so the next draw reopens the pass with LOAD.
+static void s_submit_and_reacquire(bool wait)
 {
 	s_end_active_pass();
-	if (g_ctx.cmd) {
-		SDL_GPUFence *fence = SDL_SubmitGPUCommandBufferAndAcquireFence(g_ctx.cmd);
+	if (!g_ctx.cmd) return;
+	// Debug groups must balance within a command buffer (Metal, PIX): close the open ones here
+	// and reopen them in the next buffer.
+	for (int i = 0; i < s_gpu_labels.count(); ++i) SDL_PopGPUDebugGroup(g_ctx.cmd);
+	if (wait) {
+		SDL_GPUFence* fence = SDL_SubmitGPUCommandBufferAndAcquireFence(g_ctx.cmd);
 		SDL_WaitForGPUFences(g_ctx.device, true, &fence, 1);
 		SDL_ReleaseGPUFence(g_ctx.device, fence);
-		g_ctx.cmd = SDL_AcquireGPUCommandBuffer(g_ctx.device);
+	} else {
+		SDL_SubmitGPUCommandBuffer(g_ctx.cmd);
 	}
+	g_ctx.cmd = SDL_AcquireGPUCommandBuffer(g_ctx.device);
+	for (int i = 0; i < s_gpu_labels.count(); ++i) SDL_PushGPUDebugGroup(g_ctx.cmd, s_gpu_labels[i].c_str());
+}
+
+void cf_sdlgpu_gpu_sync()
+{
+	s_submit_and_reacquire(true);
+}
+
+void cf_sdlgpu_gpu_submit()
+{
+	s_submit_and_reacquire(false);
 }
 
 bool cf_sdlgpu_set_present_mode(CF_PresentMode mode)
@@ -1011,6 +1036,7 @@ void cf_sdlgpu_begin_frame()
 		g_ctx.canvas = NULL;
 		g_ctx.swapchain_tex = NULL;
 	}
+	s_gpu_labels.clear();
 	g_ctx.cmd = SDL_AcquireGPUCommandBuffer(g_ctx.device);
 	g_ctx.skip_drawing = false;
 }
@@ -1061,6 +1087,7 @@ void cf_sdlgpu_end_frame()
 	g_ctx.cmd = NULL;
 	g_ctx.canvas = NULL;
 	g_ctx.swapchain_tex = NULL;
+	s_gpu_labels.clear();
 }
 
 bool cf_sdlgpu_texture_supports_format(CF_PixelFormat format, CF_TextureUsageBits usage)
@@ -2503,12 +2530,16 @@ void cf_sdlgpu_apply_shader(CF_Shader shader_handle, CF_Material material_handle
 
 void cf_sdlgpu_push_gpu_label(const char* name)
 {
-	if (g_ctx.cmd) SDL_PushGPUDebugGroup(g_ctx.cmd, name);
+	if (!g_ctx.cmd) return;
+	SDL_PushGPUDebugGroup(g_ctx.cmd, name);
+	s_gpu_labels.add(String(name));
 }
 
 void cf_sdlgpu_pop_gpu_label()
 {
-	if (g_ctx.cmd) SDL_PopGPUDebugGroup(g_ctx.cmd);
+	if (!g_ctx.cmd) return;
+	SDL_PopGPUDebugGroup(g_ctx.cmd);
+	if (s_gpu_labels.count()) s_gpu_labels.pop();
 }
 
 void cf_sdlgpu_current_canvas_size(int* w, int* h)

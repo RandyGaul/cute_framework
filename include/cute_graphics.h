@@ -972,8 +972,28 @@ CF_API void CF_CALL cf_generate_mipmaps(CF_Texture texture);
  * @category graphics
  * @brief    Submits the command buffer, waits for GPU completion via fence, then reacquires.
  * @remarks  Forces GPU/CPU serialization.
+ * @related  cf_gpu_submit
  */
 CF_API void CF_CALL cf_gpu_sync(void);
+
+/**
+ * @function cf_gpu_submit
+ * @category graphics
+ * @brief    Sends the GPU work recorded so far to the GPU now, without waiting for it to finish.
+ * @remarks  This is `cf_gpu_sync` without the wait. On SDL_GPU it submits the current command buffer and continues
+ *           recording in a new one; on GLES it is `glFlush`.
+ *
+ *           It ends the current render pass. The canvas stays applied, and the next draw resumes the pass, keeping
+ *           everything drawn before the submit. Call it between draws, not between `cf_apply_shader` and its draw:
+ *           apply the shader (and any viewport or scissor) again afterwards.
+ *
+ *           Use it for scheduling, such as starting heavy compute or uploads early, or splitting a frame into
+ *           separately timed chunks for profiling. It does not speed up an ordinary frame, and calling it often can
+ *           make a frame slower. It only sends recorded GPU commands; queued `cf_draw_*` calls are recorded by
+ *           `cf_render_to` or `cf_app_draw_onto_screen`.
+ * @related  cf_gpu_sync cf_render_to cf_push_gpu_label
+ */
+CF_API void CF_CALL cf_gpu_submit(void);
 
 /**
  * @function cf_texture_handle
@@ -3068,6 +3088,8 @@ CF_INLINE bool query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op) { 
 CF_INLINE void texture_update_mip(CF_Texture texture, void* data, int size, int mip_level) { cf_texture_update_mip(texture, data, size, mip_level); }
 CF_INLINE void texture_update_layer(CF_Texture texture, void* data, int size, int layer) { cf_texture_update_layer(texture, data, size, layer); }
 CF_INLINE void generate_mipmaps(CF_Texture texture) { cf_generate_mipmaps(texture); }
+CF_INLINE void gpu_sync() { cf_gpu_sync(); }
+CF_INLINE void gpu_submit() { cf_gpu_submit(); }
 CF_INLINE uint64_t texture_handle(CF_Texture texture) { return cf_texture_handle(texture); }
 CF_INLINE uint64_t texture_binding_handle(CF_Texture texture) { return cf_texture_binding_handle(texture); }
 CF_INLINE void mesh_set_index_buffer(CF_Mesh mesh, int index_buffer_size_in_bytes, int index_bit_count) { cf_mesh_set_index_buffer(mesh, index_buffer_size_in_bytes, index_bit_count); }
