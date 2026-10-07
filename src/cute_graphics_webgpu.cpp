@@ -2441,7 +2441,10 @@ static int s_canvas_samples(const CF_CanvasParams& params)
 
 int cf_webgpu_query_max_canvas_targets()
 {
-	return cf_min((int)g_ctx.limits.maxColorAttachments, CF_MAX_CANVAS_TARGETS);
+	// An RGBA8 target costs 8 of maxColorAttachmentBytesPerSample (spec minimum 32), so the
+	// attachment count alone could promise default canvases the device can't render.
+	int by_bytes = (int)g_ctx.limits.maxColorAttachmentBytesPerSample / 8;
+	return cf_min(cf_min((int)g_ctx.limits.maxColorAttachments, by_bytes), CF_MAX_CANVAS_TARGETS);
 }
 
 CF_Canvas cf_webgpu_make_canvas(CF_CanvasParams params)

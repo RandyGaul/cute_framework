@@ -300,7 +300,7 @@ How many targets depends on the device. `CF_MAX_CANVAS_TARGETS` (8) is the most 
 | D3D12, Metal | 8 |
 | Vulkan | 4 -- the spec guarantee; SDL_GPU doesn't expose the device's real `maxColorAttachments` |
 | GLES / WebGL2 | min(`GL_MAX_DRAW_BUFFERS`, `GL_MAX_COLOR_ATTACHMENTS`, 8); the spec guarantees 4 |
-| WebGPU | min(`maxColorAttachments`, 8); the spec guarantees 8 |
+| WebGPU | min(`maxColorAttachments`, `maxColorAttachmentBytesPerSample` / 8, 8), since an RGBA8 target costs 8 bytes per sample; the spec guarantees 4. Wider formats cost more |
 
 Four targets work everywhere. Past four, check the query and fall back (fewer targets, or a second pass) when it comes up short. Asking `cf_make_canvas` for more than the query allows asserts and returns an invalid canvas, rather than quietly giving you fewer targets than your shader writes.
 

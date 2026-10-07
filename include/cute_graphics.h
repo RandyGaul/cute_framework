@@ -1403,6 +1403,9 @@ CF_INLINE const char* cf_samplecount_string(CF_SampleCount count) {
  *             device's real limit, so CF reports the guarantee.
  *           - GLES/WebGL2: the smaller of `GL_MAX_DRAW_BUFFERS` and `GL_MAX_COLOR_ATTACHMENTS`, capped at 8.
  *             GLES 3.0 and WebGL2 only guarantee four.
+ *           - WebGPU: the smaller of `maxColorAttachments` and `maxColorAttachmentBytesPerSample / 8` (an
+ *             RGBA8 target costs 8 bytes per sample), capped at 8. The spec guarantees four. Wider
+ *             formats cost more, so a canvas of 16- or 32-bit float targets may fit fewer.
  *
  *           Check this before making a canvas with more than four targets, and fall back to fewer
  *           targets (or more passes) when it comes up short. Requires a running app.
