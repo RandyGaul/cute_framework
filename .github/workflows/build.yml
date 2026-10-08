@@ -50,7 +50,10 @@ jobs:
     steps:
       # Linux needs to install various dependencies.
       - name: Install Linux Dependencies
+        # A stalled mirror otherwise hangs apt until the job limit cancels it.
+        timeout-minutes: 8
         run: |
+          echo 'Acquire::Retries "3"; Acquire::http::Timeout "30"; Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/80-ci-retries > /dev/null
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
           libgl1-mesa-dev libudev-dev \
@@ -240,7 +243,10 @@ jobs:
     # rasterizer so a GLES-only regression like that one fails CI instead of only a user's browser.
     steps:
       - name: Install Linux Dependencies
+        # A stalled mirror otherwise hangs apt until the job limit cancels it.
+        timeout-minutes: 8
         run: |
+          echo 'Acquire::Retries "3"; Acquire::http::Timeout "30"; Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/80-ci-retries > /dev/null
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
           libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libudev-dev \
@@ -333,7 +339,10 @@ jobs:
       # real Vulkan driver: with SwiftShader, headless or not, the GPU process dies creating the
       # canvas swapchain (no SharedImage backing), even for a plain JS page. Mesa's lavapipe works.
       - name: Install Mesa Vulkan
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq mesa-vulkan-drivers xvfb
+        timeout-minutes: 8
+        run: |
+          echo 'Acquire::Retries "3"; Acquire::http::Timeout "30"; Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/80-ci-retries > /dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq mesa-vulkan-drivers xvfb
 
       # The page reports its backend, a readback pixel of the red box it draws, and every console
       # error; tools/web_smoke.py fails on any mismatch or after 60s.
@@ -359,7 +368,10 @@ jobs:
     # pinned wgpu-native release (CF_WGPU_NATIVE_DIR left empty).
     steps:
       - name: Install Linux Dependencies
+        # A stalled mirror otherwise hangs apt until the job limit cancels it.
+        timeout-minutes: 8
         run: |
+          echo 'Acquire::Retries "3"; Acquire::http::Timeout "30"; Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/80-ci-retries > /dev/null
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
           libgl1-mesa-dev libudev-dev \
@@ -466,7 +478,10 @@ jobs:
 
     steps:
       - name: Install Linux Dependencies
+        # A stalled mirror otherwise hangs apt until the job limit cancels it.
+        timeout-minutes: 8
         run: |
+          echo 'Acquire::Retries "3"; Acquire::http::Timeout "30"; Acquire::https::Timeout "30";' | sudo tee /etc/apt/apt.conf.d/80-ci-retries > /dev/null
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
           libgl1-mesa-dev libudev-dev \
