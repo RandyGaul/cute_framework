@@ -178,6 +178,12 @@ static float s_clear_depth(const CF_CanvasInternal* c) { return (c && c->has_cle
 static uint32_t s_clear_stencil(const CF_CanvasInternal* c) { return (c && c->has_clear_depth_stencil) ? c->clear_stencil : app->clear_stencil; }
 static int s_color_target_count(const CF_CanvasInternal* c) { return c->attached_depth ? 0 : (c->target_count > 1 ? c->target_count : 1); }
 
+// Map callbacks can outlive the app and its allocator. Only this heap-owned record survives cancellation.
+struct CF_WMap
+{
+	void* owner;
+};
+
 struct CF_ReadbackInternal
 {
 	WGPUBuffer buffer;
@@ -188,6 +194,7 @@ struct CF_ReadbackInternal
 	bool mapped;
 	bool failed;
 	bool ready;
+	CF_WMap* map;
 };
 
 struct CF_WPipelineKey
@@ -381,6 +388,7 @@ struct CF_WStagingChunk
 	uint64_t used;
 	volatile bool map_done;
 	bool map_failed;
+	CF_WMap* map;
 };
 
 struct CF_WBlitPipeline
@@ -553,6 +561,34 @@ static void s_process_events()
 	wgpuDevicePoll(g_ctx.device, false, NULL);
 	wgpuInstanceProcessEvents(g_ctx.instance);
 #endif
+}
+
+static bool s_can_wait()
+{
+#ifdef CF_EMSCRIPTEN
+	return emscripten_has_asyncify();
+#else
+	return true;
+#endif
+}
+
+// Imported page devices have no association with g_ctx.instance, so its event pump cannot
+// deliver their callbacks. Browser callbacks run on the same thread when it returns to JS.
+static WGPUCallbackMode s_callback_mode()
+{
+#ifdef CF_EMSCRIPTEN
+	return WGPUCallbackMode_AllowSpontaneous;
+#else
+	return WGPUCallbackMode_AllowProcessEvents;
+#endif
+}
+
+static CF_WMap* s_make_map(void* owner)
+{
+	CF_WMap* map = (CF_WMap*)malloc(sizeof(CF_WMap));
+	CF_ASSERT(map);
+	map->owner = owner;
+	return map;
 }
 
 // Blocks until *flag turns true, pumping WebGPU events. The web yields to the browser (ASYNCIFY).
@@ -1257,30 +1293,39 @@ static void s_make_ring(int size)
 	g_ctx.ring_used = 0;
 }
 
+static void s_release_staging_chunk(CF_WStagingChunk* c)
+{
+	if (c->buffer) wgpuBufferRelease(c->buffer);
+	CF_FREE(c->cpu);
+	free(c->map);
+	CF_FREE(c);
+}
+
 static void s_free_staging_chunk(CF_WStagingChunk* c)
 {
 	if (c->size == CF_WGPU_STAGING_CHUNK) g_ctx.staging_bytes -= c->size;
-	if (c->buffer) wgpuBufferRelease(c->buffer);
-	CF_FREE(c->cpu);
-	CF_FREE(c);
+	s_release_staging_chunk(c);
 }
 
 static void s_on_staging_mapped(WGPUMapAsyncStatus status, WGPUStringView message, void* ud1, void* ud2)
 {
 	CF_UNUSED(message); CF_UNUSED(ud2);
-	CF_WStagingChunk* c = (CF_WStagingChunk*)ud1;
+	CF_WMap* map = (CF_WMap*)ud1;
+	CF_WStagingChunk* c = (CF_WStagingChunk*)map->owner;
+	if (!c) { free(map); return; }
 	c->map_failed = status != WGPUMapAsyncStatus_Success;
 	c->map_done = true;
 }
 
-// Moves remapped chunks to the free list.
+// Moves remapped chunks to the free list. Without ASYNCIFY s_stage cannot wait to stay under the
+// ceiling, so chunks that finish remapping past it are released instead of pooled.
 static void s_collect_staging()
 {
 	for (int i = 0; i < g_ctx.staging_pending.count();) {
 		CF_WStagingChunk* c = g_ctx.staging_pending[i];
 		if (!c->map_done) { ++i; continue; }
 		g_ctx.staging_pending.unordered_remove(i);
-		if (c->map_failed || g_ctx.device_lost) {
+		if (c->map_failed || g_ctx.device_lost || g_ctx.staging_bytes > CF_WGPU_STAGING_CEILING) {
 			s_free_staging_chunk(c);
 		} else {
 			c->mapped = (uint8_t*)wgpuBufferGetMappedRange(c->buffer, 0, (size_t)c->size);
@@ -1340,9 +1385,10 @@ static void s_submit()
 		c->map_done = false;
 		c->map_failed = false;
 		WGPUBufferMapCallbackInfo cb = WGPU_BUFFER_MAP_CALLBACK_INFO_INIT;
-		cb.mode = WGPUCallbackMode_AllowProcessEvents;
+		cb.mode = s_callback_mode();
 		cb.callback = s_on_staging_mapped;
-		cb.userdata1 = c;
+		if (!c->map) c->map = s_make_map(c);
+		cb.userdata1 = c->map;
 		wgpuBufferMapAsync(c->buffer, WGPUMapMode_Write, 0, (size_t)c->size, cb);
 		g_ctx.staging_pending.add(c);
 	}
@@ -1370,7 +1416,7 @@ static uint8_t* s_stage(int size, WGPUBuffer* buffer, uint64_t* offset)
 				s_process_events();
 				s_collect_staging();
 			}
-			if (!g_ctx.staging_free.count() && g_ctx.staging_pending.count() && g_ctx.staging_bytes + CF_WGPU_STAGING_CHUNK > CF_WGPU_STAGING_CEILING && !g_ctx.device_lost) {
+			if (!g_ctx.staging_free.count() && g_ctx.staging_pending.count() && g_ctx.staging_bytes + CF_WGPU_STAGING_CHUNK > CF_WGPU_STAGING_CEILING && !g_ctx.device_lost && s_can_wait()) {
 				s_wait(&g_ctx.staging_pending[0]->map_done);
 				s_collect_staging();
 			}
@@ -1640,7 +1686,89 @@ static bool s_has_feature(const WGPUSupportedFeatures* f, WGPUFeatureName name)
 	return false;
 }
 
+static void s_name_adapter(WGPUAdapterInfo* info)
+{
+	// Browsers leave device and description empty; vendor and architecture are what they give.
+	String name = s_str(info->device);
+	if (!name.len()) name = s_str(info->description);
+	if (!name.len()) {
+		name = s_str(info->vendor);
+		String arch = s_str(info->architecture);
+		if (name.len() && arch.len()) name.add(' ');
+		name.append(arch.c_str());
+	}
+	g_ctx.adapter_name = sintern(name.c_str());
+	wgpuAdapterInfoFreeMembers(*info);
+}
+
+static void s_read_features(const WGPUSupportedFeatures* supported)
+{
+	g_ctx.float32_filterable = s_has_feature(supported, WGPUFeatureName_Float32Filterable);
+	g_ctx.float32_blendable = s_has_feature(supported, WGPUFeatureName_Float32Blendable);
+	g_ctx.depth32_stencil8 = s_has_feature(supported, WGPUFeatureName_Depth32FloatStencil8);
+	g_ctx.bc = s_has_feature(supported, WGPUFeatureName_TextureCompressionBC);
+	g_ctx.formats_tier1 = s_has_feature(supported, WGPUFeatureName_TextureFormatsTier1);
+	g_ctx.rg11b10_renderable = s_has_feature(supported, WGPUFeatureName_RG11B10UfloatRenderable) || g_ctx.formats_tier1;
+	g_ctx.depth_clip_control = s_has_feature(supported, WGPUFeatureName_DepthClipControl);
+	g_ctx.bgra8_storage = s_has_feature(supported, WGPUFeatureName_BGRA8UnormStorage);
+#ifndef CF_EMSCRIPTEN
+	g_ctx.adapter_formats = s_has_feature(supported, (WGPUFeatureName)WGPUNativeFeature_TextureAdapterSpecificFormatFeatures);
+#endif
+}
+
 #ifdef CF_EMSCRIPTEN
+EM_JS_DEPS(cf_webgpu_device_events, "$getWasmTableEntry,$stackSave,$stackRestore,$stringToUTF8OnStack");
+
+EM_JS(void, s_watch_page_device, (uintptr_t callback, int validation, int out_of_memory, int internal), {
+	const device = Module['preinitializedWebGPUDevice'];
+	const events = { active: true, device: device };
+	Module['cfWebGPUDeviceEvents'] = events;
+	const emit = (type, message) => {
+		if (!events.active) return;
+		const sp = stackSave();
+		getWasmTableEntry(callback)(type, stringToUTF8OnStack(message));
+		stackRestore(sp);
+	};
+	events.error = (event) => {
+		const error = event.error;
+		const type = error instanceof GPUValidationError ? validation :
+			error instanceof GPUOutOfMemoryError ? out_of_memory : internal;
+		emit(type, error.message);
+	};
+	device.addEventListener('uncapturederror', events.error);
+	device.lost.then((info) => emit(0, info.message));
+});
+
+EM_JS(void, s_unwatch_page_device, (), {
+	const events = Module['cfWebGPUDeviceEvents'];
+	if (!events) return;
+	events.active = false;
+	events.device.removeEventListener('uncapturederror', events.error);
+	delete Module['cfWebGPUDeviceEvents'];
+});
+
+static void s_on_page_device_event(int type, const char* message)
+{
+	if (!type) { s_mark_device_lost(s_sv(message)); return; }
+	s_on_uncaptured_error(&g_ctx.device, (WGPUErrorType)type, s_sv(message), NULL, NULL);
+}
+
+static bool s_adopt_page_device()
+{
+	if (!EM_ASM_INT({ return !!Module['preinitializedWebGPUDevice']; })) return false;
+	g_ctx.device = emscripten_webgpu_get_device();
+	// GPUDevice.adapterInfo is newer than WebGPU itself; without it the adapter stays unnamed.
+	WGPUAdapterInfo ainfo = WGPU_ADAPTER_INFO_INIT;
+	bool named = EM_ASM_INT({ return !!Module['preinitializedWebGPUDevice'].adapterInfo; });
+	if (named && wgpuDeviceGetAdapterInfo(g_ctx.device, &ainfo) == WGPUStatus_Success) s_name_adapter(&ainfo);
+	WGPUSupportedFeatures supported = WGPU_SUPPORTED_FEATURES_INIT;
+	wgpuDeviceGetFeatures(g_ctx.device, &supported);
+	s_read_features(&supported);
+	wgpuSupportedFeaturesFreeMembers(supported);
+	s_watch_page_device((uintptr_t)s_on_page_device_event, WGPUErrorType_Validation, WGPUErrorType_OutOfMemory, WGPUErrorType_Internal);
+	return true;
+}
+
 // SDL picks the window's canvas from this hint, else "#canvas".
 static WGPUSurface s_create_web_surface()
 {
@@ -1654,18 +1782,8 @@ static WGPUSurface s_create_web_surface()
 }
 #endif
 
-CF_Result cf_webgpu_init(bool debug)
+static CF_Result s_request_device()
 {
-#ifndef CF_EMSCRIPTEN
-	if (debug) {
-		wgpuSetLogCallback(s_on_log, NULL);
-		wgpuSetLogLevel(WGPULogLevel_Warn);
-	}
-#endif
-	WGPUInstanceDescriptor idesc = WGPU_INSTANCE_DESCRIPTOR_INIT;
-	g_ctx.instance = wgpuCreateInstance(&idesc);
-	if (!g_ctx.instance) return cf_result_error("WebGPU: failed to create an instance.");
-
 	CF_WRequest req = { };
 	WGPURequestAdapterOptions aopts = WGPU_REQUEST_ADAPTER_OPTIONS_INIT;
 	aopts.powerPreference = WGPUPowerPreference_HighPerformance;
@@ -1683,21 +1801,8 @@ CF_Result cf_webgpu_init(bool debug)
 	g_ctx.adapter = req.adapter;
 
 	WGPUAdapterInfo ainfo = WGPU_ADAPTER_INFO_INIT;
-	if (wgpuAdapterGetInfo(g_ctx.adapter, &ainfo) == WGPUStatus_Success) {
-		// Browsers leave device and description empty; vendor and architecture are what they give.
-		String name = s_str(ainfo.device);
-		if (!name.len()) name = s_str(ainfo.description);
-		if (!name.len()) {
-			name = s_str(ainfo.vendor);
-			String arch = s_str(ainfo.architecture);
-			if (name.len() && arch.len()) name.add(' ');
-			name.append(arch.c_str());
-		}
-		g_ctx.adapter_name = sintern(name.c_str());
-		wgpuAdapterInfoFreeMembers(ainfo);
-	}
+	if (wgpuAdapterGetInfo(g_ctx.adapter, &ainfo) == WGPUStatus_Success) s_name_adapter(&ainfo);
 
-	// Ask for every optional feature CF can use, and the adapter's full limits.
 	WGPUSupportedFeatures supported = WGPU_SUPPORTED_FEATURES_INIT;
 	wgpuAdapterGetFeatures(g_ctx.adapter, &supported);
 	WGPUFeatureName wanted[] = {
@@ -1712,17 +1817,7 @@ CF_Result cf_webgpu_init(bool debug)
 	for (int i = 0; i < (int)CF_ARRAY_SIZE(wanted); ++i) {
 		if (s_has_feature(&supported, wanted[i])) features.add(wanted[i]);
 	}
-	g_ctx.float32_filterable = s_has_feature(&supported, WGPUFeatureName_Float32Filterable);
-	g_ctx.float32_blendable = s_has_feature(&supported, WGPUFeatureName_Float32Blendable);
-	g_ctx.depth32_stencil8 = s_has_feature(&supported, WGPUFeatureName_Depth32FloatStencil8);
-	g_ctx.bc = s_has_feature(&supported, WGPUFeatureName_TextureCompressionBC);
-	g_ctx.formats_tier1 = s_has_feature(&supported, WGPUFeatureName_TextureFormatsTier1);
-	g_ctx.rg11b10_renderable = s_has_feature(&supported, WGPUFeatureName_RG11B10UfloatRenderable) || g_ctx.formats_tier1;
-	g_ctx.depth_clip_control = s_has_feature(&supported, WGPUFeatureName_DepthClipControl);
-	g_ctx.bgra8_storage = s_has_feature(&supported, WGPUFeatureName_BGRA8UnormStorage);
-#ifndef CF_EMSCRIPTEN
-	g_ctx.adapter_formats = s_has_feature(&supported, (WGPUFeatureName)WGPUNativeFeature_TextureAdapterSpecificFormatFeatures);
-#endif
+	s_read_features(&supported);
 	wgpuSupportedFeaturesFreeMembers(supported);
 
 	WGPULimits limits = WGPU_LIMITS_INIT;
@@ -1750,13 +1845,41 @@ CF_Result cf_webgpu_init(bool debug)
 		return cf_result_error(req.error ? req.error : "WebGPU: failed to create a device.");
 	}
 	g_ctx.device = req.device;
+	return cf_result_success();
+}
+
+CF_Result cf_webgpu_init(bool debug)
+{
+#ifndef CF_EMSCRIPTEN
+	if (debug) {
+		wgpuSetLogCallback(s_on_log, NULL);
+		wgpuSetLogLevel(WGPULogLevel_Warn);
+	}
+#endif
+	WGPUInstanceDescriptor idesc = WGPU_INSTANCE_DESCRIPTOR_INIT;
+	g_ctx.instance = wgpuCreateInstance(&idesc);
+	if (!g_ctx.instance) return cf_result_error("WebGPU: failed to create an instance.");
+
+#ifdef CF_EMSCRIPTEN
+	bool adopted = s_adopt_page_device();
+	if (!adopted && !s_can_wait()) {
+		wgpuInstanceRelease(g_ctx.instance);
+		g_ctx.instance = NULL;
+		return cf_result_error("WebGPU: the page provided no device, and this build cannot wait for one.");
+	}
+	CF_Result requested = adopted ? cf_result_success() : s_request_device();
+#else
+	CF_Result requested = s_request_device();
+#endif
+	if (cf_is_error(requested)) return requested;
 #ifdef CF_EMSCRIPTEN
 	// The canvas is known before the window exists, so a canvas that refuses a WebGPU context
 	// fails here, while the app can still choose WebGL 2.
 	g_ctx.surface = s_create_web_surface();
 	if (!g_ctx.surface) {
+		s_unwatch_page_device();
 		wgpuDeviceRelease(g_ctx.device);
-		wgpuAdapterRelease(g_ctx.adapter);
+		if (g_ctx.adapter) wgpuAdapterRelease(g_ctx.adapter);
 		wgpuInstanceRelease(g_ctx.instance);
 		g_ctx.device = NULL;
 		g_ctx.adapter = NULL;
@@ -1944,6 +2067,7 @@ static void s_release_swapchain()
 
 void cf_webgpu_begin_frame()
 {
+	s_collect_staging();
 	// A frame still open here means cf_app_update ran twice without drawing: keep its work.
 	if (g_ctx.encoder) {
 		s_submit();
@@ -2029,7 +2153,7 @@ void cf_webgpu_end_frame()
 #ifdef CF_EMSCRIPTEN
 	// The browser presents once control returns to it. A polling-loop app (no main callbacks)
 	// never returns, so yield here the way SDL_GL_SwapWindow does for WebGL.
-	if (!app->using_main_callbacks) emscripten_sleep(0);
+	if (!app->using_main_callbacks && s_can_wait()) emscripten_sleep(0);
 #else
 	if (g_ctx.swapchain_tex) wgpuSurfacePresent(g_ctx.surface);
 #endif
@@ -2746,10 +2870,20 @@ bool cf_webgpu_current_canvas_has_depth()
 //--------------------------------------------------------------------------------------------------
 // Readbacks.
 
+static void s_release_readback(CF_ReadbackInternal* rb)
+{
+	if (rb->mapped) wgpuBufferUnmap(rb->buffer);
+	if (rb->buffer) wgpuBufferRelease(rb->buffer);
+	free(rb->map);
+	CF_FREE(rb);
+}
+
 static void s_on_map(WGPUMapAsyncStatus status, WGPUStringView message, void* ud1, void* ud2)
 {
 	CF_UNUSED(ud2);
-	CF_ReadbackInternal* rb = (CF_ReadbackInternal*)ud1;
+	CF_WMap* map = (CF_WMap*)ud1;
+	CF_ReadbackInternal* rb = (CF_ReadbackInternal*)map->owner;
+	if (!rb) { free(map); return; }
 	if (status != WGPUMapAsyncStatus_Success) {
 		if (!g_ctx.device_lost) fprintf(stderr, "WebGPU: readback map failed: %s\n", s_str(message).c_str());
 		rb->failed = true;
@@ -2802,9 +2936,10 @@ CF_Readback cf_webgpu_canvas_readback2(CF_Canvas canvas_handle, int index)
 	// The copy has to be submitted before the buffer can map; work recorded so far rides along.
 	s_submit();
 	WGPUBufferMapCallbackInfo cb = WGPU_BUFFER_MAP_CALLBACK_INFO_INIT;
-	cb.mode = WGPUCallbackMode_AllowProcessEvents;
+	cb.mode = s_callback_mode();
 	cb.callback = s_on_map;
-	cb.userdata1 = rb;
+	rb->map = s_make_map(rb);
+	cb.userdata1 = rb->map;
 	wgpuBufferMapAsync(rb->buffer, WGPUMapMode_Read, 0, (size_t)bd.size, cb);
 	CF_Readback result;
 	result.id = (uint64_t)(uintptr_t)rb;
@@ -2846,13 +2981,15 @@ int cf_webgpu_readback_size(CF_Readback readback)
 	return rb ? rb->size : 0;
 }
 
-// The map callback holds rb, so the map has to land before the free.
 static void s_free_readback(CF_ReadbackInternal* rb)
 {
-	s_wait(&rb->ready);
-	if (rb->mapped) wgpuBufferUnmap(rb->buffer);
-	if (rb->buffer) wgpuBufferRelease(rb->buffer);
-	CF_FREE(rb);
+	if (!rb->ready && s_can_wait()) s_wait(&rb->ready);
+	if (!rb->ready) {
+		rb->map->owner = NULL;
+		rb->map = NULL;
+		wgpuBufferUnmap(rb->buffer);
+	}
+	s_release_readback(rb);
 }
 
 void cf_webgpu_destroy_readback(CF_Readback readback)
@@ -4262,9 +4399,10 @@ void cf_webgpu_gpu_submit()
 void cf_webgpu_gpu_sync()
 {
 	s_submit();
+	if (!s_can_wait()) return;
 	volatile bool done = false;
 	WGPUQueueWorkDoneCallbackInfo cb = WGPU_QUEUE_WORK_DONE_CALLBACK_INFO_INIT;
-	cb.mode = WGPUCallbackMode_AllowProcessEvents;
+	cb.mode = s_callback_mode();
 	cb.callback = [](WGPUQueueWorkDoneStatus status, WGPUStringView message, void* ud1, void* ud2) {
 		CF_UNUSED(status); CF_UNUSED(message); CF_UNUSED(ud2);
 		*(volatile bool*)ud1 = true;
@@ -4353,17 +4491,26 @@ void cf_webgpu_imgui_shutdown()
 
 void cf_webgpu_cleanup()
 {
+#ifdef CF_EMSCRIPTEN
+	s_unwatch_page_device();
+#endif
 	s_submit();
 	s_release_swapchain();
 #ifndef CF_EMSCRIPTEN
 	if (g_ctx.device) wgpuDevicePoll(g_ctx.device, true, NULL);
 #endif
-	// Map callbacks hold readback and chunk pointers, so every pending map has to land before the
-	// free, and before the instance goes: releasing it fires them with a cancel.
 	for (int i = 0; i < g_ctx.readbacks.count(); ++i) s_free_readback(g_ctx.readbacks[i]);
 	g_ctx.readbacks.clear();
-	for (int i = 0; i < g_ctx.staging_pending.count(); ++i) s_wait(&g_ctx.staging_pending[i]->map_done);
-	for (int i = 0; i < g_ctx.staging_pending.count(); ++i) s_free_staging_chunk(g_ctx.staging_pending[i]);
+	for (int i = 0; i < g_ctx.staging_pending.count(); ++i) {
+		CF_WStagingChunk* c = g_ctx.staging_pending[i];
+		if (s_can_wait()) s_wait(&c->map_done);
+		if (!c->map_done) {
+			c->map->owner = NULL;
+			c->map = NULL;
+			wgpuBufferUnmap(c->buffer);
+		}
+		s_free_staging_chunk(c);
+	}
 	for (int i = 0; i < g_ctx.staging_free.count(); ++i) s_free_staging_chunk(g_ctx.staging_free[i]);
 	g_ctx.staging_pending.clear();
 	g_ctx.staging_free.clear();

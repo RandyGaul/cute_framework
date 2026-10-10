@@ -786,7 +786,8 @@ CF_API void CF_CALL cf_generate_mipmaps(CF_Texture texture);
  * @function cf_gpu_sync
  * @category graphics
  * @brief    Submits the command buffer, waits for GPU completion via fence, then reacquires.
- * @remarks  Forces GPU/CPU serialization.
+ * @remarks  Forces GPU/CPU serialization. A WebGPU web build linked without ASYNCIFY cannot wait, so there it only
+ *           submits, like `cf_gpu_submit`.
  * @related  cf_gpu_submit
  */
 CF_API void CF_CALL cf_gpu_sync(void);
