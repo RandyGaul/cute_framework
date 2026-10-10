@@ -1317,14 +1317,15 @@ static void s_on_staging_mapped(WGPUMapAsyncStatus status, WGPUStringView messag
 	c->map_done = true;
 }
 
-// Moves remapped chunks to the free list.
+// Moves remapped chunks to the free list. Without ASYNCIFY s_stage cannot wait to stay under the
+// ceiling, so chunks that finish remapping past it are released instead of pooled.
 static void s_collect_staging()
 {
 	for (int i = 0; i < g_ctx.staging_pending.count();) {
 		CF_WStagingChunk* c = g_ctx.staging_pending[i];
 		if (!c->map_done) { ++i; continue; }
 		g_ctx.staging_pending.unordered_remove(i);
-		if (c->map_failed || g_ctx.device_lost) {
+		if (c->map_failed || g_ctx.device_lost || g_ctx.staging_bytes > CF_WGPU_STAGING_CEILING) {
 			s_free_staging_chunk(c);
 		} else {
 			c->mapped = (uint8_t*)wgpuBufferGetMappedRange(c->buffer, 0, (size_t)c->size);
