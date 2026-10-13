@@ -1492,22 +1492,18 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 		premade_sub = s_draw->premade_sub_image_id_to_sub_image.find(sprite->easy_sprite_id);
 	}
 
-	// Center patch edges in Aseprite pixel space (origin top-left of sprite, Y down):
-	// min = top-left of center, max = bottom-right of center.
+	// The center patch is in Aseprite pixel space (origin top-left, Y down), while local
+	// uvs and the quad space below are Y up. So we measure each border from its own image
+	// edge, which is the same in both, then build the center uvs from the borders.
 	float left = center_patch.min.x;
 	float right = center_patch.max.x;
-	float min_y = center_patch.min.y;
-	float max_y = center_patch.max.y;
-
-	CF_V2 center_uv0 = cf_v2(left / sprite->w, min_y / sprite->h);
-	CF_V2 center_uv1 = cf_v2(right / sprite->w, max_y / sprite->h);
-
-	// Horizontal border thicknesses from each sprite edge to the center.
+	float top_border = center_patch.min.y;
+	float bottom_border = sprite->h - center_patch.max.y;
 	float left_border = left;
 	float right_border = sprite->w - right;
-	// Vertical strip sizes fed into geometry (same mapping as the previous top/bottom locals).
-	float strip_from_max_y = sprite->h - max_y;
-	float strip_from_min_y = min_y;
+
+	CF_V2 center_uv0 = cf_v2(left / sprite->w, bottom_border / sprite->h);
+	CF_V2 center_uv1 = cf_v2(right / sprite->w, 1.0f - top_border / sprite->h);
 
 	// CF_SPRITE_EDGE_SOFT: grow the quad's outer edges one texel past the image, over the
 	// atlas's transparent border, so the silhouette fades out across it.
@@ -1561,8 +1557,8 @@ void cf_draw_sprite_9_slice(const CF_Sprite* sprite)
 	float full_height  = CF_FABSF(sprite->h * sprite->scale.y);
 	float inner_left   = left_border / full_width;
 	float inner_right  = right_border / full_width;
-	float inner_top    = strip_from_max_y / full_height;
-	float inner_bottom = strip_from_min_y / full_height;
+	float inner_top    = top_border / full_height;
+	float inner_bottom = bottom_border / full_height;
 
 	// CF_SPRITE_EDGE_SOFT: grow the outer edge of the quads to match the inflated UV
 	float pixel_x = (soft_edge && full_width  > 0) ? 1.0f / full_width : 0;
@@ -1708,22 +1704,18 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 		premade_sub = s_draw->premade_sub_image_id_to_sub_image.find(sprite->easy_sprite_id);
 	}
 
-	// Center patch edges in Aseprite pixel space (origin top-left of sprite, Y down):
-	// min = top-left of center, max = bottom-right of center.
+	// The center patch is in Aseprite pixel space (origin top-left, Y down), while local
+	// uvs and the quad space below are Y up. So we measure each border from its own image
+	// edge, which is the same in both, then build the center uvs from the borders.
 	float left = center_patch.min.x;
 	float right = center_patch.max.x;
-	float min_y = center_patch.min.y;
-	float max_y = center_patch.max.y;
-
-	CF_V2 center_uv0 = cf_v2(left / sprite->w, min_y / sprite->h);
-	CF_V2 center_uv1 = cf_v2(right / sprite->w, max_y / sprite->h);
-
-	// Horizontal border thicknesses from each sprite edge to the center.
+	float top_border = center_patch.min.y;
+	float bottom_border = sprite->h - center_patch.max.y;
 	float left_border = left;
 	float right_border = sprite->w - right;
-	// Vertical strip sizes fed into geometry (same mapping as the previous top/bottom locals).
-	float strip_from_max_y = sprite->h - max_y;
-	float strip_from_min_y = min_y;
+
+	CF_V2 center_uv0 = cf_v2(left / sprite->w, bottom_border / sprite->h);
+	CF_V2 center_uv1 = cf_v2(right / sprite->w, 1.0f - top_border / sprite->h);
 
 	// CF_SPRITE_EDGE_SOFT: grow the quad's outer edges one texel past the image, over the
 	// atlas's transparent border, so the silhouette fades out across it.
@@ -1775,8 +1767,8 @@ void cf_draw_sprite_9_slice_tiled(const CF_Sprite* sprite)
 	float full_height  = CF_FABSF(sprite->h * sprite->scale.y);
 	float inner_left   = left_border / full_width;
 	float inner_right  = right_border / full_width;
-	float inner_top    = strip_from_max_y / full_height;
-	float inner_bottom = strip_from_min_y / full_height;
+	float inner_top    = top_border / full_height;
+	float inner_bottom = bottom_border / full_height;
 
 	// tiled sizes in local space
 	CF_V2 side_tiled_size = V2(	(center_patch.max.x - center_patch.min.x) / full_width,
