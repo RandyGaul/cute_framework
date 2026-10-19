@@ -1934,7 +1934,8 @@ cs_audio_source_t* cs_read_mem_ogg(const void* memory, size_t length, cs_error_t
 		audio->channels[0] = a;
 		audio->channels[1] = b;
 		audio->playing_count = 0;
-		CUTE_SOUND_FREE(samples, s_mem_ctx);
+		// stb_vorbis_decode_memory always uses libc to allocate the samples
+		free(samples);
 	}
 
 	if (err) *err = CUTE_SOUND_ERROR_NONE;
