@@ -160,11 +160,11 @@ def main
       # #{html_name}
 
       <div class="sample-container">
-        <iframe class="sample-iframe" src="../play/#{actual_target}.html" title="#{html_name} Sample"></iframe>
+        <iframe class="sample-iframe" src="play/#{actual_target}.html" title="#{html_name} Sample"></iframe>
       </div>
 
       <div class="sample-controls" markdown>
-        [:material-fullscreen: Fullscreen](../play/#{actual_target}.html){: .md-button target="_blank" }
+        [:material-fullscreen: Fullscreen](play/#{actual_target}.html){: .md-button target="_blank" }
         [:material-code-tags: View Source](#{repo_url}/blob/master/samples/#{source_file}){: .md-button target="_blank" }
       </div>
     MARKDOWN
