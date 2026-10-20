@@ -53,6 +53,9 @@ extra_javascript:
   - javascripts/redirect.js
 
 # Navigation
+exclude_docs: |
+  /requirements.txt
+
 not_in_nav: |
   /CPU/**
   /allocator/**
