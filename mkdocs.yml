@@ -15,6 +15,7 @@ copyright: Copyright &copy; 2019—2026 Randy Gaul
 # Configuration
 theme:
   name: material
+  variant: classic
   logo: assets/logo.png
   features:
     - navigation.instant
