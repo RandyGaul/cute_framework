@@ -1,2 +1,2 @@
-zensical
-markdown-callouts
+zensical==0.0.71
+markdown-callouts==0.4.0
