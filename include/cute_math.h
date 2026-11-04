@@ -1502,7 +1502,7 @@ CF_INLINE float cf_back_in(float x) { return x * x * x - x * CF_SINF(x * CF_PI);
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_back_in cf_back_out cf_back_in_out
  */
-CF_INLINE float cf_back_out(float x) { float f = (1.0f - x); return 1.0f - (x * x * x - x * CF_SINF(f * CF_PI)); }
+CF_INLINE float cf_back_out(float x) { float f = (1.0f - x); return 1.0f - (f * f * f - f * CF_SINF(f * CF_PI)); }
 
 /**
  * @function cf_back_in_out
