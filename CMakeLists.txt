@@ -525,6 +525,8 @@ endif()
 if(LINUX)
 	# Ensure tests are not built.
 	set(BUILD_TESTING OFF CACHE BOOL "Disable building s2n tests." FORCE)
+	# Distro libcrypto.a pulls in zlib/zstd/jitterentropy that nothing links (Ubuntu 26.04+).
+	set(S2N_USE_CRYPTO_SHARED_LIBS ON CACHE BOOL "Link the system libcrypto.so instead of the static archive." FORCE)
 
 	FetchContent_Declare(
 		s2n
