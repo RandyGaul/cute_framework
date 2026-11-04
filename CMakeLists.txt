@@ -527,6 +527,8 @@ if(LINUX)
 	set(BUILD_TESTING OFF CACHE BOOL "Disable building s2n tests." FORCE)
 	# Distro libcrypto.a pulls in zlib/zstd/jitterentropy that nothing links (Ubuntu 26.04+).
 	set(S2N_USE_CRYPTO_SHARED_LIBS ON CACHE BOOL "Link the system libcrypto.so instead of the static archive." FORCE)
+	# s2n builds as C99 with -Werror; newer clang flags its _Generic use (-Wc11-extensions).
+	set(UNSAFE_TREAT_WARNINGS_AS_ERRORS OFF CACHE BOOL "Don't fail the build on s2n warnings." FORCE)
 
 	FetchContent_Declare(
 		s2n
