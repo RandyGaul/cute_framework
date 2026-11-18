@@ -51,6 +51,7 @@ static void draw_text_arc(const char* text, v2 center, float radius, float cente
 int main(int argc, char* argv[])
 {
 	make_app("Text Drawing", 0, 0, 0, 1280, 900, CF_APP_OPTIONS_WINDOW_POS_CENTERED_BIT | CF_APP_OPTIONS_RESIZABLE_BIT, argv[0]);
+	app_set_present_mode(CF_PRESENT_MODE_VSYNC);
 
 	draw_push_shape_aa(1.5f);
 	make_font_from_memory(proggy_data, proggy_sz, "ProggyClean");
@@ -265,6 +266,27 @@ int main(int argc, char* argv[])
 		draw_text_boxed("<font name=\"ProggyClean\" size=22>nested <b>mapped</b> inside font</font>", V2(style_x, style_y - style_step * 3.5f));
 		draw_text_boxed("<wave><b>styled + wave</b></wave> and <b><color=#ffcc00>styled + color</color></b>", V2(style_x, style_y - style_step * 4.6f));
 		pop_font_size();
+
+		if (cf_between_interval(1.0f, 0.0f)) {
+			float x = -620.0f;
+			float y = 350.0f;
+
+			push_font_size(26);
+			float ascent = text_height("X");
+
+			draw_text_boxed("<orbit>orbit</orbit>", V2(x, y));
+			draw_text_boxed("<wobble>wobble</wobble>", V2(x, y - ascent * 1.0f));
+			draw_text_boxed("<bounce>bounce</bounce>", V2(x, y - ascent * 2.0f));
+			draw_text_boxed("<pulse>pulse</pulse>", V2(x, y - ascent * 3.0f));
+			draw_text_boxed("<jelly>jelly</jelly>", V2(x, y - ascent * 4.0f));
+			draw_text_boxed("<twist>twist</twist>", V2(x, y - ascent * 5.0f));
+			draw_text_boxed("<breathe>breathe</breathe>", V2(x, y - ascent * 6.0f));
+			draw_text_boxed("<rainbow>rainbow</rainbow>", V2(x, y - ascent * 7.0f));
+			draw_text_boxed("<slide_in>slide_in</slide_in>", V2(x, y - ascent * 8.0f));
+			draw_text_boxed("<pop_in>pop_in</pop_in>", V2(x, y - ascent * 9.0f));
+
+			pop_font_size();
+		}
 
 		// Instructions
 		const char* instructions = "Press Space to toggle bounding boxes";
