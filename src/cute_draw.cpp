@@ -4389,6 +4389,237 @@ static bool s_text_fx_gradient(CF_TextEffect* fx_ptr)
 	return true;
 }
 
+static bool s_text_fx_orbit(CF_TextEffect* fx_ptr)
+{
+	TextEffect* fx = (TextEffect*)fx_ptr;
+	double speed = fx->get_number("speed", 7);
+	double span = fx->get_number("span", 1);
+	float radius = (float)fx->get_number("radius", 4);
+
+	double phase_offset = span != 0.0 ? fx->index_into_effect / span : 0.0;
+	float phase = (float)CF_FMOD(fx->elapsed * speed - phase_offset, CF_TAU);
+	v2 offset = V2(CF_SINF(phase), CF_COSF(phase)) * radius;
+	fx->q0 += offset;
+	fx->q1 += offset;
+	return true;
+}
+
+static bool s_text_fx_wobble(CF_TextEffect* fx_ptr)
+{
+	TextEffect* fx = (TextEffect*)fx_ptr;
+	double span = fx->get_number("span", 0.5);
+	float x_amp = (float)fx->get_number("x_amp", 4);
+	float y_amp = (float)fx->get_number("y_amp", 2);
+	double x_speed = fx->get_number("x_speed", 1.0);
+	double y_speed = fx->get_number("y_speed", 1.5);
+	double y_phase = fx->get_number("y_phase", 1.0);
+
+	double phase_offset = span != 0.0 ? fx->index_into_effect / span : 0.0;
+	float x_angle = (float)CF_FMOD(fx->elapsed * x_speed - phase_offset, CF_TAU);
+	float y_angle = (float)CF_FMOD(fx->elapsed * y_speed - phase_offset + y_phase, CF_TAU);
+	v2 offset = V2(CF_SINF(x_angle) * x_amp, CF_COSF(y_angle) * y_amp);
+	fx->q0 += offset;
+	fx->q1 += offset;
+	return true;
+}
+
+static bool s_text_fx_bounce(CF_TextEffect* fx_ptr)
+{
+	TextEffect* fx = (TextEffect*)fx_ptr;
+	double delay = fx->get_number("delay", 0);
+	double glyph_delay = fx->get_number("glyph_delay", 0.06);
+	double duration = fx->get_number("duration", 0.4);
+	double pause = fx->get_number("pause", 1);
+	float height = (float)fx->get_number("height", 8);
+	int rebounds = (int)fx->get_number("rebounds", 2);
+	float restitution = (float)fx->get_number("restitution", 0.6);
+
+	duration = cf_max(duration, 0.001);
+	pause = cf_max(pause, 0.0);
+	rebounds = cf_max(rebounds, 0);
+	restitution = cf_clamp(restitution, 0.0f, 0.99f);
+	double elapsed_time = fx->elapsed - delay - fx->index_into_effect * glyph_delay;
+
+	if (elapsed_time < 0.0) {
+		return true;
+	}
+
+	float bounce_duration = (float)duration;
+	float cycle_duration = (float)pause;
+
+	for (int i = 0; i <= rebounds; ++i) {
+		cycle_duration += bounce_duration;
+		bounce_duration *= restitution;
+	}
+
+	float cycle_time = (float)CF_FMOD(elapsed_time, cycle_duration);
+	bounce_duration = (float)duration;
+	float bounce_height = height;
+	v2 offset = V2(0.0f, 0.0f);
+
+	for (int i = 0; i <= rebounds; ++i) {
+		if (cycle_time < bounce_duration) {
+			float bounce_progress = cycle_time / bounce_duration;
+			float height_factor = bounce_progress < 0.5f ? cf_quad_out(bounce_progress * 2.0f) : 1.0f - cf_quad_in(bounce_progress * 2.0f - 1.0f);
+			offset = V2(0.0f, height_factor * bounce_height);
+			break;
+		}
+
+		cycle_time -= bounce_duration;
+		bounce_duration *= restitution;
+		bounce_height *= restitution * restitution;
+	}
+
+	fx->q0 += offset;
+	fx->q1 += offset;
+	return true;
+}
+
+static bool s_text_fx_pulse(CF_TextEffect* fx_ptr)
+{
+	TextEffect* fx = (TextEffect*)fx_ptr;
+	double speed = fx->get_number("speed", 6);
+	double span = fx->get_number("span", 0);
+	float min_scale = (float)fx->get_number("min_scale", 0.8);
+	float max_scale = (float)fx->get_number("max_scale", 1.2);
+
+	double phase_offset = span != 0.0 ? fx->index_into_effect / span : 0.0;
+	float phase = (float)CF_FMOD(fx->elapsed * speed - phase_offset, CF_TAU);
+	float pulse_factor = CF_COSF(phase) * 0.5f + 0.5f;
+	float scale = min_scale + (max_scale - min_scale) * pulse_factor;
+	v2 center = (fx->q0 + fx->q1) * 0.5f;
+	fx->q0 = center + (fx->q0 - center) * scale;
+	fx->q1 = center + (fx->q1 - center) * scale;
+	return true;
+}
+
+static bool s_text_fx_jelly(CF_TextEffect* fx_ptr)
+{
+	TextEffect* fx = (TextEffect*)fx_ptr;
+	double speed = fx->get_number("speed", 6);
+	double span = fx->get_number("span", 1);
+	float max_angle = (float)fx->get_number("max_angle", 0.25);
+
+	double phase_offset = span != 0.0 ? fx->index_into_effect / span : 0.0;
+	float phase = (float)CF_FMOD(fx->elapsed * speed - phase_offset, CF_TAU);
+	float angle = CF_SINF(phase) * max_angle;
+	v2 center = (fx->q0 + fx->q1) * 0.5f;
+	v2 half_size = (fx->q1 - fx->q0) * 0.5f;
+	float c = CF_COSF(angle);
+	float s = CF_SINF(angle);
+	v2 r = V2(half_size.x * c - half_size.y * s, half_size.x * s + half_size.y * c);
+	fx->q0 = center - r;
+	fx->q1 = center + r;
+	return true;
+}
+
+static bool s_text_fx_twist(CF_TextEffect* fx_ptr)
+{
+	TextEffect* fx = (TextEffect*)fx_ptr;
+	double speed = fx->get_number("speed", 6);
+	double span = fx->get_number("span", 0);
+
+	double phase_offset = span != 0.0 ? fx->index_into_effect / span : 0.0;
+	float angle = (float)CF_FMOD(fx->elapsed * speed - phase_offset, CF_TAU);
+	v2 center = (fx->q0 + fx->q1) * 0.5f;
+	v2 half_size = (fx->q1 - fx->q0) * 0.5f;
+	float c = CF_COSF(angle);
+	float s = CF_SINF(angle);
+	v2 r = V2(half_size.x * c - half_size.y * s, half_size.x * s + half_size.y * c);
+	fx->q0 = center - r;
+	fx->q1 = center + r;
+	return true;
+}
+
+static bool s_text_fx_breathe(CF_TextEffect* fx_ptr)
+{
+	TextEffect* fx = (TextEffect*)fx_ptr;
+	double speed = fx->get_number("speed", 4);
+	float spacing = (float)fx->get_number("spacing", 1.5);
+
+	float phase = (float)CF_FMOD(fx->elapsed * speed, CF_TAU);
+	float spread_factor = 0.5f - CF_COSF(phase) * 0.5f;
+	float center_index = (fx->glyph_count - 1) * 0.5f;
+	v2 offset = V2((fx->index_into_effect - center_index) * spacing * spread_factor, 0.0f);
+	fx->q0 += offset;
+	fx->q1 += offset;
+	return true;
+}
+
+static bool s_text_fx_rainbow(CF_TextEffect* fx_ptr)
+{
+	TextEffect* fx = (TextEffect*)fx_ptr;
+	double speed = fx->get_number("speed", 3);
+	float hue_cycles = (float)fx->get_number("hue_cycles", 1);
+	float saturation = (float)fx->get_number("saturation", 1);
+	float brightness = (float)fx->get_number("brightness", 1);
+
+	float glyph_progress = fx->glyph_count > 0 ? (float)fx->index_into_effect / fx->glyph_count : 0.0f;
+	float offset = (1.0f - glyph_progress) * hue_cycles;
+	float hue = (float)cf_fract(fx->elapsed * speed / CF_TAU + offset);
+	CF_Color hsv = cf_make_color_rgba_f(hue, saturation, brightness, 1.0f);
+	CF_Color rgb = cf_hsv_to_rgb(hsv);
+	rgb.a = fx->color.a;
+	fx->color = rgb;
+	return true;
+}
+
+static bool s_text_fx_slide_in(CF_TextEffect* fx_ptr)
+{
+	TextEffect* fx = (TextEffect*)fx_ptr;
+	double delay = fx->get_number("delay", 0);
+	double glyph_delay = fx->get_number("glyph_delay", 0.1);
+	double duration = fx->get_number("duration", 0.15);
+	float from_x = (float)fx->get_number("from_x", 0);
+	float from_y = (float)fx->get_number("from_y", -4);
+
+	duration = cf_max(duration, 0.001);
+	double elapsed_time = fx->elapsed - delay - fx->index_into_effect * glyph_delay;
+	float progress = (float)(elapsed_time / duration);
+
+	if (progress < 0.0f) {
+		fx->visible = false;
+		return true;
+	}
+
+	progress = cf_min(progress, 1.0f);
+	float eased_progress = cf_cube_out(progress);
+	fx->opacity *= eased_progress;
+	v2 offset = V2(from_x, from_y) * (1.0f - eased_progress);
+	fx->q0 += offset;
+	fx->q1 += offset;
+	return true;
+}
+
+static bool s_text_fx_pop_in(CF_TextEffect* fx_ptr)
+{
+	TextEffect* fx = (TextEffect*)fx_ptr;
+	double delay = fx->get_number("delay", 0);
+	double glyph_delay = fx->get_number("glyph_delay", 0);
+	double duration = fx->get_number("duration", 0.35);
+	float from_scale = (float)fx->get_number("from_scale", 0);
+	float overshoot = (float)fx->get_number("overshoot", 0.5);
+
+	duration = cf_max(duration, 0.001);
+	double elapsed_time = fx->elapsed - delay - fx->index_into_effect * glyph_delay;
+	float progress = (float)(elapsed_time / duration);
+
+	if (progress < 0.0f) {
+		fx->visible = false;
+		return true;
+	}
+
+	progress = cf_min(progress, 1.0f);
+	float eased_progress = cf_cube_out(progress);
+	float scale_progress = eased_progress + (cf_back_out(progress) - eased_progress) * overshoot;
+	float scale = from_scale + (1.0f - from_scale) * scale_progress;
+	fx->opacity *= cf_quad_out(progress < 0.25f ? progress * 4.0f : 1.0f);
+	v2 center = (fx->q0 + fx->q1) * 0.5f;
+	fx->q0 = center + (fx->q0 - center) * scale;
+	fx->q1 = center + (fx->q1 - center) * scale;
+	return true;
+}
+
 // Font/size for the built-in <font> effect are applied during layout (see
 // s_resolve_text_style); the callback itself is a no-op so the markup is valid.
 static bool s_text_fx_font(CF_TextEffect* fx_ptr)
@@ -4426,6 +4657,16 @@ static void s_parse_codes(CF_ParsedTextState* text_state, const char* text)
 		text_effect_register("strike", s_text_fx_strike);
 		text_effect_register("underline", s_text_fx_underline);
 		text_effect_register("gradient", s_text_fx_gradient);
+		text_effect_register("orbit", s_text_fx_orbit);
+		text_effect_register("wobble", s_text_fx_wobble);
+		text_effect_register("bounce", s_text_fx_bounce);
+		text_effect_register("pulse", s_text_fx_pulse);
+		text_effect_register("jelly", s_text_fx_jelly);
+		text_effect_register("twist", s_text_fx_twist);
+		text_effect_register("breathe", s_text_fx_breathe);
+		text_effect_register("rainbow", s_text_fx_rainbow);
+		text_effect_register("slide_in", s_text_fx_slide_in);
+		text_effect_register("pop_in", s_text_fx_pop_in);
 		text_effect_register("font", s_text_fx_font);
 	}
 
