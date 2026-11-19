@@ -74,6 +74,12 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
         if: matrix.compiler == 'msvc'
 
+      - name: Ensure LLVM 22 or newer (Windows, clang)
+        if: runner.os == 'Windows' && matrix.compiler == 'clang'
+        shell: pwsh
+        run: |
+          choco install llvm --version=22.1.8 -y --no-progress
+
       - name: Set compiler environment
         shell: bash
         run: |
