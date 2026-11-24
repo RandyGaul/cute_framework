@@ -674,8 +674,8 @@ void cf_pump_input_msgs()
 		case SDL_EVENT_MOUSE_MOTION:
 			app->mouse.x = event.motion.x;
 			app->mouse.y = event.motion.y;
-			app->mouse.xrel = event.motion.xrel;
-			app->mouse.yrel = -event.motion.yrel;
+			app->mouse.xrel += event.motion.xrel;
+			app->mouse.yrel -= event.motion.yrel;
 			break;
 
 		case SDL_EVENT_MOUSE_BUTTON_DOWN:
@@ -715,7 +715,7 @@ void cf_pump_input_msgs()
 			break;
 
 		case SDL_EVENT_MOUSE_WHEEL:
-			app->mouse.wheel_motion = event.wheel.y;
+			app->mouse.wheel_motion += event.wheel.y;
 			break;
 
 		case SDL_EVENT_GAMEPAD_BUTTON_UP:
