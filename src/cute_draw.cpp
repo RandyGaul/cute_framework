@@ -4895,6 +4895,7 @@ static v2 s_draw_text(const char* text, CF_V2 position, int text_length, bool re
 					g.shape[3] = V2(q0.x, q0.y);
 				}
 				g.color = premultiply(color);
+				g.user_params = s_draw->user_params.last();
 				if (!use_corner_colors) {
 					CF_Color flat = g.color;
 					for (int j = 0; j < 4; ++j) g.text_colors[j] = flat;
