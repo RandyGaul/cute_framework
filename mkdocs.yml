@@ -10,11 +10,12 @@ repo_url: https://github.com/RandyGaul/cute_framework
 repo_name: RandyGaul/cute_framework
 
 # Copyright
-copyright: Copyright &copy; 2019—2025 Randy Gaul
+copyright: Copyright &copy; 2019—2026 Randy Gaul
 
 # Configuration
 theme:
   name: material
+  variant: classic
   logo: assets/logo.png
   features:
     - navigation.instant
@@ -52,6 +53,9 @@ extra_javascript:
   - javascripts/redirect.js
 
 # Navigation
+exclude_docs: |
+  /requirements.txt
+
 not_in_nav: |
   /CPU/**
   /allocator/**
@@ -202,7 +206,7 @@ nav:
 # Plugins
 plugins:
   - search:
-      separator: '[\s\-\_]+'
+      separator: '[\\s\\-\\_]+'
   - social
 
 # Extensions
